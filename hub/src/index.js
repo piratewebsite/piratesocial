@@ -42,8 +42,10 @@ app.use(cors({
     if (!origin) return callback(null, true);
     // Allow any *.github.io site (user nodes)
     if (origin.endsWith('.github.io')) return callback(null, true);
+    // Allow the hub's own pages (setup wizard, landing page)
+    if (origin.endsWith('.up.railway.app')) return callback(null, true);
     if (allowedOrigins.includes(origin)) return callback(null, true);
-    callback(new Error('Not allowed by CORS'));
+    callback(null, false);
   },
   credentials: true,
 }));
