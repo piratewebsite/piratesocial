@@ -1,9 +1,9 @@
 backend:
   name: github
-  repo: YOUR_USERNAME/YOUR_REPO   # Replace with your GitHub repo
+  repo: twilightscapes/twilightscapes.github.io
   branch: main
-  base_url: https://piratesocial-hub-production.up.railway.app  # Hub provides OAuth proxy
-  auth_endpoint: /api/auth/github
+  base_url: https://piratesocial-hub-production.up.railway.app
+  auth_endpoint: /api/decap/auth
 
 media_folder: public/images
 public_folder: /images

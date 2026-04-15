@@ -14,6 +14,7 @@ import interactionRoutes from './routes/interactions.js';
 import webhookRoutes from './routes/webhooks.js';
 import adminRoutes from './routes/admin.js';
 import directoryRoutes from './routes/directory.js';
+import decapRoutes from './routes/decap.js';
 import { aggregateAllFeeds } from './services/aggregator.js';
 
 const app = express();
@@ -74,6 +75,7 @@ app.use('/api/interactions', interactionRoutes);
 app.use('/api/webhooks', webhookRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/directory', directoryRoutes);
+app.use('/api/decap', decapRoutes);
 
 // --- SSE endpoint for real-time updates ---
 const sseClients = new Map(); // userId -> Set<res>

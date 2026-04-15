@@ -2,7 +2,7 @@
 title: "My First Photo Post"
 description: "A sample post to get you started with Pirate Social"
 pubDate: 2026-04-15
-image: "/images/sample.jpg"
+image: "./sample.jpg"
 imageAlt: "Sample photograph"
 tags: ["photography", "sample"]
 exif:

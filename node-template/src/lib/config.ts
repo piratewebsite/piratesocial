@@ -7,7 +7,7 @@ export const siteConfig = {
   description: 'A photography site on the Pirate Social network',
 
   /** Your display name */
-  author: 'Photographer',
+  author: 'Todd',
 
   /** Bio text shown on your profile */
   bio: 'I take photos of things.',
@@ -22,14 +22,14 @@ export const siteConfig = {
   camera: '',
 
   /** Your website URL (auto-set during build) */
-  siteUrl: 'https://YOUR_USERNAME.github.io',
+  siteUrl: 'https://twilightscapes.github.io',
 
   /** Pirate Social hub URL */
   hubUrl: 'https://piratesocial-hub-production.up.railway.app',
 
   /** Social links */
   social: {
-    github: '',
+    github: 'twilightscapes',
     instagram: '',
     mastodon: '',
   },
