@@ -33,10 +33,11 @@ async function ghApi(endpoint, token, opts = {}) {
   const url = endpoint.startsWith('http')
     ? endpoint
     : `https://api.github.com${endpoint}`;
+  const method = opts.method || 'GET';
   const res = await fetch(url, {
     ...opts,
     headers: {
-      Authorization: `Bearer ${token}`,
+      Authorization: `token ${token}`,
       Accept: 'application/vnd.github+json',
       'X-GitHub-Api-Version': '2022-11-28',
       ...(opts.body ? { 'Content-Type': 'application/json' } : {}),
@@ -45,6 +46,7 @@ async function ghApi(endpoint, token, opts = {}) {
   });
   if (!res.ok) {
     const text = await res.text();
+    console.error(`[ghApi] ${method} ${endpoint} → ${res.status}`);
     throw new Error(`GitHub API ${res.status}: ${text}`);
   }
   return res.json();
@@ -168,26 +170,25 @@ export async function provisionNode(user, settings) {
   console.log(`[provision] Starting for ${user.username} → ${repoName}`);
 
   // 1. Create the repo (or check if it exists)
-  let repoCreated = false;
+  let repoExists = false;
   try {
     await ghApi(`/repos/${user.username}/${repoName}`, token);
+    repoExists = true;
     console.log(`[provision] Repo ${repoName} already exists`);
   } catch {
-    // Repo doesn't exist — create it
+    // Repo doesn't exist — create it (no auto_init, we'll push our own initial commit)
     await ghApi('/user/repos', token, {
       method: 'POST',
       body: JSON.stringify({
         name: repoName,
         description: `My photography site on Pirate Social`,
         homepage: siteUrl,
-        auto_init: true,    // Creates initial commit so we can build a tree
+        auto_init: false,
         private: false,
       }),
     });
-    repoCreated = true;
     console.log(`[provision] Created repo ${repoName}`);
-    // Small delay to let GitHub init the repo
-    await new Promise(r => setTimeout(r, 2000));
+    await new Promise(r => setTimeout(r, 1000));
   }
 
   // 2. Fetch the template file tree
@@ -233,36 +234,50 @@ export async function provisionNode(user, settings) {
     treeEntries.push(...results);
   }
 
-  // 4. Get the current commit SHA (HEAD of main)
-  const refData = await ghApi(
-    `/repos/${user.username}/${repoName}/git/ref/heads/main`,
-    token
-  );
-  const parentCommitSha = refData.object.sha;
-
-  // 5. Create a new tree with all template files
+  // 4. Create a new tree with all template files
   console.log(`[provision] Creating tree with ${treeEntries.length} files...`);
   const newTree = await ghApi(`/repos/${user.username}/${repoName}/git/trees`, token, {
     method: 'POST',
     body: JSON.stringify({ tree: treeEntries }),
-    // No base_tree — we replace everything
   });
 
-  // 6. Create a commit
+  // 5. Create a commit (orphan if new repo, child if existing)
+  let parentShas = [];
+  if (repoExists) {
+    try {
+      const refData = await ghApi(
+        `/repos/${user.username}/${repoName}/git/ref/heads/main`,
+        token
+      );
+      parentShas = [refData.object.sha];
+    } catch {
+      // No main branch yet — orphan commit
+    }
+  }
+
   const commit = await ghApi(`/repos/${user.username}/${repoName}/git/commits`, token, {
     method: 'POST',
     body: JSON.stringify({
       message: '🏴‍☠️ Initialize Pirate Social node',
       tree: newTree.sha,
-      parents: [parentCommitSha],
+      parents: parentShas,
     }),
   });
 
-  // 7. Update main to point to the new commit
-  await ghApi(`/repos/${user.username}/${repoName}/git/refs/heads/main`, token, {
-    method: 'PATCH',
-    body: JSON.stringify({ sha: commit.sha }),
-  });
+  // 6. Create or update the main branch ref
+  if (parentShas.length > 0) {
+    // Existing branch — update it
+    await ghApi(`/repos/${user.username}/${repoName}/git/refs/heads/main`, token, {
+      method: 'PATCH',
+      body: JSON.stringify({ sha: commit.sha, force: true }),
+    });
+  } else {
+    // No branch yet — create it
+    await ghApi(`/repos/${user.username}/${repoName}/git/refs`, token, {
+      method: 'POST',
+      body: JSON.stringify({ ref: 'refs/heads/main', sha: commit.sha }),
+    });
+  }
 
   console.log(`[provision] Pushed ${treeEntries.length} files`);
 
@@ -285,7 +300,7 @@ export async function provisionNode(user, settings) {
   return {
     repoUrl: `https://github.com/${user.username}/${repoName}`,
     siteUrl,
-    repoCreated,
+    repoCreated: !repoExists,
     filesCount: treeEntries.length,
   };
 }
