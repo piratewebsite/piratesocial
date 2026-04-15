@@ -21,6 +21,9 @@ router.get('/auth', (_req, res) => {
 
 // Step 2: GitHub callback — exchange code for token, send back to CMS popup
 router.get('/callback', async (req, res) => {
+  // Allow cross-origin opener so postMessage works back to the Decap CMS popup
+  res.setHeader('Cross-Origin-Opener-Policy', 'unsafe-none');
+
   const { code } = req.query;
   if (!code) return res.status(400).send('Missing code');
 
