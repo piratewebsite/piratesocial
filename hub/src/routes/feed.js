@@ -3,6 +3,22 @@ import { authenticate } from '../middleware/auth.js';
 
 const router = Router();
 
+// Lookup a post by guid (slug) — used by node sites to map slug → postId
+router.get('/by-guid/:guid', async (req, res) => {
+  const prisma = req.app.locals.prisma;
+  const post = await prisma.post.findUnique({
+    where: { guid: req.params.guid },
+    select: {
+      id: true,
+      blueskyUri: true,
+      title: true,
+      _count: { select: { likes: true, comments: true } },
+    },
+  });
+  if (!post) return res.status(404).json({ error: 'Post not found' });
+  res.json(post);
+});
+
 // Get a single post details (with EXIF, gallery, etc.)
 router.get('/:postId', async (req, res) => {
   const prisma = req.app.locals.prisma;
