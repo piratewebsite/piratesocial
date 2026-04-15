@@ -316,6 +316,8 @@ export async function provisionNode(user, settings) {
   console.log(`[provision] Pushed ${treeEntries.length} files`);
 
   // 8. Enable GitHub Pages (Actions source)
+  // For *.github.io repos, GitHub auto-enables Pages with legacy/branch source.
+  // We need to POST (create) or PUT (update) to set build_type to 'workflow'.
   try {
     await ghApi(`/repos/${user.username}/${repoName}/pages`, token, {
       method: 'POST',
@@ -323,10 +325,20 @@ export async function provisionNode(user, settings) {
         build_type: 'workflow',
       }),
     });
-    console.log(`[provision] GitHub Pages enabled`);
+    console.log(`[provision] GitHub Pages enabled (created)`);
   } catch (err) {
-    // Pages might already be enabled, or user might not have permissions
-    console.warn(`[provision] Could not enable Pages (non-fatal):`, err.message);
+    // Pages likely already exists (auto-enabled for *.github.io repos) — update it
+    try {
+      await ghApi(`/repos/${user.username}/${repoName}/pages`, token, {
+        method: 'PUT',
+        body: JSON.stringify({
+          build_type: 'workflow',
+        }),
+      });
+      console.log(`[provision] GitHub Pages updated to workflow build`);
+    } catch (err2) {
+      console.warn(`[provision] Could not configure Pages (non-fatal):`, err2.message);
+    }
   }
 
   console.log(`[provision] ✅ Done! Site will be at ${siteUrl}`);
