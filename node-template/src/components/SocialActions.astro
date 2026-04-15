@@ -1,0 +1,62 @@
+---
+import { siteConfig } from '../lib/config';
+
+interface Props {
+  postSlug: string;
+}
+
+const { postSlug } = Astro.props;
+---
+
+<div class="mt-8 border-t border-zinc-800 pt-6" id={`social-${postSlug}`}>
+  <div class="flex items-center gap-4 text-sm text-zinc-400">
+    <button class="like-action hover:text-red-400 transition cursor-pointer" data-slug={postSlug}>
+      ♡ <span class="like-count">0</span>
+    </button>
+    <button class="comment-toggle hover:text-blue-400 transition cursor-pointer" data-slug={postSlug}>
+      💬 <span class="comment-count">0</span> Comments
+    </button>
+  </div>
+
+  <!-- Comments section (hidden by default) -->
+  <div class="comments-section hidden mt-4" data-slug={postSlug}>
+    <div class="comments-list space-y-3 mb-4"></div>
+    <div class="flex gap-2">
+      <input
+        type="text"
+        class="comment-input flex-1 rounded bg-zinc-800 border border-zinc-700 px-3 py-2 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-zinc-500"
+        placeholder="Write a comment..."
+        maxlength="2000"
+      />
+      <button class="comment-submit rounded bg-zinc-700 px-4 py-2 text-sm hover:bg-zinc-600 transition cursor-pointer">
+        Post
+      </button>
+    </div>
+  </div>
+</div>
+
+<script is:inline define:vars={{ hubUrl: siteConfig.hubUrl }}>
+  // This runs per-post — interactions are client-side against the hub API
+  document.querySelectorAll('.comment-toggle').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const slug = btn.dataset.slug;
+      const section = document.querySelector(`.comments-section[data-slug="${slug}"]`);
+      section.classList.toggle('hidden');
+    });
+  });
+
+  document.querySelectorAll('.comment-submit').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const token = localStorage.getItem('ps_token');
+      if (!token) return alert('Sign in to comment');
+
+      const input = btn.previousElementSibling;
+      const body = input.value.trim();
+      if (!body) return;
+
+      // We'd need to map slug → postId via hub API
+      // For now, this shows the interaction pattern
+      input.value = '';
+    });
+  });
+</script>

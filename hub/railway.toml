@@ -1,0 +1,19 @@
+[build]
+  builder = "DOCKERFILE"
+  dockerfilePath = "Dockerfile"
+
+[deploy]
+  startCommand = "npx prisma db push && node src/index.js"
+  restartPolicyType = "ON_FAILURE"
+  restartPolicyMaxRetries = 3
+
+[[services]]
+  name = "piratesocial-hub"
+  protocol = "TCP"
+  internalPort = 3000
+
+[[services.healthchecks]]
+  path = "/"
+  protocol = "HTTP"
+  interval = 30
+  timeout = 5

@@ -1,0 +1,63 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import ExifDisplay from '../../components/ExifDisplay.astro';
+import PhotoGallery from '../../components/PhotoGallery.astro';
+import SocialActions from '../../components/SocialActions.astro';
+import { getCollection } from 'astro:content';
+
+export async function getStaticPaths() {
+  const posts = await getCollection('posts');
+  return posts.map(post => ({ params: { slug: post.id }, props: { post } }));
+}
+
+const { post } = Astro.props;
+const { Content } = await post.render();
+---
+
+<BaseLayout title={post.data.title} description={post.data.description} image={post.data.image ? (typeof post.data.image === 'string' ? post.data.image : post.data.image.src) : undefined}>
+  <article class="mx-auto max-w-4xl">
+    <!-- Hero Image -->
+    {post.data.image && (
+      <div class="mb-8 overflow-hidden rounded-lg">
+        <img
+          src={typeof post.data.image === 'string' ? post.data.image : post.data.image.src}
+          alt={post.data.imageAlt || post.data.title}
+          class="w-full"
+        />
+      </div>
+    )}
+
+    <!-- Title & Meta -->
+    <header class="mb-8">
+      <h1 class="text-3xl font-bold">{post.data.title}</h1>
+      <div class="mt-2 flex items-center gap-4 text-sm text-zinc-400">
+        <time datetime={post.data.pubDate.toISOString()}>
+          {post.data.pubDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+        </time>
+        {post.data.tags.length > 0 && (
+          <div class="flex gap-1">
+            {post.data.tags.map(tag => (
+              <span class="rounded bg-zinc-800 px-2 py-0.5 text-xs">{tag}</span>
+            ))}
+          </div>
+        )}
+      </div>
+    </header>
+
+    <!-- EXIF Data -->
+    {post.data.exif && <ExifDisplay exif={post.data.exif} />}
+
+    <!-- Content -->
+    <div class="prose prose-invert prose-zinc max-w-none">
+      <Content />
+    </div>
+
+    <!-- Gallery -->
+    {post.data.gallery && post.data.gallery.length > 0 && (
+      <PhotoGallery photos={post.data.gallery} />
+    )}
+
+    <!-- Social interactions (client-side) -->
+    <SocialActions postSlug={post.id} />
+  </article>
+</BaseLayout>

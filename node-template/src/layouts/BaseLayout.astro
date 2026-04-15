@@ -1,0 +1,84 @@
+---
+import { siteConfig } from '../lib/config';
+
+interface Props {
+  title?: string;
+  description?: string;
+  image?: string;
+}
+
+const { title, description, image } = Astro.props;
+const pageTitle = title ? `${title} | ${siteConfig.title}` : siteConfig.title;
+const pageDescription = description || siteConfig.description;
+const ogImage = image || siteConfig.avatar;
+---
+
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{pageTitle}</title>
+    <meta name="description" content={pageDescription} />
+    <meta name="generator" content={Astro.generator} />
+
+    <!-- Open Graph -->
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={pageDescription} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:type" content="website" />
+
+    <!-- RSS -->
+    <link rel="alternate" type="application/rss+xml" title={siteConfig.title} href="/feed.xml" />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  </head>
+  <body class="min-h-screen bg-zinc-950 text-zinc-100 antialiased">
+    <header class="border-b border-zinc-800">
+      <nav class="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
+        <a href="/" class="text-xl font-bold tracking-tight">{siteConfig.title}</a>
+        <div class="flex items-center gap-6 text-sm">
+          <a href="/posts" class="hover:text-white text-zinc-400 transition">Posts</a>
+          <a href="/galleries" class="hover:text-white text-zinc-400 transition">Galleries</a>
+          <a href="/social" class="hover:text-white text-zinc-400 transition">Social</a>
+          <a href="/about" class="hover:text-white text-zinc-400 transition">About</a>
+          <button id="auth-btn" class="rounded bg-zinc-800 px-3 py-1.5 text-xs hover:bg-zinc-700 transition">
+            Sign In
+          </button>
+        </div>
+      </nav>
+    </header>
+
+    <main class="mx-auto max-w-6xl px-4 py-8">
+      <slot />
+    </main>
+
+    <footer class="border-t border-zinc-800 mt-16">
+      <div class="mx-auto max-w-6xl px-4 py-8 text-center text-sm text-zinc-500">
+        <p>Powered by <a href="https://github.com/piratesocial" class="underline hover:text-white">Pirate Social</a></p>
+        <p class="mt-1">Part of the distributed photography network &middot; <a href="/feed.xml" class="underline">RSS</a></p>
+      </div>
+    </footer>
+
+    <script is:inline define:vars={{ hubUrl: siteConfig.hubUrl }}>
+      // Handle auth token from OAuth redirect
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get('token');
+      if (token) {
+        localStorage.setItem('ps_token', token);
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+
+      // Update auth button
+      const btn = document.getElementById('auth-btn');
+      const savedToken = localStorage.getItem('ps_token');
+      if (savedToken && btn) {
+        btn.textContent = 'My Profile';
+        btn.addEventListener('click', () => window.location.href = '/social');
+      } else if (btn) {
+        btn.addEventListener('click', () => window.location.href = `${hubUrl}/api/auth/github`);
+      }
+    </script>
+  </body>
+</html>

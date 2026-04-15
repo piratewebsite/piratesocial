@@ -1,0 +1,87 @@
+import { defineCollection, z } from 'astro:content';
+
+const posts = defineCollection({
+  type: 'content',
+  schema: ({ image }) =>
+    z.object({
+      title: z.string(),
+      description: z.string().optional(),
+      pubDate: z.coerce.date(),
+      updatedDate: z.coerce.date().optional(),
+      /** Hero/featured image */
+      image: image().optional(),
+      imageAlt: z.string().optional(),
+      /** Gallery of additional images */
+      gallery: z
+        .array(
+          z.object({
+            src: image(),
+            alt: z.string().optional(),
+            caption: z.string().optional(),
+          })
+        )
+        .optional(),
+      /** EXIF override (auto-extracted at build if not provided) */
+      exif: z
+        .object({
+          camera: z.string().optional(),
+          lens: z.string().optional(),
+          focalLength: z.string().optional(),
+          aperture: z.string().optional(),
+          shutterSpeed: z.string().optional(),
+          iso: z.string().optional(),
+          dateTaken: z.string().optional(),
+        })
+        .optional(),
+      tags: z.array(z.string()).default([]),
+      draft: z.boolean().default(false),
+    }),
+});
+
+const galleries = defineCollection({
+  type: 'content',
+  schema: ({ image }) =>
+    z.object({
+      title: z.string(),
+      description: z.string().optional(),
+      pubDate: z.coerce.date(),
+      coverImage: image().optional(),
+      photos: z.array(
+        z.object({
+          src: image(),
+          alt: z.string().optional(),
+          caption: z.string().optional(),
+        })
+      ),
+      tags: z.array(z.string()).default([]),
+      /** Slideshow transition style */
+      slideshowStyle: z.enum(['fade', 'slide', 'zoom']).default('fade'),
+      /** Auto-advance interval in seconds (0 = manual) */
+      slideshowInterval: z.number().default(0),
+    }),
+});
+
+const slideshows = defineCollection({
+  type: 'data',
+  schema: ({ image }) =>
+    z.object({
+      title: z.string(),
+      description: z.string().optional(),
+      transition: z.enum(['fade', 'slide', 'zoom', 'kenburns']).default('fade'),
+      interval: z.number().default(5),
+      autoplay: z.boolean().default(true),
+      loop: z.boolean().default(true),
+      showCaptions: z.boolean().default(true),
+      showExif: z.boolean().default(false),
+      photos: z.array(
+        z.object({
+          src: image(),
+          alt: z.string().optional(),
+          caption: z.string().optional(),
+          credit: z.string().optional(),
+        })
+      ),
+    }),
+});
+
+export const collections = { posts, galleries, slideshows };

@@ -1,0 +1,98 @@
+backend:
+  name: github
+  repo: YOUR_USERNAME/YOUR_REPO   # Replace with your GitHub repo
+  branch: main
+  base_url: https://your-hub.railway.app  # Hub provides OAuth proxy
+  auth_endpoint: /api/auth/github
+
+media_folder: public/images
+public_folder: /images
+
+collections:
+  - name: posts
+    label: Posts
+    folder: src/content/posts
+    create: true
+    slug: "{{slug}}"
+    extension: md
+    fields:
+      - { label: Title, name: title, widget: string }
+      - { label: Description, name: description, widget: text, required: false }
+      - { label: Publish Date, name: pubDate, widget: datetime }
+      - { label: Featured Image, name: image, widget: image, required: false }
+      - { label: Image Alt Text, name: imageAlt, widget: string, required: false }
+      - label: Tags
+        name: tags
+        widget: list
+        default: []
+      - { label: Draft, name: draft, widget: boolean, default: false }
+      - label: EXIF Data
+        name: exif
+        widget: object
+        required: false
+        collapsed: true
+        fields:
+          - { label: Camera, name: camera, widget: string, required: false }
+          - { label: Lens, name: lens, widget: string, required: false }
+          - { label: Focal Length, name: focalLength, widget: string, required: false }
+          - { label: Aperture, name: aperture, widget: string, required: false }
+          - { label: Shutter Speed, name: shutterSpeed, widget: string, required: false }
+          - { label: ISO, name: iso, widget: string, required: false }
+          - { label: Date Taken, name: dateTaken, widget: string, required: false }
+      - label: Gallery
+        name: gallery
+        widget: list
+        required: false
+        fields:
+          - { label: Image, name: src, widget: image }
+          - { label: Alt Text, name: alt, widget: string, required: false }
+          - { label: Caption, name: caption, widget: string, required: false }
+      - { label: Body, name: body, widget: markdown }
+
+  - name: galleries
+    label: Galleries
+    folder: src/content/galleries
+    create: true
+    slug: "{{slug}}"
+    extension: md
+    fields:
+      - { label: Title, name: title, widget: string }
+      - { label: Description, name: description, widget: text, required: false }
+      - { label: Publish Date, name: pubDate, widget: datetime }
+      - { label: Cover Image, name: coverImage, widget: image, required: false }
+      - label: Tags
+        name: tags
+        widget: list
+        default: []
+      - label: Slideshow Style
+        name: slideshowStyle
+        widget: select
+        options: ["fade", "slide", "zoom"]
+        default: fade
+      - label: Slideshow Interval (seconds, 0 for manual)
+        name: slideshowInterval
+        widget: number
+        default: 0
+      - label: Photos
+        name: photos
+        widget: list
+        fields:
+          - { label: Image, name: src, widget: image }
+          - { label: Alt Text, name: alt, widget: string, required: false }
+          - { label: Caption, name: caption, widget: string, required: false }
+      - { label: Body, name: body, widget: markdown }
+
+  - name: site-settings
+    label: Site Settings
+    files:
+      - label: Configuration
+        name: config
+        file: src/lib/config.ts
+        fields:
+          - { label: Site Title, name: title, widget: string }
+          - { label: Description, name: description, widget: text }
+          - { label: Author Name, name: author, widget: string }
+          - { label: Bio, name: bio, widget: text }
+          - { label: Avatar, name: avatar, widget: image }
+          - { label: Location, name: location, widget: string, required: false }
+          - { label: Camera, name: camera, widget: string, required: false }

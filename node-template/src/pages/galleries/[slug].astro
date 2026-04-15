@@ -1,0 +1,60 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Slideshow from '../../components/Slideshow.astro';
+import { getCollection } from 'astro:content';
+
+export async function getStaticPaths() {
+  const galleries = await getCollection('galleries');
+  return galleries.map(g => ({ params: { slug: g.id }, props: { gallery: g } }));
+}
+
+const { gallery } = Astro.props;
+const { Content } = await gallery.render();
+---
+
+<BaseLayout title={gallery.data.title} description={gallery.data.description}>
+  <article class="mx-auto max-w-5xl">
+    <header class="mb-8">
+      <h1 class="text-3xl font-bold">{gallery.data.title}</h1>
+      {gallery.data.description && (
+        <p class="mt-2 text-zinc-400">{gallery.data.description}</p>
+      )}
+      <p class="mt-1 text-sm text-zinc-500">
+        {gallery.data.photos.length} photos &middot;
+        <time datetime={gallery.data.pubDate.toISOString()}>
+          {gallery.data.pubDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+        </time>
+      </p>
+    </header>
+
+    <!-- Slideshow -->
+    <Slideshow
+      photos={gallery.data.photos}
+      transition={gallery.data.slideshowStyle}
+      interval={gallery.data.slideshowInterval}
+    />
+
+    <!-- Text content -->
+    <div class="prose prose-invert prose-zinc mt-8 max-w-none">
+      <Content />
+    </div>
+
+    <!-- Grid view -->
+    <h2 class="mt-12 mb-6 text-xl font-semibold">All Photos</h2>
+    <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+      {gallery.data.photos.map((photo, i) => (
+        <button
+          class="group aspect-square overflow-hidden rounded cursor-pointer slideshow-jump"
+          data-index={i}
+        >
+          <img
+            src={typeof photo.src === 'string' ? photo.src : photo.src.src}
+            alt={photo.alt || `Photo ${i + 1}`}
+            class="h-full w-full object-cover transition group-hover:scale-110"
+            loading="lazy"
+          />
+        </button>
+      ))}
+    </div>
+  </article>
+</BaseLayout>

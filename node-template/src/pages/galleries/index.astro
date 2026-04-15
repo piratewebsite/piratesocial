@@ -1,0 +1,37 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getCollection } from 'astro:content';
+
+const galleries = (await getCollection('galleries'))
+  .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
+---
+
+<BaseLayout title="Galleries">
+  <h1 class="mb-8 text-2xl font-bold">Photo Galleries</h1>
+  <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+    {galleries.map((gallery) => (
+      <a
+        href={`/galleries/${gallery.id}`}
+        class="group overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900 transition hover:border-zinc-600"
+      >
+        {gallery.data.coverImage && (
+          <div class="aspect-video overflow-hidden">
+            <img
+              src={typeof gallery.data.coverImage === 'string' ? gallery.data.coverImage : gallery.data.coverImage.src}
+              alt={gallery.data.title}
+              class="h-full w-full object-cover transition group-hover:scale-105"
+              loading="lazy"
+            />
+          </div>
+        )}
+        <div class="p-4">
+          <h3 class="font-medium">{gallery.data.title}</h3>
+          <p class="mt-1 text-sm text-zinc-400">{gallery.data.photos.length} photos</p>
+          {gallery.data.description && (
+            <p class="mt-1 text-sm text-zinc-500 line-clamp-2">{gallery.data.description}</p>
+          )}
+        </div>
+      </a>
+    ))}
+  </div>
+</BaseLayout>
