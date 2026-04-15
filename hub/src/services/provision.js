@@ -176,19 +176,29 @@ export async function provisionNode(user, settings) {
     repoExists = true;
     console.log(`[provision] Repo ${repoName} already exists`);
   } catch {
-    // Repo doesn't exist — create it (no auto_init, we'll push our own initial commit)
+    // Repo doesn't exist — create it with auto_init so Git Data API works
     await ghApi('/user/repos', token, {
       method: 'POST',
       body: JSON.stringify({
         name: repoName,
         description: `My photography site on Pirate Social`,
         homepage: siteUrl,
-        auto_init: false,
+        auto_init: true,
         private: false,
       }),
     });
     console.log(`[provision] Created repo ${repoName}`);
-    await new Promise(r => setTimeout(r, 1000));
+    // Poll until the repo is initialized (main branch exists)
+    for (let attempt = 0; attempt < 10; attempt++) {
+      await new Promise(r => setTimeout(r, 1500));
+      try {
+        await ghApi(`/repos/${user.username}/${repoName}/git/ref/heads/main`, token);
+        console.log(`[provision] Repo ready after ${attempt + 1} attempts`);
+        break;
+      } catch {
+        console.log(`[provision] Waiting for repo init (attempt ${attempt + 1})...`);
+      }
+    }
   }
 
   // 2. Fetch the template file tree
