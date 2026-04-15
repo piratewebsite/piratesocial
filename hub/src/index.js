@@ -15,6 +15,7 @@ import webhookRoutes from './routes/webhooks.js';
 import adminRoutes from './routes/admin.js';
 import directoryRoutes from './routes/directory.js';
 import decapRoutes from './routes/decap.js';
+import blueskyRoutes from './routes/bluesky.js';
 import { aggregateAllFeeds } from './services/aggregator.js';
 
 const app = express();
@@ -67,6 +68,7 @@ app.get('/', (_req, res) => {
       interactions: '/api/interactions',
       directory: '/api/directory',
       webhooks: '/api/webhooks',
+      bluesky: '/api/bluesky',
     },
   });
 });
@@ -80,6 +82,7 @@ app.use('/api/webhooks', webhookRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/directory', directoryRoutes);
 app.use('/api/decap', decapRoutes);
+app.use('/api/bluesky', blueskyRoutes);
 
 // --- SSE endpoint for real-time updates ---
 const sseClients = new Map(); // userId -> Set<res>

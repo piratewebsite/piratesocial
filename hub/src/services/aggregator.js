@@ -12,7 +12,11 @@ const parser = new XMLParser({
 export async function aggregateAllFeeds(prisma) {
   const users = await prisma.user.findMany({
     where: { feedUrl: { not: null }, isBanned: false },
-    select: { id: true, username: true, feedUrl: true },
+    select: {
+      id: true, username: true, feedUrl: true,
+      blueskyHandle: true, blueskyAppPassword: true,
+      blueskyEnabled: true, blueskyDid: true,
+    },
   });
 
   console.log(`[aggregator] Processing ${users.length} feeds`);
@@ -94,7 +98,7 @@ export async function aggregateUserFeed(prisma, user) {
     }
 
     try {
-      await prisma.post.create({
+      const newPost = await prisma.post.create({
         data: {
           guid,
           userId: user.id,
@@ -111,6 +115,22 @@ export async function aggregateUserFeed(prisma, user) {
         },
       });
       newCount++;
+
+      // Cross-post to Bluesky if enabled
+      if (user.blueskyEnabled) {
+        try {
+          const { crossPostToBluesky } = await import('./bluesky.js');
+          const bskyUri = await crossPostToBluesky(user, newPost);
+          if (bskyUri) {
+            await prisma.post.update({
+              where: { id: newPost.id },
+              data: { blueskyUri: bskyUri },
+            });
+          }
+        } catch (bskyErr) {
+          console.warn(`[aggregator] Bluesky cross-post failed for "${guid}":`, bskyErr.message);
+        }
+      }
     } catch (err) {
       console.warn(`[aggregator] Failed to save post "${guid}":`, err.message);
     }

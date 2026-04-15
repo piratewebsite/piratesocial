@@ -21,6 +21,10 @@ model User {
   website       String?
   isAdmin       Boolean  @default(false)
   isBanned      Boolean  @default(false)
+  blueskyHandle String?
+  blueskyDid    String?
+  blueskyAppPassword String?
+  blueskyEnabled Boolean @default(false)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -50,6 +54,7 @@ model Post {
   exifData    Json?
   gallery     Json?
   tags        String[]
+  blueskyUri  String?
   createdAt   DateTime @default(now())
 
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)

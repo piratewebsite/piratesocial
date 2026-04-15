@@ -1,0 +1,172 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { siteConfig } from '../../lib/config';
+---
+
+<BaseLayout title="Bluesky Settings">
+  <div class="mx-auto max-w-xl">
+    <h1 class="text-2xl font-bold mb-6">Bluesky Integration</h1>
+    <p class="text-zinc-400 text-sm mb-8">
+      Connect your Bluesky account to automatically cross-post your photos.
+      New posts published to your site will appear on Bluesky with images and links back to your site.
+    </p>
+
+    <div id="auth-required" class="hidden text-center py-12 text-zinc-500">
+      <p>Sign in to manage your Bluesky connection</p>
+      <a href="/social/" class="mt-4 inline-block rounded bg-white text-black px-4 py-2 text-sm font-medium hover:bg-zinc-200 transition">
+        Sign in with GitHub
+      </a>
+    </div>
+
+    <div id="bluesky-settings" class="hidden space-y-6">
+      <!-- Status card -->
+      <div id="status-card" class="rounded-lg border border-zinc-800 bg-zinc-900 p-6">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-lg font-semibold">Connection Status</h2>
+          <span id="status-badge" class="text-xs px-2 py-1 rounded-full"></span>
+        </div>
+        <div id="status-details" class="text-sm text-zinc-400"></div>
+      </div>
+
+      <!-- Connect form (shown when not connected) -->
+      <div id="connect-form" class="hidden rounded-lg border border-zinc-800 bg-zinc-900 p-6">
+        <h2 class="text-lg font-semibold mb-4">Connect Bluesky</h2>
+        <p class="text-sm text-zinc-400 mb-4">
+          Use an <a href="https://bsky.app/settings/app-passwords" target="_blank" class="text-blue-400 hover:underline">App Password</a> — never your main password.
+        </p>
+        <form id="bsky-connect-form" class="space-y-4">
+          <div>
+            <label for="bsky-handle" class="block text-sm font-medium mb-1">Bluesky Handle</label>
+            <input type="text" id="bsky-handle" placeholder="yourname.bsky.social"
+              class="w-full rounded bg-zinc-800 border border-zinc-700 px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
+          </div>
+          <div>
+            <label for="bsky-password" class="block text-sm font-medium mb-1">App Password</label>
+            <input type="password" id="bsky-password" placeholder="xxxx-xxxx-xxxx-xxxx"
+              class="w-full rounded bg-zinc-800 border border-zinc-700 px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
+          </div>
+          <div id="connect-error" class="hidden text-red-400 text-sm"></div>
+          <button type="submit" class="w-full rounded bg-blue-600 px-4 py-2 text-sm font-medium hover:bg-blue-500 transition">
+            Connect Bluesky Account
+          </button>
+        </form>
+      </div>
+
+      <!-- Connected actions (shown when connected) -->
+      <div id="connected-actions" class="hidden space-y-4">
+        <div class="flex gap-3">
+          <button id="toggle-btn" class="flex-1 rounded px-4 py-2 text-sm font-medium transition"></button>
+          <button id="disconnect-btn" class="rounded bg-red-900 px-4 py-2 text-sm font-medium hover:bg-red-800 transition">
+            Disconnect
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</BaseLayout>
+
+<script is:inline define:vars={{ hubUrl: siteConfig.hubUrl }}>
+  const token = localStorage.getItem('ps_token');
+
+  if (!token) {
+    document.getElementById('auth-required').classList.remove('hidden');
+  } else {
+    document.getElementById('bluesky-settings').classList.remove('hidden');
+    loadStatus();
+  }
+
+  async function loadStatus() {
+    try {
+      const res = await fetch(`${hubUrl}/api/bluesky/status`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      renderStatus(data);
+    } catch (err) {
+      console.error('Failed to load Bluesky status:', err);
+    }
+  }
+
+  function renderStatus(data) {
+    const badge = document.getElementById('status-badge');
+    const details = document.getElementById('status-details');
+    const connectForm = document.getElementById('connect-form');
+    const connectedActions = document.getElementById('connected-actions');
+    const toggleBtn = document.getElementById('toggle-btn');
+
+    if (data.connected) {
+      badge.textContent = data.enabled ? 'Active' : 'Paused';
+      badge.className = `text-xs px-2 py-1 rounded-full ${data.enabled ? 'bg-green-900 text-green-300' : 'bg-yellow-900 text-yellow-300'}`;
+      details.innerHTML = `
+        <p><strong>Handle:</strong> @${data.handle}</p>
+        <p class="mt-1"><strong>DID:</strong> <code class="text-xs">${data.did}</code></p>
+        <p class="mt-1"><strong>Cross-posting:</strong> ${data.enabled ? 'New posts will appear on Bluesky' : 'Paused — new posts will not be cross-posted'}</p>
+      `;
+      connectForm.classList.add('hidden');
+      connectedActions.classList.remove('hidden');
+      toggleBtn.textContent = data.enabled ? 'Pause Cross-posting' : 'Enable Cross-posting';
+      toggleBtn.className = `flex-1 rounded px-4 py-2 text-sm font-medium transition ${data.enabled ? 'bg-yellow-700 hover:bg-yellow-600' : 'bg-green-700 hover:bg-green-600'}`;
+    } else {
+      badge.textContent = 'Not Connected';
+      badge.className = 'text-xs px-2 py-1 rounded-full bg-zinc-700 text-zinc-300';
+      details.innerHTML = '<p>No Bluesky account connected.</p>';
+      connectForm.classList.remove('hidden');
+      connectedActions.classList.add('hidden');
+    }
+  }
+
+  // Connect form
+  document.getElementById('bsky-connect-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const handle = document.getElementById('bsky-handle').value.trim();
+    const appPassword = document.getElementById('bsky-password').value.trim();
+    const errorEl = document.getElementById('connect-error');
+    errorEl.classList.add('hidden');
+
+    if (!handle || !appPassword) {
+      errorEl.textContent = 'Both fields are required';
+      errorEl.classList.remove('hidden');
+      return;
+    }
+
+    try {
+      const res = await fetch(`${hubUrl}/api/bluesky/connect`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ handle, appPassword }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        errorEl.textContent = data.error || 'Connection failed';
+        errorEl.classList.remove('hidden');
+        return;
+      }
+      loadStatus();
+    } catch (err) {
+      errorEl.textContent = 'Network error';
+      errorEl.classList.remove('hidden');
+    }
+  });
+
+  // Toggle
+  document.getElementById('toggle-btn').addEventListener('click', async () => {
+    await fetch(`${hubUrl}/api/bluesky/toggle`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    loadStatus();
+  });
+
+  // Disconnect
+  document.getElementById('disconnect-btn').addEventListener('click', async () => {
+    if (!confirm('Disconnect your Bluesky account? Existing cross-posts will remain on Bluesky.')) return;
+    await fetch(`${hubUrl}/api/bluesky/disconnect`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    loadStatus();
+  });
+</script>
