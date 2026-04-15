@@ -45,8 +45,10 @@ async function ghApi(endpoint, token, opts = {}) {
     },
   });
   if (!res.ok) {
+    const scopes = res.headers.get('x-oauth-scopes');
     const text = await res.text();
-    console.error(`[ghApi] ${method} ${endpoint} → ${res.status}`);
+    console.error(`[ghApi] ${method} ${endpoint} → ${res.status} (scopes: ${scopes})`);
+    console.error(`[ghApi] Response: ${text.slice(0, 300)}`);
     throw new Error(`GitHub API ${res.status}: ${text}`);
   }
   return res.json();
@@ -168,6 +170,12 @@ export async function provisionNode(user, settings) {
     : `https://${user.username}.github.io/${repoName}`;
 
   console.log(`[provision] Starting for ${user.username} → ${repoName}`);
+
+  // Check token scopes
+  const scopeCheck = await fetch('https://api.github.com/user', {
+    headers: { Authorization: `token ${token}` },
+  });
+  console.log(`[provision] Token scopes: ${scopeCheck.headers.get('x-oauth-scopes')}`);
 
   // 1. Create the repo (or check if it exists)
   let repoExists = false;
