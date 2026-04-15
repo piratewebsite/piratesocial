@@ -1,16 +1,19 @@
 ---
-title: "My First Photo Post"
-description: "A sample post to get you started with Pirate Social"
+title: My First Photo Post
+description: A sample post to get you started with Pirate Social
 pubDate: 2026-04-15
-image: "./sample.jpg"
-imageAlt: "Sample photograph"
-tags: ["photography", "sample"]
+image: /images/wasabi-balls.webp
+imageAlt: Sample photograph
+tags:
+  - photography
+  - sample
+draft: false
 exif:
-  camera: "Sony A7IV"
-  lens: "24-70mm f/2.8 GM"
-  focalLength: "50mm"
+  camera: Sony A7IV
+  lens: 24-70mm f/2.8 GM
+  focalLength: 50mm
   aperture: "2.8"
-  shutterSpeed: "1/250"
+  shutterSpeed: 1/250
   iso: "100"
 ---
 

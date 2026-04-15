@@ -5,6 +5,9 @@ backend:
   base_url: https://piratesocial-hub-production.up.railway.app
   auth_endpoint: /api/decap/auth
 
+site_url: https://twilightscapes.github.io
+display_url: https://twilightscapes.github.io
+
 media_folder: public/images
 public_folder: /images
 
@@ -87,7 +90,7 @@ collections:
     files:
       - label: Configuration
         name: config
-        file: src/lib/config.ts
+        file: src/data/settings.json
         fields:
           - { label: Site Title, name: title, widget: string }
           - { label: Description, name: description, widget: text }

@@ -73,11 +73,25 @@ export async function aggregateUserFeed(prisma, user) {
 
     // Check if post already exists
     const existing = await prisma.post.findUnique({ where: { guid } });
-    if (existing) continue;
 
     // Extract photo-specific fields (custom RSS namespace)
     const imageUrl = extractImageUrl(item);
     const exifData = extractExifData(item);
+    const gallery = extractGallery(item);
+    const tags = extractTags(item);
+
+    if (existing) {
+      // Update existing post if key fields changed
+      const updates = {};
+      if (imageUrl && imageUrl !== existing.imageUrl) updates.imageUrl = imageUrl;
+      if (item.title && item.title !== existing.title) updates.title = item.title;
+      const desc = item.description || item.summary || '';
+      if (desc && desc !== existing.description) updates.description = desc;
+      if (Object.keys(updates).length > 0) {
+        await prisma.post.update({ where: { guid }, data: updates });
+      }
+      continue;
+    }
     const gallery = extractGallery(item);
     const tags = extractTags(item);
 

@@ -2,20 +2,17 @@ import { defineCollection, z } from 'astro:content';
 
 const posts = defineCollection({
   type: 'content',
-  schema: ({ image }) =>
-    z.object({
+  schema: z.object({
       title: z.string(),
       description: z.string().optional(),
       pubDate: z.coerce.date(),
       updatedDate: z.coerce.date().optional(),
-      /** Hero/featured image */
-      image: image().optional(),
+      image: z.string().optional(),
       imageAlt: z.string().optional(),
-      /** Gallery of additional images */
       gallery: z
         .array(
           z.object({
-            src: image(),
+            src: z.string(),
             alt: z.string().optional(),
             caption: z.string().optional(),
           })
@@ -40,15 +37,14 @@ const posts = defineCollection({
 
 const galleries = defineCollection({
   type: 'content',
-  schema: ({ image }) =>
-    z.object({
+  schema: z.object({
       title: z.string(),
       description: z.string().optional(),
       pubDate: z.coerce.date(),
-      coverImage: image().optional(),
+      coverImage: z.string().optional(),
       photos: z.array(
         z.object({
-          src: image(),
+          src: z.string(),
           alt: z.string().optional(),
           caption: z.string().optional(),
         })
@@ -63,8 +59,7 @@ const galleries = defineCollection({
 
 const slideshows = defineCollection({
   type: 'data',
-  schema: ({ image }) =>
-    z.object({
+  schema: z.object({
       title: z.string(),
       description: z.string().optional(),
       transition: z.enum(['fade', 'slide', 'zoom', 'kenburns']).default('fade'),
@@ -75,7 +70,7 @@ const slideshows = defineCollection({
       showExif: z.boolean().default(false),
       photos: z.array(
         z.object({
-          src: image(),
+          src: z.string(),
           alt: z.string().optional(),
           caption: z.string().optional(),
           credit: z.string().optional(),
