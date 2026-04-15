@@ -4,6 +4,9 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  # Rebuild weekly to pick up template updates
+  schedule:
+    - cron: '0 6 * * 1'
 
 permissions:
   contents: read
@@ -18,24 +21,80 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout user repo
+        uses: actions/checkout@v4
+        with:
+          path: user-repo
+
+      - name: Fetch latest template
+        uses: actions/checkout@v4
+        with:
+          repository: twilightscapes/piratesocial
+          path: template-source
+          sparse-checkout: node-template
+          sparse-checkout-cone-mode: true
+
+      - name: Merge template + user content
+        run: |
+          # Start with fresh template code
+          cp -r template-source/node-template build
+          
+          # Overlay user content (these are the user's own files)
+          # Posts, galleries, and other content
+          if [ -d user-repo/src/content ]; then
+            rm -rf build/src/content
+            cp -r user-repo/src/content build/src/content
+          fi
+          
+          # User settings (author, bio, etc.)
+          if [ -f user-repo/src/data/settings.json ]; then
+            cp user-repo/src/data/settings.json build/src/data/settings.json
+          fi
+          
+          # User images
+          if [ -d user-repo/public/images ]; then
+            rm -rf build/public/images
+            cp -r user-repo/public/images build/public/images
+          fi
+          
+          # Decap CMS config (has user's repo name, URLs)
+          if [ -f user-repo/public/admin/config.yml ]; then
+            mkdir -p build/public/admin
+            cp user-repo/public/admin/config.yml build/public/admin/config.yml
+          fi
+          
+          # Preserve user's package.json if they added custom dependencies
+          if [ -f user-repo/package.json ]; then
+            cp user-repo/package.json build/package.json
+          fi
+          
+          # Preserve user's astro.config (has their site URL)
+          if [ -f user-repo/astro.config.mjs ]; then
+            cp user-repo/astro.config.mjs build/astro.config.mjs
+          fi
+          
+          echo "✅ Merged template + user content"
+          echo "Template files from: twilightscapes/piratesocial/node-template"
+          echo "User content from: ${{ github.repository }}"
 
       - uses: actions/setup-node@v4
         with:
           node-version: 20
 
       - name: Install dependencies
+        working-directory: build
         run: npm install
 
       - name: Build site
+        working-directory: build
         env:
-          SITE_URL: https://${{ github.repository_owner }}.github.io
+          SITE_URL: ${{ github.event.repository.homepage || format('https://{0}.github.io/{1}', github.repository_owner, github.event.repository.name) }}
         run: npm run build
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: dist/
+          path: build/dist/
 
   deploy:
     needs: build
