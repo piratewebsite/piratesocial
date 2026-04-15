@@ -11,6 +11,7 @@ const { title, description, image } = Astro.props;
 const pageTitle = title ? `${title} | ${siteConfig.title}` : siteConfig.title;
 const pageDescription = description || siteConfig.description;
 const ogImage = image || siteConfig.avatar;
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 ---
 
 <!doctype html>
@@ -29,21 +30,21 @@ const ogImage = image || siteConfig.avatar;
     <meta property="og:type" content="website" />
 
     <!-- RSS -->
-    <link rel="alternate" type="application/rss+xml" title={siteConfig.title} href="/feed.xml" />
+    <link rel="alternate" type="application/rss+xml" title={siteConfig.title} href={`${base}/feed.xml`} />
 
     <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/svg+xml" href={`${base}/favicon.svg`} />
   </head>
   <body class="min-h-screen bg-zinc-950 text-zinc-100 antialiased">
     <header class="border-b border-zinc-800">
       <nav class="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
-        <a href="/" class="text-xl font-bold tracking-tight">{siteConfig.title}</a>
+        <a href={`${base}/`} class="text-xl font-bold tracking-tight">{siteConfig.title}</a>
         <div class="flex items-center gap-6 text-sm">
-          <a href="/posts" class="hover:text-white text-zinc-400 transition">Posts</a>
-          <a href="/galleries" class="hover:text-white text-zinc-400 transition">Galleries</a>
-          <a href="/social" class="hover:text-white text-zinc-400 transition">Social</a>
-          <a href="/settings/bluesky" class="hover:text-white text-zinc-400 transition">Settings</a>
-          <a href="/about" class="hover:text-white text-zinc-400 transition">About</a>
+          <a href={`${base}/posts`} class="hover:text-white text-zinc-400 transition">Posts</a>
+          <a href={`${base}/galleries`} class="hover:text-white text-zinc-400 transition">Galleries</a>
+          <a href={`${base}/social`} class="hover:text-white text-zinc-400 transition">Social</a>
+          <a href={`${base}/settings/bluesky`} class="hover:text-white text-zinc-400 transition">Settings</a>
+          <a href={`${base}/about`} class="hover:text-white text-zinc-400 transition">About</a>
           <button id="auth-btn" class="rounded bg-zinc-800 px-3 py-1.5 text-xs hover:bg-zinc-700 transition">
             Sign In
           </button>
@@ -58,7 +59,7 @@ const ogImage = image || siteConfig.avatar;
     <footer class="border-t border-zinc-800 mt-16">
       <div class="mx-auto max-w-6xl px-4 py-8 text-center text-sm text-zinc-500">
         <p>Powered by <a href="https://github.com/piratesocial" class="underline hover:text-white">Pirate Social</a></p>
-        <p class="mt-1">Part of the distributed photography network &middot; <a href="/feed.xml" class="underline">RSS</a></p>
+        <p class="mt-1">Part of the distributed photography network &middot; <a href={`${base}/feed.xml`} class="underline">RSS</a></p>
       </div>
     </footer>
 

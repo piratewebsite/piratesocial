@@ -2,6 +2,7 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { getCollection } from 'astro:content';
 
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 const galleries = (await getCollection('galleries'))
   .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
 ---
@@ -11,7 +12,7 @@ const galleries = (await getCollection('galleries'))
   <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
     {galleries.map((gallery) => (
       <a
-        href={`/galleries/${gallery.id}`}
+        href={`${base}/galleries/${gallery.id}`}
         class="group overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900 transition hover:border-zinc-600"
       >
         {gallery.data.coverImage && (
