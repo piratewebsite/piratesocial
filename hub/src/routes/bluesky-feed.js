@@ -29,7 +29,8 @@ router.get('/timeline', authenticate, async (req, res) => {
       cursor: response.data.cursor || null,
     });
   } catch (err) {
-    console.error('Bluesky timeline error:', err.message);
+    console.error('Bluesky timeline error:', err.status, err.message);
+    if (err.status === 429) return res.status(429).json({ error: 'Rate limited by Bluesky. Please wait a moment.' });
     res.status(500).json({ error: 'Failed to fetch Bluesky timeline' });
   }
 });
@@ -62,7 +63,8 @@ router.get('/author/:handle', authenticate, async (req, res) => {
       cursor: response.data.cursor || null,
     });
   } catch (err) {
-    console.error('Bluesky author feed error:', err.message);
+    console.error('Bluesky author feed error:', err.status, err.message);
+    if (err.status === 429) return res.status(429).json({ error: 'Rate limited by Bluesky. Please wait a moment.' });
     res.status(500).json({ error: 'Failed to fetch author feed' });
   }
 });
@@ -245,7 +247,8 @@ router.get('/squads/:id/activity', authenticate, async (req, res) => {
 
     res.json({ activityWindow: squad.activityWindow, members });
   } catch (err) {
-    console.error('Activity check error:', err.message);
+    console.error('Activity check error:', err.status, err.message);
+    if (err.status === 429) return res.status(429).json({ error: 'Rate limited by Bluesky. Please wait a moment.' });
     res.status(500).json({ error: 'Failed to check activity' });
   }
 });
@@ -286,7 +289,8 @@ router.get('/squads/:id/feed', authenticate, async (req, res) => {
 
     res.json({ posts: allPosts });
   } catch (err) {
-    console.error('Squad feed error:', err.message);
+    console.error('Squad feed error:', err.status, err.message);
+    if (err.status === 429) return res.status(429).json({ error: 'Rate limited by Bluesky. Please wait a moment.' });
     res.status(500).json({ error: 'Failed to fetch squad feed' });
   }
 });
