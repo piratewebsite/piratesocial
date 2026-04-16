@@ -4,12 +4,16 @@ import jwt from 'jsonwebtoken';
 const router = Router();
 
 // Step 1: Redirect to GitHub OAuth
-router.get('/github', (_req, res) => {
+router.get('/github', (req, res) => {
   const params = new URLSearchParams({
     client_id: process.env.GITHUB_CLIENT_ID,
     redirect_uri: `${process.env.HUB_URL}/api/auth/github/callback`,
     scope: 'read:user user:email public_repo workflow',
   });
+  // Pass redirect hint through OAuth state (e.g. ?redirect=/admin.html)
+  if (req.query.redirect) {
+    params.set('state', req.query.redirect);
+  }
   res.redirect(`https://github.com/login/oauth/authorize?${params}`);
 });
 
@@ -70,6 +74,12 @@ router.get('/github/callback', async (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: '30d' }
     );
+
+    // Check if OAuth state contains a redirect path (e.g. /admin.html)
+    const stateRedirect = req.query.state;
+    if (stateRedirect && stateRedirect.startsWith('/')) {
+      return res.redirect(`${process.env.HUB_URL}${stateRedirect}?token=${jwtToken}`);
+    }
 
     // New users go to setup wizard; returning users go to their site
     if (!user.nodeCreated) {
