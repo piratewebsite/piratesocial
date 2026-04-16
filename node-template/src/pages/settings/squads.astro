@@ -46,14 +46,16 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
   } else {
     document.getElementById('squads-app').classList.remove('hidden');
     // Fetch user's Bluesky profile for center avatar
-    try {
-      const bskyRes = await fetch(`${hubUrl}/api/bluesky/status`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const bskyData = await bskyRes.json();
-      myHandle = bskyData.handle;
-    } catch {}
-    loadSquads();
+    (async () => {
+      try {
+        const bskyRes = await fetch(`${hubUrl}/api/bluesky/status`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const bskyData = await bskyRes.json();
+        myHandle = bskyData.handle;
+      } catch {}
+      loadSquads();
+    })();
   }
 
   // --- Create squad ---
