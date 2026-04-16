@@ -21,13 +21,14 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 
     <div id="feeds-app" class="hidden">
       <!-- Add feed form -->
-      <form id="add-feed-form" class="flex gap-2 mb-8">
-        <input type="url" id="feed-url-input" placeholder="https://example.com/feed.xml" required
+      <form id="add-feed-form" class="flex gap-2 mb-3">
+        <input type="text" id="feed-url-input" placeholder="https://example.com/feed.xml or @handle.bsky.social" required
           class="flex-1 rounded bg-zinc-800 border border-zinc-700 px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
         <button type="submit" id="add-feed-btn" class="rounded bg-blue-600 px-4 py-2 text-sm font-medium hover:bg-blue-500 transition whitespace-nowrap">
           Add Feed
         </button>
       </form>
+      <p class="text-zinc-500 text-xs mb-6">Paste any RSS/Atom URL, or a Bluesky handle (e.g. <code class="text-zinc-400">alice.bsky.social</code> or <code class="text-zinc-400">@alice.bsky.social</code>)</p>
       <div id="add-error" class="hidden text-red-400 text-sm mb-4"></div>
 
       <!-- Filter tabs -->
@@ -113,12 +114,22 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
   }
 
   // --- Add feed ---
+  function resolveInput(raw) {
+    // Bluesky handle: @user.bsky.social or user.bsky.social or user.custom.domain
+    const stripped = raw.replace(/^@/, '');
+    // If it looks like a domain handle (has dots, no slashes, no ://)
+    if (/^[\w.-]+\.\w{2,}$/.test(stripped) && !stripped.includes('/')) {
+      return `https://bsky.app/profile/${stripped}/rss`;
+    }
+    return raw;
+  }
+
   document.getElementById('add-feed-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const input = document.getElementById('feed-url-input');
     const errorEl = document.getElementById('add-error');
     const btn = document.getElementById('add-feed-btn');
-    const feedUrl = input.value.trim();
+    const feedUrl = resolveInput(input.value.trim());
 
     errorEl.classList.add('hidden');
     btn.disabled = true;
