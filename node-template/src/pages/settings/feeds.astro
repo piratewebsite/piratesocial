@@ -372,7 +372,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 
       return `
       <article class="rounded-lg border border-zinc-800 bg-zinc-900 overflow-hidden">
-        ${primaryImage ? `<img src="${esc(primaryImage)}" alt="${esc(embed.images?.[0]?.alt || post.title)}" class="w-full aspect-[16/9] object-cover" loading="lazy" onerror="this.style.display='none'" />` : ''}
+        ${primaryImage ? `<div class="bg-black flex justify-center"><img src="${esc(primaryImage)}" alt="${esc(embed.images?.[0]?.alt || post.title)}" class="max-w-full max-h-[28rem] object-contain" loading="lazy" onerror="this.parentElement.style.display='none'" /></div>` : ''}
         <div class="p-4">
           <div class="flex items-center gap-2 mb-2">
             ${post.feed?.iconUrl
