@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authenticate } from '../middleware/auth.js';
-import { createAgent } from '../services/bluesky.js';
+import { createAgent, evictAgentCache } from '../services/bluesky.js';
 
 const router = Router();
 
@@ -30,6 +30,7 @@ router.get('/timeline', authenticate, async (req, res) => {
     });
   } catch (err) {
     console.error('Bluesky timeline error:', err.status, err.message);
+    if (err.status === 401 || err.message?.includes('expired')) evictAgentCache(req.user.id);
     if (err.status === 429) return res.status(429).json({ error: 'Rate limited by Bluesky. Please wait a moment.' });
     res.status(500).json({ error: 'Failed to fetch Bluesky timeline' });
   }
@@ -64,6 +65,7 @@ router.get('/author/:handle', authenticate, async (req, res) => {
     });
   } catch (err) {
     console.error('Bluesky author feed error:', err.status, err.message);
+    if (err.status === 401 || err.message?.includes('expired')) evictAgentCache(req.user.id);
     if (err.status === 429) return res.status(429).json({ error: 'Rate limited by Bluesky. Please wait a moment.' });
     res.status(500).json({ error: 'Failed to fetch author feed' });
   }

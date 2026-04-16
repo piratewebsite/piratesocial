@@ -1,19 +1,19 @@
 import { AtpAgent, RichText } from '@atproto/api';
 
 // Cache authenticated agents to avoid re-login on every request.
-// Key: `${userId}`, Value: { agent, expiresAt }
+// Key: userId, Value: { agent, expiresAt }
 const agentCache = new Map();
 const AGENT_TTL = 5 * 60 * 1000; // 5 minutes
 
 /**
  * Create an authenticated Bluesky agent for a user.
- * Caches the agent to avoid repeated logins (rate limit cause).
- * If no user is provided, creates an unauthenticated agent for public reads.
+ * Caches the agent to avoid repeated logins.
+ * If a cached agent's session has expired, it re-authenticates.
  */
 export async function createAgent(user) {
   if (user?.id && user?.blueskyHandle && user?.blueskyAppPassword) {
     const cached = agentCache.get(user.id);
-    if (cached && cached.expiresAt > Date.now()) {
+    if (cached && cached.expiresAt > Date.now() && cached.agent.session) {
       return cached.agent;
     }
 
@@ -27,6 +27,13 @@ export async function createAgent(user) {
   }
 
   return new AtpAgent({ service: 'https://bsky.social' });
+}
+
+/**
+ * Evict cached agent for a user (e.g. on auth failure).
+ */
+export function evictAgentCache(userId) {
+  agentCache.delete(userId);
 }
 
 /**
