@@ -160,7 +160,7 @@ import { siteConfig } from '../lib/config';
       } else if (currentTab === 'timeline' && token) {
         url = `${hubUrl}/api/timeline?page=${currentPage}`;
       } else if (currentTab === 'bluesky' && token) {
-        // Use browser-side Bluesky session — call bsky.social directly (no proxy)
+        // Get browser-side Bluesky session, use hub as thin proxy (server-to-server to bsky.social)
         const session = await ensureBskySession();
         console.log('[PS] Bluesky session:', session ? 'got accessJwt' : 'NONE');
         if (!session?.accessJwt) {
@@ -168,13 +168,13 @@ import { siteConfig } from '../lib/config';
           return;
         }
         try {
-          let bskyUrl = `https://bsky.social/xrpc/app.bsky.feed.getTimeline?limit=30`;
-          if (bskyCursor) bskyUrl += `&cursor=${encodeURIComponent(bskyCursor)}`;
-          console.log('[PS] Fetching timeline direct from bsky.social...');
-          const res = await fetchWithTimeout(bskyUrl, {
+          let proxyUrl = `${hubUrl}/api/bluesky-feed/proxy/timeline?limit=30`;
+          if (bskyCursor) proxyUrl += `&cursor=${encodeURIComponent(bskyCursor)}`;
+          console.log('[PS] Fetching timeline via hub proxy...');
+          const res = await fetch(proxyUrl, {
             headers: { 'Authorization': `Bearer ${session.accessJwt}` },
-          }, 30000);
-          console.log('[PS] bsky.social response:', res.status);
+          });
+          console.log('[PS] Proxy response:', res.status);
           if (res.ok) {
             const raw = await res.json();
             const posts = (raw.feed || []).map(item => normalizeBskyPostClient(item));
@@ -186,9 +186,9 @@ import { siteConfig } from '../lib/config';
             console.log('[PS] Token expired, refreshing...');
             const refreshed = await refreshBskySession();
             if (refreshed?.accessJwt) {
-              const retry = await fetchWithTimeout(bskyUrl, {
+              const retry = await fetch(proxyUrl, {
                 headers: { 'Authorization': `Bearer ${refreshed.accessJwt}` },
-              }, 30000);
+              });
               if (retry.ok) {
                 const raw = await retry.json();
                 const posts = (raw.feed || []).map(item => normalizeBskyPostClient(item));
@@ -198,20 +198,7 @@ import { siteConfig } from '../lib/config';
             }
           }
         } catch (err) {
-          console.error('[PS] Direct bsky.social error:', err.message);
-        }
-        // Fallback: own posts via public API
-        if (session.handle) {
-          try {
-            const pubUrl = `https://public.api.bsky.app/xrpc/app.bsky.feed.getAuthorFeed?actor=${encodeURIComponent(session.handle)}&limit=30${bskyCursor ? `&cursor=${encodeURIComponent(bskyCursor)}` : ''}`;
-            const pubRes = await fetchWithTimeout(pubUrl, {}, 8000);
-            if (pubRes.ok) {
-              const pubData = await pubRes.json();
-              const posts = (pubData.feed || []).map(item => normalizeBskyPostClient(item));
-              renderBskyPosts({ posts, cursor: pubData.cursor || null }, append);
-              return;
-            }
-          } catch {}
+          console.error('[PS] Proxy error:', err.message);
         }
         feedContainer.innerHTML = '<div class="text-center py-8 text-red-400">Failed to load Bluesky feed. Try refreshing the page.</div>';
         return;

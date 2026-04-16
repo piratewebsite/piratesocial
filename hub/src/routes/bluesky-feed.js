@@ -18,14 +18,9 @@ router.get('/proxy/timeline', async (req, res) => {
     if (cursor) apiUrl += `&cursor=${encodeURIComponent(cursor)}`;
 
     console.log('[proxy/timeline] Fetching from bsky.social...');
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 8000);
-
     const response = await fetch(apiUrl, {
       headers: { 'Authorization': `Bearer ${token}` },
-      signal: controller.signal,
     });
-    clearTimeout(timeout);
     console.log('[proxy/timeline] bsky.social responded:', response.status);
 
     if (!response.ok) {
@@ -34,11 +29,10 @@ router.get('/proxy/timeline', async (req, res) => {
     }
 
     const data = await response.json();
-    const posts = (data.feed || []).map(item => normalizeBskyPost(item.post, item.reason));
-    res.json({ posts, cursor: data.cursor || null });
+    res.json({ feed: data.feed || [], cursor: data.cursor || null });
   } catch (err) {
     console.error('Proxy timeline error:', err.message);
-    res.status(502).json({ error: 'Bluesky API timed out or is unreachable' });
+    res.status(502).json({ error: 'Bluesky API unreachable' });
   }
 });
 
