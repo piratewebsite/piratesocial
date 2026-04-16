@@ -62,6 +62,67 @@ import { siteConfig } from '../lib/config';
     return fetch(url, { ...opts, signal: ctrl.signal }).finally(() => clearTimeout(timer));
   }
 
+  // --- Bluesky Session Management (browser-side, like skypost) ---
+  let bskySession = null;
+
+  function loadBskySession() {
+    try {
+      const stored = localStorage.getItem('ps_bsky_session');
+      if (stored) bskySession = JSON.parse(stored);
+    } catch { bskySession = null; }
+    return bskySession;
+  }
+
+  function saveBskySession(session) {
+    bskySession = session;
+    localStorage.setItem('ps_bsky_session', JSON.stringify(session));
+  }
+
+  async function ensureBskySession() {
+    // Return cached session if we have one
+    if (bskySession?.accessJwt) return bskySession;
+    loadBskySession();
+    if (bskySession?.accessJwt) return bskySession;
+
+    // Get session from hub (hub calls createSession with stored app password)
+    if (!token) return null;
+    try {
+      const res = await fetchWithTimeout(`${hubUrl}/api/bluesky/session`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }, 10000);
+      if (res.ok) {
+        const data = await res.json();
+        saveBskySession(data);
+        return data;
+      }
+    } catch {}
+    return null;
+  }
+
+  async function refreshBskySession() {
+    if (!bskySession?.refreshJwt) return null;
+    try {
+      const res = await fetchWithTimeout('https://bsky.social/xrpc/com.atproto.server.refreshSession', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${bskySession.refreshJwt}` },
+      }, 8000);
+      if (res.ok) {
+        const data = await res.json();
+        bskySession.accessJwt = data.accessJwt;
+        if (data.refreshJwt) bskySession.refreshJwt = data.refreshJwt;
+        saveBskySession(bskySession);
+        return bskySession;
+      } else {
+        // Refresh failed — clear session and re-create from hub
+        localStorage.removeItem('ps_bsky_session');
+        bskySession = null;
+        return ensureBskySession();
+      }
+    } catch {
+      return null;
+    }
+  }
+
   // Tab switching
   document.querySelectorAll('[id^="tab-"]').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -92,20 +153,41 @@ import { siteConfig } from '../lib/config';
       } else if (currentTab === 'timeline' && token) {
         url = `${hubUrl}/api/timeline?page=${currentPage}`;
       } else if (currentTab === 'bluesky' && token) {
-        // Try hub proxy first (has auth for getTimeline), with timeout
-        url = `${hubUrl}/api/bluesky-feed/timeline${bskyCursor ? `?cursor=${encodeURIComponent(bskyCursor)}` : ''}`;
+        // Use browser-side Bluesky session with thin hub proxy
+        const session = await ensureBskySession();
+        if (!session?.accessJwt) {
+          feedContainer.innerHTML = '<div class="text-center py-8 text-zinc-500">Connect your Bluesky account in Settings to see your feed</div>';
+          return;
+        }
         try {
-          const res = await fetchWithTimeout(url, { headers }, 10000);
+          const proxyUrl = `${hubUrl}/api/bluesky-feed/proxy/timeline?limit=30${bskyCursor ? `&cursor=${encodeURIComponent(bskyCursor)}` : ''}`;
+          const res = await fetchWithTimeout(proxyUrl, {
+            headers: { 'Authorization': `Bearer ${session.accessJwt}` },
+          }, 10000);
           if (res.ok) {
             const data = await res.json();
             renderBskyPosts(data, append);
             return;
           }
+          // If 401/expired, refresh and retry once
+          if (res.status === 401 || res.status === 400) {
+            const refreshed = await refreshBskySession();
+            if (refreshed?.accessJwt) {
+              const retry = await fetchWithTimeout(proxyUrl, {
+                headers: { 'Authorization': `Bearer ${refreshed.accessJwt}` },
+              }, 10000);
+              if (retry.ok) {
+                const data = await retry.json();
+                renderBskyPosts(data, append);
+                return;
+              }
+            }
+          }
         } catch {}
-        // Fallback: fetch own posts via public API (no auth needed)
-        if (myHandle) {
+        // Fallback: own posts via public API
+        if (session.handle) {
           try {
-            const pubUrl = `https://public.api.bsky.app/xrpc/app.bsky.feed.getAuthorFeed?actor=${encodeURIComponent(myHandle)}&limit=30${bskyCursor ? `&cursor=${encodeURIComponent(bskyCursor)}` : ''}`;
+            const pubUrl = `https://public.api.bsky.app/xrpc/app.bsky.feed.getAuthorFeed?actor=${encodeURIComponent(session.handle)}&limit=30${bskyCursor ? `&cursor=${encodeURIComponent(bskyCursor)}` : ''}`;
             const pubRes = await fetchWithTimeout(pubUrl, {}, 8000);
             if (pubRes.ok) {
               const pubData = await pubRes.json();
@@ -115,7 +197,7 @@ import { siteConfig } from '../lib/config';
             }
           } catch {}
         }
-        feedContainer.innerHTML = '<div class="text-center py-8 text-red-400">Failed to load Bluesky feed. The server may be temporarily unavailable.</div>';
+        feedContainer.innerHTML = '<div class="text-center py-8 text-red-400">Failed to load Bluesky feed. Try refreshing the page.</div>';
         return;
       } else if (currentTab === 'discover' || (currentTab === 'timeline' && !token)) {
         url = `${hubUrl}/api/timeline/discover?page=${currentPage}`;
@@ -592,13 +674,11 @@ import { siteConfig } from '../lib/config';
     if (squadsInitialized) return;
     squadsInitialized = true;
     try {
-      const bskyRes = await fetch(`${hubUrl}/api/bluesky/status`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const bskyData = await bskyRes.json();
-      myHandle = bskyData.handle;
+      // Use cached Bluesky session (already fetched by ensureBskySession)
+      const session = await ensureBskySession();
+      myHandle = session?.handle || null;
       if (myHandle) {
-        const profileRes = await fetch(`https://public.api.bsky.app/xrpc/app.bsky.actor.getProfile?actor=${encodeURIComponent(myHandle)}`);
+        const profileRes = await fetchWithTimeout(`https://public.api.bsky.app/xrpc/app.bsky.actor.getProfile?actor=${encodeURIComponent(myHandle)}`, {}, 8000);
         if (profileRes.ok) {
           const profile = await profileRes.json();
           myAvatar = profile.avatar || null;

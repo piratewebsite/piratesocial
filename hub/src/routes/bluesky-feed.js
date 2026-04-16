@@ -4,7 +4,38 @@ import { createAgent, evictAgentCache } from '../services/bluesky.js';
 
 const router = Router();
 
-// --- Bluesky Timeline Proxy ---
+// --- Thin Bluesky Proxy (forwards browser's accessJwt) ---
+
+// GET /proxy/timeline — forward getTimeline to Bluesky using browser's JWT
+router.get('/proxy/timeline', async (req, res) => {
+  const token = req.headers['authorization']?.replace('Bearer ', '');
+  if (!token) return res.status(401).json({ error: 'No token provided' });
+
+  try {
+    const limit = Math.min(parseInt(req.query.limit) || 30, 100);
+    const cursor = req.query.cursor;
+    let apiUrl = `https://bsky.social/xrpc/app.bsky.feed.getTimeline?limit=${limit}`;
+    if (cursor) apiUrl += `&cursor=${encodeURIComponent(cursor)}`;
+
+    const response = await fetch(apiUrl, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      return res.status(response.status).json({ error: err.message || `Bluesky API error ${response.status}` });
+    }
+
+    const data = await response.json();
+    const posts = (data.feed || []).map(item => normalizeBskyPost(item.post, item.reason));
+    res.json({ posts, cursor: data.cursor || null });
+  } catch (err) {
+    console.error('Proxy timeline error:', err.message);
+    res.status(500).json({ error: 'Failed to fetch timeline' });
+  }
+});
+
+// --- Bluesky Timeline Proxy (legacy — uses server-side auth) ---
 
 // GET /timeline — fetch the user's Bluesky home timeline
 router.get('/timeline', authenticate, async (req, res) => {

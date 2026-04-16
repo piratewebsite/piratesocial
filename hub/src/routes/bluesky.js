@@ -29,6 +29,44 @@ router.get('/status', authenticate, async (req, res) => {
   });
 });
 
+// Get a Bluesky session (accessJwt/refreshJwt) for browser-side API calls.
+// Uses the stored app password to create a session, returns tokens to the browser.
+router.get('/session', authenticate, async (req, res) => {
+  const prisma = req.app.locals.prisma;
+  const user = await prisma.user.findUnique({
+    where: { id: req.user.id },
+    select: { blueskyHandle: true, blueskyAppPassword: true, blueskyDid: true },
+  });
+
+  if (!user?.blueskyHandle || !user?.blueskyAppPassword) {
+    return res.status(400).json({ error: 'Bluesky account not connected' });
+  }
+
+  try {
+    const response = await fetch('https://bsky.social/xrpc/com.atproto.server.createSession', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ identifier: user.blueskyHandle, password: user.blueskyAppPassword }),
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      return res.status(response.status).json({ error: err.message || 'Failed to create Bluesky session' });
+    }
+
+    const data = await response.json();
+    res.json({
+      accessJwt: data.accessJwt,
+      refreshJwt: data.refreshJwt,
+      did: data.did,
+      handle: data.handle,
+    });
+  } catch (err) {
+    console.error('Bluesky session error:', err.message);
+    res.status(500).json({ error: 'Failed to create Bluesky session' });
+  }
+});
+
 // Connect Bluesky account (save handle + app password)
 router.post('/connect', authenticate, async (req, res) => {
   const { handle, appPassword } = req.body;
