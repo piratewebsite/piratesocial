@@ -173,7 +173,7 @@ import { siteConfig } from '../lib/config';
           console.log('[PS] Fetching timeline direct from bsky.social...');
           const res = await fetchWithTimeout(bskyUrl, {
             headers: { 'Authorization': `Bearer ${session.accessJwt}` },
-          }, 10000);
+          }, 30000);
           console.log('[PS] bsky.social response:', res.status);
           if (res.ok) {
             const raw = await res.json();
@@ -188,7 +188,7 @@ import { siteConfig } from '../lib/config';
             if (refreshed?.accessJwt) {
               const retry = await fetchWithTimeout(bskyUrl, {
                 headers: { 'Authorization': `Bearer ${refreshed.accessJwt}` },
-              }, 10000);
+              }, 30000);
               if (retry.ok) {
                 const raw = await retry.json();
                 const posts = (raw.feed || []).map(item => normalizeBskyPostClient(item));
