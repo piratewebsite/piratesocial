@@ -53,6 +53,78 @@ router.delete('/posts/:id', async (req, res) => {
   res.json({ deleted: true });
 });
 
+// List all users
+router.get('/users', async (req, res) => {
+  const prisma = req.app.locals.prisma;
+  const users = await prisma.user.findMany({
+    orderBy: { createdAt: 'asc' },
+    select: {
+      id: true, username: true, displayName: true, avatarUrl: true,
+      siteUrl: true, feedUrl: true, isAdmin: true, isBanned: true,
+      nodeCreated: true, createdAt: true,
+      _count: { select: { posts: true, followers: true, following: true } },
+    },
+  });
+  res.json(users);
+});
+
+// Reset a user (set nodeCreated=false, clear siteUrl/feedUrl so they re-provision)
+router.post('/users/:id/reset', async (req, res) => {
+  const prisma = req.app.locals.prisma;
+  const user = await prisma.user.update({
+    where: { id: req.params.id },
+    data: { nodeCreated: false, siteUrl: null, feedUrl: null },
+    select: { id: true, username: true, nodeCreated: true },
+  });
+  res.json(user);
+});
+
+// Delete a user and all their data
+router.delete('/users/:id', async (req, res) => {
+  const prisma = req.app.locals.prisma;
+  const target = await prisma.user.findUnique({ where: { id: req.params.id } });
+  if (!target) return res.status(404).json({ error: 'User not found' });
+  if (target.isAdmin) return res.status(403).json({ error: 'Cannot delete admin user' });
+
+  // Delete related records first
+  await prisma.$transaction([
+    prisma.like.deleteMany({ where: { userId: req.params.id } }),
+    prisma.comment.deleteMany({ where: { userId: req.params.id } }),
+    prisma.notification.deleteMany({ where: { userId: req.params.id } }),
+    prisma.follow.deleteMany({ where: { OR: [{ followerId: req.params.id }, { followingId: req.params.id }] } }),
+    prisma.report.deleteMany({ where: { OR: [{ reporterId: req.params.id }, { reportedId: req.params.id }] } }),
+    prisma.externalPost.deleteMany({ where: { feed: { userId: req.params.id } } }),
+    prisma.externalFeed.deleteMany({ where: { userId: req.params.id } }),
+    prisma.post.deleteMany({ where: { userId: req.params.id } }),
+    prisma.user.delete({ where: { id: req.params.id } }),
+  ]);
+  res.json({ deleted: true });
+});
+
+// Delete ALL non-admin users and their data
+router.delete('/users', async (req, res) => {
+  const prisma = req.app.locals.prisma;
+  const nonAdmins = await prisma.user.findMany({
+    where: { isAdmin: false },
+    select: { id: true },
+  });
+  const ids = nonAdmins.map(u => u.id);
+  if (ids.length === 0) return res.json({ deleted: 0 });
+
+  await prisma.$transaction([
+    prisma.like.deleteMany({ where: { userId: { in: ids } } }),
+    prisma.comment.deleteMany({ where: { userId: { in: ids } } }),
+    prisma.notification.deleteMany({ where: { userId: { in: ids } } }),
+    prisma.follow.deleteMany({ where: { OR: [{ followerId: { in: ids } }, { followingId: { in: ids } }] } }),
+    prisma.report.deleteMany({ where: { OR: [{ reporterId: { in: ids } }, { reportedId: { in: ids } }] } }),
+    prisma.externalPost.deleteMany({ where: { feed: { userId: { in: ids } } } }),
+    prisma.externalFeed.deleteMany({ where: { userId: { in: ids } } }),
+    prisma.post.deleteMany({ where: { userId: { in: ids } } }),
+    prisma.user.deleteMany({ where: { id: { in: ids } } }),
+  ]);
+  res.json({ deleted: ids.length });
+});
+
 // Network stats
 router.get('/stats', async (req, res) => {
   const prisma = req.app.locals.prisma;

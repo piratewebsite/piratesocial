@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin — Pirate Social</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0a0a0a; --surface: #141414; --border: #262626; --text: #e5e5e5;
+      --muted: #a3a3a3; --accent: #3b82f6; --accent-hover: #2563eb;
+      --green: #22c55e; --red: #ef4444; --yellow: #eab308;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg); color: var(--text); line-height: 1.6;
+      min-height: 100vh;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .container { max-width: 900px; margin: 0 auto; padding: 0 20px; }
+
+    .header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 20px 0; border-bottom: 1px solid var(--border); margin-bottom: 32px;
+    }
+    .header h1 { font-size: 1.4em; font-weight: 800; }
+    .header h1 span { color: var(--muted); font-weight: 400; font-size: 0.7em; margin-left: 8px; }
+    .header-actions { display: flex; gap: 8px; }
+
+    /* Auth gate */
+    #auth-gate {
+      text-align: center; padding: 80px 20px;
+    }
+    #auth-gate h2 { font-size: 1.5em; margin-bottom: 12px; }
+    #auth-gate p { color: var(--muted); margin-bottom: 24px; }
+
+    #admin-content { display: none; }
+
+    /* Stats bar */
+    .stats-bar {
+      display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 28px;
+    }
+    .stat-card {
+      flex: 1; min-width: 100px; background: var(--surface);
+      border: 1px solid var(--border); border-radius: 10px; padding: 16px;
+      text-align: center;
+    }
+    .stat-card .num { font-size: 1.8em; font-weight: 800; color: var(--accent); }
+    .stat-card .label { font-size: 0.8em; color: var(--muted); margin-top: 2px; }
+
+    /* Tabs */
+    .tabs { display: flex; gap: 4px; margin-bottom: 20px; }
+    .tab {
+      padding: 8px 18px; border-radius: 6px; font-size: 0.9em; font-weight: 600;
+      cursor: pointer; background: transparent; border: 1px solid var(--border);
+      color: var(--muted); transition: all 0.15s;
+    }
+    .tab.active { background: var(--accent); color: white; border-color: var(--accent); }
+    .tab:hover:not(.active) { border-color: var(--muted); }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* Users table */
+    .toolbar {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 16px; gap: 12px; flex-wrap: wrap;
+    }
+    .toolbar .count { font-size: 0.9em; color: var(--muted); }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 16px; border-radius: 6px; font-size: 0.85em;
+      font-weight: 600; cursor: pointer; border: none; transition: all 0.15s;
+    }
+    .btn-danger { background: var(--red); color: white; }
+    .btn-danger:hover { opacity: 0.85; }
+    .btn-sm { padding: 4px 10px; font-size: 0.8em; }
+    .btn-outline {
+      background: transparent; border: 1px solid var(--border); color: var(--text);
+    }
+    .btn-outline:hover { border-color: var(--muted); }
+    .btn-accent { background: var(--accent); color: white; }
+    .btn-accent:hover { background: var(--accent-hover); }
+
+    .user-table { width: 100%; border-collapse: collapse; }
+    .user-table th {
+      text-align: left; padding: 8px 12px; font-size: 0.75em;
+      color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em;
+      border-bottom: 1px solid var(--border);
+    }
+    .user-table td {
+      padding: 12px; border-bottom: 1px solid var(--border);
+      font-size: 0.9em; vertical-align: middle;
+    }
+    .user-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+    .user-info { display: flex; align-items: center; gap: 10px; }
+    .user-info img {
+      width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+    }
+    .user-info .name { font-weight: 600; }
+    .user-info .username { color: var(--muted); font-size: 0.85em; }
+
+    .badge {
+      display: inline-block; padding: 2px 8px; border-radius: 10px;
+      font-size: 0.75em; font-weight: 600;
+    }
+    .badge-admin { background: rgba(59,130,246,0.15); color: var(--accent); }
+    .badge-banned { background: rgba(239,68,68,0.15); color: var(--red); }
+    .badge-ok { background: rgba(34,197,94,0.15); color: var(--green); }
+    .badge-pending { background: rgba(234,179,8,0.15); color: var(--yellow); }
+
+    .actions { display: flex; gap: 6px; flex-wrap: wrap; }
+
+    /* Modal / confirm */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+      z-index: 100; align-items: center; justify-content: center;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 28px; max-width: 440px; width: 90%;
+    }
+    .modal h3 { font-size: 1.2em; margin-bottom: 12px; }
+    .modal p { color: var(--muted); margin-bottom: 20px; font-size: 0.95em; }
+    .modal .btn-row { display: flex; gap: 10px; justify-content: flex-end; }
+
+    .toast {
+      position: fixed; bottom: 24px; right: 24px; padding: 12px 20px;
+      border-radius: 8px; font-size: 0.9em; font-weight: 600;
+      z-index: 200; transform: translateY(80px); opacity: 0;
+      transition: all 0.3s;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast-success { background: var(--green); color: #000; }
+    .toast-error { background: var(--red); color: white; }
+
+    /* Loading */
+    .loading { text-align: center; padding: 40px; color: var(--muted); }
+
+    @media (max-width: 640px) {
+      .user-table th:nth-child(3), .user-table td:nth-child(3),
+      .user-table th:nth-child(4), .user-table td:nth-child(4) { display: none; }
+      .stats-bar { gap: 8px; }
+      .stat-card { min-width: 70px; padding: 12px; }
+      .stat-card .num { font-size: 1.4em; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <!-- Auth gate -->
+  <div id="auth-gate">
+    <h2>🏴‍☠️ Admin Panel</h2>
+    <p>Sign in with your admin account to continue.</p>
+    <a href="/api/auth/github?admin=1" class="btn btn-accent">Sign in with GitHub</a>
+  </div>
+
+  <!-- Admin content (hidden until authed) -->
+  <div id="admin-content">
+    <div class="header">
+      <h1>🏴‍☠️ Admin <span>Pirate Social</span></h1>
+      <div class="header-actions">
+        <a href="/" class="btn btn-outline">← Home</a>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-bar">
+      <div class="stat-card"><div class="num" id="stat-users">-</div><div class="label">Users</div></div>
+      <div class="stat-card"><div class="num" id="stat-posts">-</div><div class="label">Posts</div></div>
+      <div class="stat-card"><div class="num" id="stat-follows">-</div><div class="label">Follows</div></div>
+      <div class="stat-card"><div class="num" id="stat-likes">-</div><div class="label">Likes</div></div>
+      <div class="stat-card"><div class="num" id="stat-comments">-</div><div class="label">Comments</div></div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" data-tab="users">Users</button>
+      <button class="tab" data-tab="reports">Reports</button>
+    </div>
+
+    <!-- Users tab -->
+    <div class="tab-panel active" id="tab-users">
+      <div class="toolbar">
+        <span class="count" id="user-count"></span>
+        <button class="btn btn-danger" onclick="confirmPurge()">Delete All Non-Admin Users</button>
+      </div>
+      <div id="users-loading" class="loading">Loading users…</div>
+      <table class="user-table" id="users-table" style="display:none">
+        <thead>
+          <tr>
+            <th>User</th>
+            <th>Status</th>
+            <th>Site</th>
+            <th>Posts</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="users-body"></tbody>
+      </table>
+    </div>
+
+    <!-- Reports tab -->
+    <div class="tab-panel" id="tab-reports">
+      <div id="reports-loading" class="loading">Loading reports…</div>
+      <div id="reports-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm modal -->
+<div class="modal-overlay" id="confirm-modal">
+  <div class="modal">
+    <h3 id="modal-title">Confirm</h3>
+    <p id="modal-message">Are you sure?</p>
+    <div class="btn-row">
+      <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-danger" id="modal-confirm">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+const API = window.location.origin + '/api';
+let token = null;
+let users = [];
+
+// --- Auth ---
+function init() {
+  // Check for token in URL (from OAuth redirect) or localStorage
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('token')) {
+    token = params.get('token');
+    localStorage.setItem('ps_admin_token', token);
+    window.history.replaceState({}, '', '/admin.html');
+  } else {
+    token = localStorage.getItem('ps_admin_token');
+  }
+
+  if (token) {
+    verifyAdmin();
+  }
+}
+
+async function verifyAdmin() {
+  try {
+    const res = await apiFetch('/auth/me');
+    if (!res.isAdmin) {
+      showToast('Access denied — admin only', 'error');
+      token = null;
+      localStorage.removeItem('ps_admin_token');
+      return;
+    }
+    document.getElementById('auth-gate').style.display = 'none';
+    document.getElementById('admin-content').style.display = 'block';
+    loadStats();
+    loadUsers();
+  } catch {
+    token = null;
+    localStorage.removeItem('ps_admin_token');
+  }
+}
+
+async function apiFetch(path, opts = {}) {
+  const res = await fetch(API + path, {
+    ...opts,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+      ...(opts.headers || {}),
+    },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Request failed');
+  }
+  return res.json();
+}
+
+// --- Stats ---
+async function loadStats() {
+  try {
+    const s = await apiFetch('/admin/stats');
+    document.getElementById('stat-users').textContent = s.users;
+    document.getElementById('stat-posts').textContent = s.posts;
+    document.getElementById('stat-follows').textContent = s.follows;
+    document.getElementById('stat-likes').textContent = s.likes;
+    document.getElementById('stat-comments').textContent = s.comments;
+  } catch {}
+}
+
+// --- Users ---
+async function loadUsers() {
+  document.getElementById('users-loading').style.display = 'block';
+  document.getElementById('users-table').style.display = 'none';
+  try {
+    users = await apiFetch('/admin/users');
+    renderUsers();
+  } catch (e) {
+    document.getElementById('users-loading').textContent = 'Failed to load users: ' + e.message;
+  }
+}
+
+function renderUsers() {
+  document.getElementById('users-loading').style.display = 'none';
+  document.getElementById('users-table').style.display = 'table';
+  document.getElementById('user-count').textContent = `${users.length} user${users.length !== 1 ? 's' : ''}`;
+
+  const tbody = document.getElementById('users-body');
+  tbody.innerHTML = users.map(u => {
+    const statusBadge = u.isAdmin
+      ? '<span class="badge badge-admin">Admin</span>'
+      : u.isBanned
+        ? '<span class="badge badge-banned">Banned</span>'
+        : u.nodeCreated
+          ? '<span class="badge badge-ok">Active</span>'
+          : '<span class="badge badge-pending">Pending</span>';
+
+    const siteLink = u.siteUrl
+      ? `<a href="${escapeHtml(u.siteUrl)}" target="_blank">${escapeHtml(u.siteUrl.replace('https://', ''))}</a>`
+      : '<span style="color:var(--muted)">—</span>';
+
+    const actions = u.isAdmin ? '—' : `
+      <div class="actions">
+        <button class="btn btn-sm btn-outline" onclick="toggleBan('${u.id}', ${!u.isBanned})">${u.isBanned ? 'Unban' : 'Ban'}</button>
+        <button class="btn btn-sm btn-outline" onclick="resetUser('${u.id}', '${escapeHtml(u.username)}')">Reset</button>
+        <button class="btn btn-sm btn-danger" onclick="confirmDeleteUser('${u.id}', '${escapeHtml(u.username)}')">Delete</button>
+      </div>`;
+
+    return `<tr>
+      <td>
+        <div class="user-info">
+          <img src="${escapeHtml(u.avatarUrl || '')}" alt="" />
+          <div>
+            <div class="name">${escapeHtml(u.displayName || u.username)}</div>
+            <div class="username">@${escapeHtml(u.username)}</div>
+          </div>
+        </div>
+      </td>
+      <td>${statusBadge}</td>
+      <td>${siteLink}</td>
+      <td>${u._count.posts}</td>
+      <td>${actions}</td>
+    </tr>`;
+  }).join('');
+}
+
+// --- User Actions ---
+async function toggleBan(id, ban) {
+  try {
+    await apiFetch(`/admin/users/${id}/ban`, {
+      method: 'PATCH',
+      body: JSON.stringify({ banned: ban }),
+    });
+    showToast(ban ? 'User banned' : 'User unbanned', 'success');
+    loadUsers();
+    loadStats();
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
+async function resetUser(id, username) {
+  showConfirm(
+    'Reset User',
+    `Reset <strong>@${username}</strong>? This clears their site URL and lets them re-provision. Their content and follows are preserved.`,
+    async () => {
+      try {
+        await apiFetch(`/admin/users/${id}/reset`, { method: 'POST' });
+        showToast(`@${username} reset — they'll see setup wizard on next login`, 'success');
+        loadUsers();
+      } catch (e) {
+        showToast(e.message, 'error');
+      }
+    }
+  );
+}
+
+function confirmDeleteUser(id, username) {
+  showConfirm(
+    'Delete User',
+    `Permanently delete <strong>@${username}</strong> and all their data (posts, likes, comments, follows)? This cannot be undone.`,
+    async () => {
+      try {
+        await apiFetch(`/admin/users/${id}`, { method: 'DELETE' });
+        showToast(`@${username} deleted`, 'success');
+        loadUsers();
+        loadStats();
+      } catch (e) {
+        showToast(e.message, 'error');
+      }
+    }
+  );
+}
+
+function confirmPurge() {
+  const nonAdminCount = users.filter(u => !u.isAdmin).length;
+  if (nonAdminCount === 0) {
+    showToast('No non-admin users to delete', 'error');
+    return;
+  }
+  showConfirm(
+    'Delete All Non-Admin Users',
+    `This will permanently delete <strong>${nonAdminCount} user${nonAdminCount !== 1 ? 's' : ''}</strong> and all their data. Your admin account will be preserved. This cannot be undone.`,
+    async () => {
+      try {
+        const result = await apiFetch('/admin/users', { method: 'DELETE' });
+        showToast(`${result.deleted} user${result.deleted !== 1 ? 's' : ''} deleted`, 'success');
+        loadUsers();
+        loadStats();
+      } catch (e) {
+        showToast(e.message, 'error');
+      }
+    }
+  );
+}
+
+// --- Reports ---
+async function loadReports() {
+  document.getElementById('reports-loading').style.display = 'block';
+  try {
+    const reports = await apiFetch('/admin/reports');
+    document.getElementById('reports-loading').style.display = 'none';
+    if (reports.length === 0) {
+      document.getElementById('reports-list').innerHTML = '<p style="color:var(--muted);text-align:center;padding:30px">No pending reports</p>';
+      return;
+    }
+    document.getElementById('reports-list').innerHTML = reports.map(r => `
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;align-items:start">
+          <div>
+            <strong>@${escapeHtml(r.reporter?.username || '?')}</strong>
+            <span style="color:var(--muted)">reported</span>
+            <strong>@${escapeHtml(r.reported?.username || '?')}</strong>
+            <div style="color:var(--muted);font-size:0.85em;margin-top:4px">${escapeHtml(r.reason || 'No reason given')}</div>
+          </div>
+          <div class="actions">
+            <button class="btn btn-sm btn-outline" onclick="resolveReport('${r.id}','resolved')">Resolve</button>
+            <button class="btn btn-sm btn-outline" onclick="resolveReport('${r.id}','dismissed')">Dismiss</button>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  } catch (e) {
+    document.getElementById('reports-loading').textContent = 'Failed: ' + e.message;
+  }
+}
+
+async function resolveReport(id, status) {
+  try {
+    await apiFetch(`/admin/reports/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    });
+    showToast(`Report ${status}`, 'success');
+    loadReports();
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
+// --- Tabs ---
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+    if (tab.dataset.tab === 'reports') loadReports();
+  });
+});
+
+// --- Modal ---
+function showConfirm(title, message, onConfirm) {
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-message').innerHTML = message;
+  const btn = document.getElementById('modal-confirm');
+  const newBtn = btn.cloneNode(true);
+  btn.parentNode.replaceChild(newBtn, btn);
+  newBtn.addEventListener('click', () => { closeModal(); onConfirm(); });
+  document.getElementById('confirm-modal').classList.add('active');
+}
+
+function closeModal() {
+  document.getElementById('confirm-modal').classList.remove('active');
+}
+
+document.getElementById('confirm-modal').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) closeModal();
+});
+
+// --- Toast ---
+function showToast(msg, type = 'success') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `toast toast-${type} show`;
+  setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+// --- Util ---
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str || '';
+  return div.innerHTML;
+}
+
+init();
+</script>
+</body>
+</html>
