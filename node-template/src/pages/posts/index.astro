@@ -8,7 +8,7 @@ import settings from '../../content/settings.json';
 const showDates = settings.showDates !== false;
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 const posts = (await getCollection('posts'))
-  .filter(p => !p.data.draft)
+  .filter(p => !p.data.draft && p.data.visibility !== 'private')
   .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
 ---
 

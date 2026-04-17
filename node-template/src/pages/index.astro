@@ -1,9 +1,13 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import BlockRenderer from '../components/BlockRenderer.astro';
-import home from '../content/home.json';
+import { getCollection } from 'astro:content';
+
+// Load home page from pages collection
+const pages = await getCollection('pages');
+const home = pages.find(p => p.data.slug === 'home');
 ---
 
 <BaseLayout>
-  <BlockRenderer blocks={home.blocks || []} />
+  {home ? <BlockRenderer blocks={home.data.blocks || []} /> : <p>Home page not configured</p>}
 </BaseLayout>

@@ -1,6 +1,6 @@
 ---
 title: My First Photo Post
-description: A sample post to get you started with Pirate Social
+description: A sample post to get you started with Pirate Socials!
 pubDate: 2026-04-15
 image: ./wasabi-balls.webp
 imageAlt: Sample photograph

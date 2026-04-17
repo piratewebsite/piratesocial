@@ -1,4 +1,7 @@
 {
+  "title": "Home",
+  "slug": "home",
+  "showInNav": false,
   "blocks": [
     {
       "type": "profile",

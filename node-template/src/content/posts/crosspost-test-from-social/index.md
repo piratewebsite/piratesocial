@@ -1,7 +1,7 @@
 ---
 title: Crosspost test from social
 description: A test of crossposting from social site to bluesky. One post,
-  multiple platforms.
+  multiple platforms
 pubDate: 2026-04-15T13:32:00.000-05:00
 image: ./wasabi-balls.webp
 imageAlt: Wasabi is a good good boy!

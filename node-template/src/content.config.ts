@@ -34,6 +34,8 @@ const posts = defineCollection({
         .optional(),
       tags: z.array(z.string()).default([]),
       draft: z.boolean().default(false),
+      visibility: z.enum(['site', 'social', 'private']).default('site'),
+      privatePassword: z.string().optional(),
     }),
 });
 
@@ -81,4 +83,15 @@ const slideshows = defineCollection({
     }),
 });
 
-export const collections = { posts, galleries, slideshows };
+const pages = defineCollection({
+  loader: glob({ pattern: '**/*.json', base: './src/content/pages' }),
+  schema: z.object({
+      title: z.string(),
+      slug: z.string(),
+      description: z.string().optional(),
+      showInNav: z.boolean().default(false),
+      blocks: z.array(z.any()).default([]),
+    }),
+});
+
+export const collections = { posts, galleries, slideshows, pages };

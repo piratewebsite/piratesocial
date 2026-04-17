@@ -1,15 +1,17 @@
 ---
 import { ClientRouter } from 'astro:transitions';
+import { getCollection } from 'astro:content';
 import { siteConfig } from '../lib/config';
 import theme from '../content/theme.json';
 import labels from '../content/labels.json';
 import pwa from '../content/pwa.json';
 import settings from '../content/settings.json';
-import home from '../content/home.json';
 import YouTubePlayer from '../components/YouTubePlayer.jsx';
 
 // Floating YouTube players from home blocks — rendered in layout so they persist across all pages
-const floatingPlayers = (home.blocks || []).filter((b: any) => b.type === 'youtube' && b.display === 'floating');
+const pages = await getCollection('pages');
+const home = pages.find(p => p.data.slug === 'home');
+const floatingPlayers = (home?.data.blocks || []).filter((b: any) => b.type === 'youtube' && b.display === 'floating');
 
 interface Props {
   title?: string;

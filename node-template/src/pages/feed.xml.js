@@ -4,7 +4,7 @@ import { siteConfig, cleanSlug } from '../lib/config';
 
 export async function GET(context) {
   const posts = (await getCollection('posts'))
-    .filter(p => !p.data.draft)
+    .filter(p => !p.data.draft && p.data.visibility !== 'private')
     .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
 
   const galleries = (await getCollection('galleries'))

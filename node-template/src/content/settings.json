@@ -1,19 +1,19 @@
 {
-  "enableSocial": true,
+  "enableSocial": false,
   "showDates": true,
-  "github": "",
-  "camera": "",
+  "github": "twilightscapes",
+  "camera": "Canon 5D 3",
   "bio": "I take photos of things.",
   "mastodon": "",
-  "author": "",
-  "instagram": "",
-  "location": "",
-  "title": "My Photo Site",
-  "avatar": "/images/avatar.jpg",
-  "description": "A photography site on the Pirate Social network",
+  "author": "Todd",
   "logo": {
     "type": "image",
     "image": "/images/logoImage.svg",
     "text": ""
-  }
+  },
+  "instagram": "",
+  "location": "Western US",
+  "title": "My Photo Site",
+  "avatar": "/images/e45f09f3-d86d-4cca-bed3-d65cb81b1cc3_1_105_c.jpg",
+  "description": "A photography site on the Pirate Social network"
 }

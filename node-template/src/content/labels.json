@@ -1,12 +1,25 @@
 {
-  "navItems": [
-    { "label": "Posts", "url": "/posts", "visible": true },
-    { "label": "Galleries", "url": "/galleries", "visible": true },
-    { "label": "Social", "url": "/social", "visible": true },
-    { "label": "Settings", "url": "/settings", "visible": true },
-    { "label": "About", "url": "/about", "visible": true }
-  ],
-  "showSignIn": true,
+  "player": {
+    "track": "Track",
+    "playlist": "Playlist",
+    "next": "Next",
+    "play": "Play",
+    "pause": "Pause",
+    "audioPlayer": "♫ Todd's Player",
+    "previous": "Previous",
+    "youtubeVideo": "YouTube video",
+    "changePosition": "Change position",
+    "expand": "Expand player",
+    "videoPlayer": "▶ Player",
+    "minimize": "Minimize"
+  },
+  "settings": {
+    "heading": "Settings",
+    "rssFeeds": "RSS Feeds",
+    "bluesky": "Bluesky",
+    "signInPrompt": "Sign in to manage your settings",
+    "signInButton": "Sign in with GitHub"
+  },
   "nav": {
     "posts": "Posts",
     "galleries": "Galleries",
@@ -16,45 +29,48 @@
     "signIn": "Sign In",
     "rss": "RSS"
   },
-  "home": {
-    "recentPhotos": "Recent Photos",
-    "viewAllPosts": "View all posts →"
+  "bluesky": {
+    "heading": "Bluesky Integration",
+    "active": "Active",
+    "pauseCrosspost": "Pause Cross-posting",
+    "noAccount": "No Bluesky account connected.",
+    "handleLabel": "Bluesky Handle",
+    "paused": "Paused",
+    "connectionStatus": "Connection Status",
+    "notConnected": "Not Connected",
+    "connectHeading": "Connect Bluesky",
+    "passwordLabel": "App Password",
+    "connectButton": "Connect Bluesky Account",
+    "enableCrosspost": "Enable Cross-posting"
   },
   "social": {
     "heading": "Social Feed",
-    "tabSquads": "Squads",
-    "tabTimeline": "Timeline",
-    "tabBluesky": "Bluesky",
-    "tabDiscover": "Discover",
     "tabPeople": "People",
     "signInPrompt": "Sign in to see your timeline",
-    "signInButton": "Sign in with GitHub",
-    "loading": "Loading...",
-    "noPosts": "No posts yet",
     "noUsers": "No users yet",
-    "failedToLoad": "Failed to load feed",
-    "shareButton": "↗ Share",
     "readButton": "↗ Read",
+    "tabSquads": "Squads",
+    "shareButton": "↗ Share",
+    "tabBluesky": "Bluesky",
+    "noPosts": "No posts yet",
+    "signInButton": "Sign in with GitHub",
+    "tabTimeline": "Timeline",
     "viewButton": "↗ View",
-    "connectBluesky": "Connect your Bluesky account in Settings to see your feed"
+    "loading": "Loading...",
+    "connectBluesky": "Connect your Bluesky account in Settings to see your feed",
+    "failedToLoad": "Failed to load feed",
+    "tabDiscover": "Discover"
   },
-  "posts": {
-    "heading": "All Posts"
+  "about": {
+    "heading": "About This Site"
   },
   "galleries": {
     "heading": "Photo Galleries",
     "allPhotos": "All Photos",
     "gallery": "Gallery"
   },
-  "about": {
-    "heading": "About This Site"
-  },
-  "settings": {
-    "heading": "Settings",
-    "rssFeeds": "RSS Feeds",
-    "bluesky": "Bluesky",
-    "signInPrompt": "Sign in to manage your settings",
-    "signInButton": "Sign in with GitHub"
+  "posts": {
+    "heading": "All Posts"
   },
   "feeds": {
     "heading": "External RSS Feeds",
@@ -66,19 +82,20 @@
     "loadMore": "Load More",
     "adding": "Adding..."
   },
-  "bluesky": {
-    "heading": "Bluesky Integration",
-    "connectionStatus": "Connection Status",
-    "connectHeading": "Connect Bluesky",
-    "handleLabel": "Bluesky Handle",
-    "passwordLabel": "App Password",
-    "connectButton": "Connect Bluesky Account",
-    "active": "Active",
-    "paused": "Paused",
-    "notConnected": "Not Connected",
-    "noAccount": "No Bluesky account connected.",
-    "pauseCrosspost": "Pause Cross-posting",
-    "enableCrosspost": "Enable Cross-posting"
+  "components": {
+    "viewOnBluesky": "View on Bluesky ↗",
+    "iso": "ISO",
+    "camera": "Camera",
+    "focalLength": "Focal Length",
+    "aperture": "Aperture",
+    "postButton": "Post",
+    "commentPlaceholder": "Write a comment...",
+    "comments": "Comments",
+    "dateTaken": "Date Taken",
+    "shutterSpeed": "Shutter Speed",
+    "exifData": "EXIF Data",
+    "lens": "Lens",
+    "share": "↗ Share"
   },
   "squads": {
     "heading": "Squads",
@@ -90,36 +107,39 @@
     "hideFeed": "Hide Squad Feed",
     "noPosts": "No posts"
   },
-  "components": {
-    "comments": "Comments",
-    "share": "↗ Share",
-    "viewOnBluesky": "View on Bluesky ↗",
-    "commentPlaceholder": "Write a comment...",
-    "postButton": "Post",
-    "exifData": "EXIF Data",
-    "camera": "Camera",
-    "lens": "Lens",
-    "focalLength": "Focal Length",
-    "aperture": "Aperture",
-    "shutterSpeed": "Shutter Speed",
-    "iso": "ISO",
-    "dateTaken": "Date Taken"
-  },
-  "player": {
-    "audioPlayer": "♫ Audio Player",
-    "videoPlayer": "▶ Player",
-    "play": "Play",
-    "pause": "Pause",
-    "previous": "Previous",
-    "next": "Next",
-    "playlist": "Playlist",
-    "minimize": "Minimize",
-    "expand": "Expand player",
-    "changePosition": "Change position",
-    "track": "Track",
-    "youtubeVideo": "YouTube video"
-  },
   "footer": {
     "poweredBy": "Powered by Pirate Social"
-  }
+  },
+  "navItems": [
+    {
+      "label": "Posts",
+      "url": "/posts",
+      "visible": true
+    },
+    {
+      "label": "Galleries",
+      "url": "/galleries",
+      "visible": true
+    },
+    {
+      "label": "Social",
+      "url": "/social",
+      "visible": true
+    },
+    {
+      "label": "Settings",
+      "url": "/settings",
+      "visible": true
+    },
+    {
+      "label": "About",
+      "url": "/about",
+      "visible": true
+    }
+  ],
+  "home": {
+    "recentPhotos": "Recent Photos",
+    "viewAllPosts": "View all posts →"
+  },
+  "showSignIn": true
 }
