@@ -87,8 +87,16 @@ function InteractivePlayer({ playlist, audioOnly, isFloating, heading, caption, 
   const iframeRef = useRef(null);
   const progressInterval = useRef(null);
   const isDragging = useRef(false);
+  const playerReadyRef = useRef(false);
+  const nextTrackRef = useRef(null);
   const hasPlaylist = playlist.length > 1;
   const current = playlist[currentIndex] || playlist[0];
+  const currentRef = useRef(current);
+  const currentIndexRef = useRef(currentIndex);
+
+  // Keep refs in sync
+  currentRef.current = current;
+  currentIndexRef.current = currentIndex;
 
   // Load YouTube IFrame API
   useEffect(() => {
@@ -98,62 +106,54 @@ function InteractivePlayer({ playlist, audioOnly, isFloating, heading, caption, 
     document.head.appendChild(tag);
   }, []);
 
-  // Create/update player
+  // Create player ONCE when started (never recreated for track changes)
   useEffect(() => {
     if (!started) return;
+    if (playerRef.current) return; // already created
 
     function initPlayer() {
-      if (playerRef.current) {
-        playerRef.current.loadVideoById({
-          videoId: current.id,
-          startSeconds: current.startTime || 0,
-          endSeconds: current.endTime || undefined,
-        });
-        return;
-      }
+      if (playerRef.current) return;
+      if (!iframeRef.current) return;
 
+      const c = currentRef.current;
       playerRef.current = new window.YT.Player(iframeRef.current, {
-        videoId: current.id,
+        videoId: c.id,
         playerVars: {
           autoplay: 1,
           controls: 0,
           modestbranding: 1,
           rel: 0,
           playsinline: 1,
-          start: current.startTime || 0,
-          end: current.endTime || undefined,
+          start: c.startTime || 0,
+          end: c.endTime || undefined,
         },
         events: {
           onReady: (e) => {
+            playerReadyRef.current = true;
             e.target.setVolume(volume);
             e.target.playVideo();
             setIsPlaying(true);
             const fullDur = e.target.getDuration();
-            const clipStart = current.startTime || 0;
-            const clipEnd = current.endTime || fullDur;
-            setDuration(clipEnd - clipStart);
+            const cur = currentRef.current;
+            setDuration((cur.endTime || fullDur) - (cur.startTime || 0));
           },
           onStateChange: (e) => {
             if (e.data === window.YT.PlayerState.PLAYING) {
               setIsPlaying(true);
               const fullDur = e.target.getDuration();
-              const clipStart = current.startTime || 0;
-              const clipEnd = current.endTime || fullDur;
-              setDuration(clipEnd - clipStart);
+              const cur = currentRef.current;
+              setDuration((cur.endTime || fullDur) - (cur.startTime || 0));
               clearInterval(progressInterval.current);
               progressInterval.current = setInterval(() => {
                 if (playerRef.current && playerRef.current.getCurrentTime) {
                   const t = playerRef.current.getCurrentTime();
-                  const cs = current.startTime || 0;
+                  const cur = currentRef.current;
+                  const cs = cur.startTime || 0;
                   setProgress(Math.max(0, t - cs));
-                  // Enforce endTime as a safety net
-                  if (current.endTime && t >= current.endTime) {
+                  // Safety net: enforce endTime
+                  if (cur.endTime && t >= cur.endTime) {
                     clearInterval(progressInterval.current);
-                    if (currentIndex < playlist.length - 1) {
-                      setCurrentIndex(currentIndex + 1);
-                    } else {
-                      setCurrentIndex(0);
-                    }
+                    nextTrackRef.current?.();
                   }
                 }
               }, 500);
@@ -162,12 +162,7 @@ function InteractivePlayer({ playlist, audioOnly, isFloating, heading, caption, 
               clearInterval(progressInterval.current);
             } else if (e.data === window.YT.PlayerState.ENDED) {
               clearInterval(progressInterval.current);
-              // Auto-advance or loop
-              if (currentIndex < playlist.length - 1) {
-                setCurrentIndex(currentIndex + 1);
-              } else {
-                setCurrentIndex(0); // loop
-              }
+              nextTrackRef.current?.();
             }
           },
         },
@@ -181,7 +176,24 @@ function InteractivePlayer({ playlist, audioOnly, isFloating, heading, caption, 
     }
 
     return () => clearInterval(progressInterval.current);
-  }, [started, current.id]);
+  }, [started]);
+
+  // Load video when currentIndex changes (player init handles the first video)
+  const mountedRef = useRef(false);
+  useEffect(() => {
+    if (!playerReadyRef.current || !playerRef.current) return;
+    // Skip the very first render — the player init already loaded this video
+    if (!mountedRef.current) {
+      mountedRef.current = true;
+      return;
+    }
+
+    playerRef.current.loadVideoById({
+      videoId: current.id,
+      startSeconds: current.startTime || 0,
+      endSeconds: current.endTime || undefined,
+    });
+  }, [currentIndex]);
 
   // Volume changes
   useEffect(() => {
@@ -205,34 +217,32 @@ function InteractivePlayer({ playlist, audioOnly, isFloating, heading, caption, 
 
   const skipTo = useCallback((idx) => {
     setCurrentIndex(idx);
-    if (playerRef.current && playerRef.current.loadVideoById) {
-      playerRef.current.loadVideoById({
-        videoId: playlist[idx].id,
-        startSeconds: playlist[idx].startTime || 0,
-        endSeconds: playlist[idx].endTime || undefined,
-      });
-    }
-  }, [playlist]);
+  }, []);
 
   const prevTrack = useCallback(() => {
-    const idx = currentIndex > 0 ? currentIndex - 1 : playlist.length - 1;
+    const idx = currentIndexRef.current > 0 ? currentIndexRef.current - 1 : playlist.length - 1;
     skipTo(idx);
-  }, [currentIndex, playlist.length, skipTo]);
+  }, [playlist.length, skipTo]);
 
   const nextTrack = useCallback(() => {
-    const idx = currentIndex < playlist.length - 1 ? currentIndex + 1 : 0;
+    const idx = currentIndexRef.current < playlist.length - 1 ? currentIndexRef.current + 1 : 0;
     skipTo(idx);
-  }, [currentIndex, playlist.length, skipTo]);
+  }, [playlist.length, skipTo]);
+
+  // Keep nextTrackRef always pointing to latest nextTrack
+  useEffect(() => {
+    nextTrackRef.current = nextTrack;
+  }, [nextTrack]);
 
   const seekTo = useCallback((e) => {
     if (!playerRef.current || !duration) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const pct = (e.clientX - rect.left) / rect.width;
-    const clipStart = current.startTime || 0;
+    const clipStart = currentRef.current.startTime || 0;
     const time = clipStart + pct * duration;
     playerRef.current.seekTo(time, true);
     setProgress(pct * duration);
-  }, [duration, current]);
+  }, [duration]);
 
   const formatTime = (s) => {
     if (!s || isNaN(s)) return '0:00';
