@@ -3,9 +3,9 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import ExifDisplay from '../../components/ExifDisplay.astro';
 import PhotoGallery from '../../components/PhotoGallery.astro';
 import SocialActions from '../../components/SocialActions.astro';
-import { getCollection } from 'astro:content';
+import { getCollection, render } from 'astro:content';
 import { withBase, cleanSlug } from '../../lib/config';
-import settings from '../../data/settings.json';
+import settings from '../../content/settings.json';
 
 const enableSocial = settings.enableSocial !== false;
 const showDates = settings.showDates !== false;
@@ -16,7 +16,7 @@ export async function getStaticPaths() {
 }
 
 const { post } = Astro.props;
-const { Content } = await post.render();
+const { Content } = await render(post);
 ---
 
 <BaseLayout title={post.data.title} description={post.data.description} image={post.data.image ? withBase(typeof post.data.image === 'string' ? post.data.image : post.data.image.src) : undefined}>

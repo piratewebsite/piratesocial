@@ -1,6 +1,6 @@
 import rss from '@astrojs/rss';
 import { getCollection } from 'astro:content';
-import { siteConfig } from '../lib/config';
+import { siteConfig, cleanSlug } from '../lib/config';
 
 export async function GET(context) {
   const posts = (await getCollection('posts'))
@@ -49,7 +49,7 @@ export async function GET(context) {
       title: post.data.title,
       pubDate: post.data.pubDate,
       description: post.data.description || '',
-      link: `/posts/${post.id.replace(/\.(md|mdx)$/, '')}/`,
+      link: `/posts/${cleanSlug(post.id)}/`,
       categories: post.data.tags,
       customData: customXml,
     };
@@ -59,7 +59,7 @@ export async function GET(context) {
     title: `[Gallery] ${g.data.title}`,
     pubDate: g.data.pubDate,
     description: g.data.description || `Photo gallery with ${g.data.photos.length} images`,
-    link: `/galleries/${g.id}/`,
+    link: `/galleries/${cleanSlug(g.id)}/`,
     categories: g.data.tags,
     customData: `<photo:gallery>\n${g.data.photos.map(p => {
       const src = typeof p.src === 'string' ? p.src : p.src.src;

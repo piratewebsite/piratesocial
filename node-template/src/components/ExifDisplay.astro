@@ -13,7 +13,7 @@ interface Props {
 
 const { exif } = Astro.props;
 const hasData = Object.values(exif).some(v => v);
-import labels from '../data/labels.json';
+import labels from '../content/labels.json';
 const cl = labels.components;
 ---
 

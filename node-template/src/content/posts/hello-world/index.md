@@ -2,7 +2,7 @@
 title: My First Photo Post
 description: A sample post to get you started with Pirate Social
 pubDate: 2026-04-15
-image: /images/wasabi-balls.webp
+image: ./wasabi-balls.webp
 imageAlt: Sample photograph
 tags:
   - photography
@@ -21,9 +21,9 @@ Welcome to your Pirate Social node! This is a sample post showing how content wo
 
 ## Getting Started
 
-1. Edit `src/lib/config.ts` with your site details
+1. Edit your site settings at `/admin` or in `src/content/settings.json`
 2. Replace this post with your own content in `src/content/posts/`
-3. Add photos to `public/images/` or use Astro's image optimization
+3. Add photos directly into your post folder — they'll be bundled with the post
 4. Push to GitHub and your site builds automatically
 
 ## Photography Features

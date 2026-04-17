@@ -1,4 +1,4 @@
-import pwa from '../data/pwa.json';
+import pwa from '../content/pwa.json';
 
 export async function GET() {
   const base = import.meta.env.BASE_URL.replace(/\/$/, '');

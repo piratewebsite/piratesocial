@@ -2,8 +2,8 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import BlockRenderer from '../../components/BlockRenderer.astro';
 
-// Load all page JSON files from the data/pages directory
-const pageFiles = import.meta.glob('../../data/pages/*.json', { eager: true });
+// Load all page JSON files from the content/pages directory
+const pageFiles = import.meta.glob('../../content/pages/*.json', { eager: true });
 
 // Build pages array, skipping the .gitkeep placeholder
 const pages = Object.entries(pageFiles)
@@ -15,7 +15,7 @@ const pages = Object.entries(pageFiles)
   .filter(Boolean);
 
 export function getStaticPaths() {
-  const pageFiles = import.meta.glob('../../data/pages/*.json', { eager: true });
+  const pageFiles = import.meta.glob('../../content/pages/*.json', { eager: true });
   return Object.entries(pageFiles)
     .map(([path, mod]: [string, any]) => {
       const data = mod.default || mod;

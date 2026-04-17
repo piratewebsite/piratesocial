@@ -34,7 +34,7 @@ function detectGitHubUser() {
 async function main() {
   console.log('\n🏴‍☠️  Pirate Social Node Setup\n');
   console.log('This wizard configures your site. You can always change settings later\n');
-  console.log('via the CMS at /admin or by editing src/data/settings.json.\n');
+  console.log('via the CMS at /admin or by editing src/content/settings.json.\n');
 
   const detectedUser = detectGitHubUser();
 
@@ -57,7 +57,7 @@ async function main() {
   console.log(`\n📝 Configuring for ${siteUrl}...\n`);
 
   // 1. Update settings.json
-  const settingsPath = resolve('src/data/settings.json');
+  const settingsPath = resolve('src/content/settings.json');
   const settings = JSON.parse(readFileSync(settingsPath, 'utf-8'));
   settings.github = githubUser;
   settings.author = author;
@@ -67,7 +67,7 @@ async function main() {
   settings.title = siteTitle;
   settings.description = `A photography site on the Pirate Social network`;
   writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + '\n');
-  console.log('  ✅ src/data/settings.json');
+  console.log('  ✅ src/content/settings.json');
 
   // 2. Update astro.config.mjs
   const astroConfigPath = resolve('astro.config.mjs');

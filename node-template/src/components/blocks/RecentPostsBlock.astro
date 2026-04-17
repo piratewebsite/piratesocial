@@ -1,8 +1,8 @@
 ---
 import { getCollection } from 'astro:content';
 import { withBase, cleanSlug } from '../../lib/config';
-import settings from '../../data/settings.json';
-import labels from '../../data/labels.json';
+import settings from '../../content/settings.json';
+import labels from '../../content/labels.json';
 
 const { heading = 'Recent Photos', count = 6, columns = '3' } = Astro.props;
 

@@ -1,9 +1,10 @@
 ---
+import { ClientRouter } from 'astro:transitions';
 import { siteConfig } from '../lib/config';
-import theme from '../data/theme.json';
-import labels from '../data/labels.json';
-import pwa from '../data/pwa.json';
-import settings from '../data/settings.json';
+import theme from '../content/theme.json';
+import labels from '../content/labels.json';
+import pwa from '../content/pwa.json';
+import settings from '../content/settings.json';
 
 interface Props {
   title?: string;
@@ -56,7 +57,7 @@ const visibleNavItems = (labels.navItems || []).filter((item: any) => {
 });
 
 // Auto-add pages with showInNav: true
-const pageFiles = import.meta.glob('../data/pages/*.json', { eager: true });
+const pageFiles = import.meta.glob('../content/pages/*.json', { eager: true });
 const autoNavPages = Object.values(pageFiles)
   .map((mod: any) => mod.default || mod)
   .filter((p: any) => p.showInNav && p.slug && p.title)
@@ -99,6 +100,8 @@ const allNavItems = [...visibleNavItems, ...autoNavPages];
 
     <!-- Theme CSS custom properties -->
     <style set:html={`:root{${lightVars};${fontVars}}.dark{${darkVars}}${bgCss}`}></style>
+
+    <ClientRouter />
 
     <script is:inline>
       (function() {

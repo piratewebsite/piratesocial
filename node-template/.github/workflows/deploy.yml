@@ -39,32 +39,28 @@ jobs:
           # Start with fresh template code
           cp -r template-source/node-template build
           
-          # Overlay user content (these are the user's own files)
-          # Posts, galleries, and other content
+          # Overlay user content — everything lives in src/content/
+          # This includes: posts, galleries, settings, theme, labels, pwa, home, pages
           if [ -d user-repo/src/content ]; then
             rm -rf build/src/content
             cp -r user-repo/src/content build/src/content
           fi
           
-          # User settings (author, bio, etc.)
+          # Legacy support: migrate old src/data/ files if they exist
           if [ -f user-repo/src/data/settings.json ]; then
-            cp user-repo/src/data/settings.json build/src/data/settings.json
+            cp user-repo/src/data/settings.json build/src/content/settings.json
           fi
-          
-          # User customizations (theme, labels, PWA — edited via Decap CMS)
           for f in labels.json theme.json pwa.json home.json; do
             if [ -f "user-repo/src/data/$f" ]; then
-              cp "user-repo/src/data/$f" "build/src/data/$f"
+              cp "user-repo/src/data/$f" "build/src/content/$f"
             fi
           done
-          
-          # User-created pages (block-based custom pages)
           if [ -d user-repo/src/data/pages ]; then
-            mkdir -p build/src/data/pages
-            cp -r user-repo/src/data/pages/. build/src/data/pages/
+            mkdir -p build/src/content/pages
+            cp -r user-repo/src/data/pages/. build/src/content/pages/
           fi
           
-          # User images (overlay on top of template images, user files win)
+          # User images (site-wide assets like icons, logos)
           if [ -d user-repo/public/images ]; then
             cp -r user-repo/public/images/. build/public/images/
           fi
@@ -107,7 +103,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Install dependencies
         working-directory: build

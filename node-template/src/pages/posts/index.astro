@@ -2,8 +2,8 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { getCollection } from 'astro:content';
 import { withBase, cleanSlug } from '../../lib/config';
-import labels from '../../data/labels.json';
-import settings from '../../data/settings.json';
+import labels from '../../content/labels.json';
+import settings from '../../content/settings.json';
 
 const showDates = settings.showDates !== false;
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');

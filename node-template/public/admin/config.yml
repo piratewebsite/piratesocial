@@ -16,6 +16,9 @@ collections:
     label: Posts
     folder: src/content/posts
     create: true
+    path: "{{slug}}/index"
+    media_folder: ""
+    public_folder: ""
     slug: "{{slug}}"
     extension: md
     fields:
@@ -56,6 +59,9 @@ collections:
     label: Galleries
     folder: src/content/galleries
     create: true
+    path: "{{slug}}/index"
+    media_folder: ""
+    public_folder: ""
     slug: "{{slug}}"
     extension: md
     fields:
@@ -90,7 +96,7 @@ collections:
     files:
       - label: "Home Page"
         name: home
-        file: src/data/home.json
+        file: src/content/home.json
         fields:
           - label: "Content Blocks"
             name: blocks
@@ -147,9 +153,26 @@ collections:
                 name: youtube
                 widget: object
                 fields:
-                  - { label: "YouTube URL", name: url, widget: string, hint: "Paste a YouTube video URL (e.g. https://youtube.com/watch?v=...)" }
-                  - { label: "Heading", name: heading, widget: string, required: false }
+                  - { label: "YouTube URL", name: url, widget: string, hint: "Paste a YouTube video URL" }
+                  - { label: "Title", name: heading, widget: string, required: false }
                   - { label: "Caption", name: caption, widget: text, required: false }
+                  - label: "Display"
+                    name: display
+                    widget: select
+                    options:
+                      - { label: "Docked (inline on page)", value: "docked" }
+                      - { label: "Floating (mini player)", value: "floating" }
+                    default: "docked"
+                    hint: "Floating player persists across pages and can be minimized"
+                  - { label: "Audio Only", name: audioOnly, widget: boolean, default: false, hint: "Hide video, play audio only" }
+                  - label: "Additional Tracks"
+                    name: tracks
+                    widget: list
+                    required: false
+                    hint: "Add more tracks to create a playlist"
+                    fields:
+                      - { label: "YouTube URL", name: url, widget: string }
+                      - { label: "Title", name: title, widget: string, required: false }
                   - label: "Layout"
                     name: layout
                     widget: select
@@ -221,7 +244,7 @@ collections:
   - name: pages
     label: Pages
     label_singular: Page
-    folder: src/data/pages
+    folder: src/content/pages
     create: true
     format: json
     slug: "{{slug}}"
@@ -286,9 +309,26 @@ collections:
             name: youtube
             widget: object
             fields:
-              - { label: "YouTube URL", name: url, widget: string, hint: "Paste a YouTube video URL (e.g. https://youtube.com/watch?v=...)" }
-              - { label: "Heading", name: heading, widget: string, required: false }
+              - { label: "YouTube URL", name: url, widget: string, hint: "Paste a YouTube video URL" }
+              - { label: "Title", name: heading, widget: string, required: false }
               - { label: "Caption", name: caption, widget: text, required: false }
+              - label: "Display"
+                name: display
+                widget: select
+                options:
+                  - { label: "Docked (inline on page)", value: "docked" }
+                  - { label: "Floating (mini player)", value: "floating" }
+                default: "docked"
+                hint: "Floating player persists across pages and can be minimized"
+              - { label: "Audio Only", name: audioOnly, widget: boolean, default: false, hint: "Hide video, play audio only" }
+              - label: "Additional Tracks"
+                name: tracks
+                widget: list
+                required: false
+                hint: "Add more tracks to create a playlist"
+                fields:
+                  - { label: "YouTube URL", name: url, widget: string }
+                  - { label: "Title", name: title, widget: string, required: false }
               - label: "Layout"
                 name: layout
                 widget: select
@@ -362,7 +402,7 @@ collections:
     files:
       - label: Configuration
         name: config
-        file: src/data/settings.json
+        file: src/content/settings.json
         fields:
           - label: "Enable Social Features"
             name: enableSocial
@@ -399,7 +439,7 @@ collections:
 
       - label: PWA & Open Graph
         name: pwa
-        file: src/data/pwa.json
+        file: src/content/pwa.json
         fields:
           - label: "Search Engine Visibility"
             name: searchEngineVisibility
@@ -436,7 +476,7 @@ collections:
 
       - label: Theme
         name: theme
-        file: src/data/theme.json
+        file: src/content/theme.json
         fields:
           - label: "Background Image"
             name: backgroundImage
@@ -640,7 +680,7 @@ collections:
 
       - label: "Menus, Labels & Text"
         name: labels
-        file: src/data/labels.json
+        file: src/content/labels.json
         fields:
           - label: "Navigation Menu"
             name: navItems

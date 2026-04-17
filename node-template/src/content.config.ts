@@ -1,18 +1,20 @@
-import { defineCollection, z } from 'astro:content';
+import { defineCollection } from 'astro:content';
+import { z } from 'astro/zod';
+import { glob } from 'astro/loaders';
 
 const posts = defineCollection({
-  type: 'content',
-  schema: z.object({
+  loader: glob({ pattern: '**/*.md', base: './src/content/posts' }),
+  schema: ({ image }) => z.object({
       title: z.string(),
       description: z.string().optional(),
       pubDate: z.coerce.date(),
       updatedDate: z.coerce.date().optional(),
-      image: z.string().optional(),
+      image: image().optional(),
       imageAlt: z.string().optional(),
       gallery: z
         .array(
           z.object({
-            src: z.string(),
+            src: image(),
             alt: z.string().optional(),
             caption: z.string().optional(),
           })
@@ -36,15 +38,15 @@ const posts = defineCollection({
 });
 
 const galleries = defineCollection({
-  type: 'content',
-  schema: z.object({
+  loader: glob({ pattern: '**/*.md', base: './src/content/galleries' }),
+  schema: ({ image }) => z.object({
       title: z.string(),
       description: z.string().optional(),
       pubDate: z.coerce.date(),
-      coverImage: z.string().optional(),
+      coverImage: image().optional(),
       photos: z.array(
         z.object({
-          src: z.string(),
+          src: image(),
           alt: z.string().optional(),
           caption: z.string().optional(),
         })
@@ -58,7 +60,7 @@ const galleries = defineCollection({
 });
 
 const slideshows = defineCollection({
-  type: 'data',
+  loader: glob({ pattern: '**/*.json', base: './src/content/slideshows' }),
   schema: z.object({
       title: z.string(),
       description: z.string().optional(),

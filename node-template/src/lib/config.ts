@@ -1,4 +1,4 @@
-import settings from '../data/settings.json';
+import settings from '../content/settings.json';
 
 const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '');
 
@@ -8,9 +8,9 @@ export function withBase(path: string): string {
   return `${base}${path}`;
 }
 
-/** Strip file extension from content collection IDs for clean URLs */
+/** Strip file extension and /index suffix from content collection IDs for clean URLs */
 export function cleanSlug(id: string): string {
-  return id.replace(/\.(md|mdx)$/, '');
+  return id.replace(/\.(md|mdx)$/, '').replace(/\/index$/, '');
 }
 
 /** Site-wide configuration — edit via /admin or settings.json */
