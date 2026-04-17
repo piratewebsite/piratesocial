@@ -8,39 +8,37 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 
 <BaseLayout title="RSS Feeds">
   <div class="mx-auto max-w-2xl">
-    <h1 class="text-2xl font-bold mb-2">{labels.feeds.heading}</h1>
-    <p class="text-theme-muted text-sm mb-8">
-      Subscribe to any RSS feed to see updates in your timeline. Blog posts, photo sites, news — anything with an RSS feed.
-    </p>
+    <div class="sticky top-[41px] md:top-[57px] z-30 -mx-4 px-3 py-2 md:px-4 md:py-4 bg-theme-bg/95 backdrop-blur supports-[backdrop-filter]:bg-theme-bg/80 border-b border-theme-border mb-4 md:mb-6">
+      <h1 class="text-lg md:text-2xl font-bold mb-2">{labels.feeds.heading}</h1>
 
-    <div id="auth-required" class="hidden text-center py-12 text-theme-faint">
-      <p>Sign in to manage your RSS subscriptions</p>
-      <a href={`${base}/social/`} class="mt-4 inline-block rounded bg-theme-primary text-white px-4 py-2 text-sm font-medium hover:bg-theme-primary-hover transition">
-        {labels.settings.signInButton}
-      </a>
+      <div id="auth-required" class="hidden text-center py-4 text-theme-faint">
+        <p>Sign in to manage your RSS subscriptions</p>
+        <a href={`${base}/social/`} class="mt-2 inline-block rounded bg-theme-primary text-white px-4 py-2 text-sm font-medium hover:bg-theme-primary-hover transition">
+          {labels.settings.signInButton}
+        </a>
+      </div>
+
+      <div id="feeds-controls" class="hidden">
+        <form id="add-feed-form" class="flex gap-2 mb-2">
+          <input type="text" id="feed-url-input" placeholder="https://example.com/feed.xml or @handle.bsky.social" required
+            class="flex-1 rounded bg-theme-input-bg border border-theme-input-border px-2 py-1.5 text-sm focus:outline-none focus:border-theme-primary" />
+          <button type="submit" id="add-feed-btn" class="rounded bg-theme-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-theme-primary-hover transition whitespace-nowrap">
+            {labels.feeds.addFeed}
+          </button>
+        </form>
+        <div id="add-error" class="hidden text-red-400 text-sm mb-2"></div>
+        <div class="flex gap-2">
+          <button id="view-feeds" class="rounded bg-theme-surface-hover px-2 py-1 text-xs md:px-3 md:py-1.5 md:text-sm transition active-view">
+            {labels.feeds.tabMyFeeds}
+          </button>
+          <button id="view-posts" class="rounded bg-theme-input-bg px-2 py-1 text-xs md:px-3 md:py-1.5 md:text-sm hover:bg-theme-surface-hover transition">
+            {labels.feeds.tabAllPosts}
+          </button>
+        </div>
+      </div>
     </div>
 
     <div id="feeds-app" class="hidden">
-      <!-- Add feed form -->
-      <form id="add-feed-form" class="flex gap-2 mb-3">
-        <input type="text" id="feed-url-input" placeholder="https://example.com/feed.xml or @handle.bsky.social" required
-          class="flex-1 rounded bg-theme-input-bg border border-theme-input-border px-3 py-2 text-sm focus:outline-none focus:border-theme-primary" />
-        <button type="submit" id="add-feed-btn" class="rounded bg-theme-primary px-4 py-2 text-sm font-medium text-white hover:bg-theme-primary-hover transition whitespace-nowrap">
-          {labels.feeds.addFeed}
-        </button>
-      </form>
-      <p class="text-theme-faint text-xs mb-6">Paste any RSS/Atom URL, or a Bluesky handle (e.g. <code class="text-theme-muted">alice.bsky.social</code> or <code class="text-theme-muted">@alice.bsky.social</code>)</p>
-      <div id="add-error" class="hidden text-red-400 text-sm mb-4"></div>
-
-      <!-- Filter tabs -->
-      <div class="flex gap-2 mb-6">
-        <button id="view-feeds" class="rounded bg-theme-surface-hover px-3 py-1.5 text-sm transition active-view">
-          {labels.feeds.tabMyFeeds}
-        </button>
-        <button id="view-posts" class="rounded bg-theme-input-bg px-3 py-1.5 text-sm hover:bg-theme-surface-hover transition">
-          {labels.feeds.tabAllPosts}
-        </button>
-      </div>
 
       <!-- Feeds list -->
       <div id="feeds-list" class="space-y-3"></div>
@@ -78,6 +76,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
   if (!token) {
     document.getElementById('auth-required').classList.remove('hidden');
   } else {
+    document.getElementById('feeds-controls').classList.remove('hidden');
     document.getElementById('feeds-app').classList.remove('hidden');
     loadFeeds();
   }
