@@ -114,16 +114,12 @@ function InteractivePlayer({ playlist, audioOnly, isFloating, heading, caption, 
 
       playerRef.current = new window.YT.Player(iframeRef.current, {
         videoId: current.id,
-        host: 'https://www.youtube-nocookie.com',
         playerVars: {
           autoplay: 1,
           controls: 0,
           modestbranding: 1,
           rel: 0,
           playsinline: 1,
-          iv_load_policy: 3,
-          disablekb: 1,
-          fs: 0,
           start: current.startTime || 0,
           end: current.endTime || undefined,
         },
