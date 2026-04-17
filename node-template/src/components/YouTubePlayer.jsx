@@ -76,6 +76,7 @@ function InteractivePlayer({ playlist, audioOnly, isFloating, heading, caption, 
   const [volume, setVolume] = useState(80);
   const [showPlaylist, setShowPlaylist] = useState(false);
   const [minimized, setMinimized] = useState(false);
+  const [closed, setClosed] = useState(false);
   const [position, setPosition] = useState({ side: 'bottom' }); // bottom, left, right
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -389,6 +390,9 @@ function InteractivePlayer({ playlist, audioOnly, isFloating, heading, caption, 
   }
 
   // ── Floating mini player ──
+  // Video mode: closed = fully hidden; audio mode: minimized = nub
+  if (isFloating && !audioOnly && closed) return null;
+
   const floatingWidth = !audioOnly && !minimized ? '420px' : (minimized ? '48px' : '380px');
   const posStyles = {
     bottom: { bottom: '72px', left: '50%', transform: 'translateX(-50%)', maxWidth: floatingWidth },
@@ -442,8 +446,8 @@ function InteractivePlayer({ playlist, audioOnly, isFloating, heading, caption, 
               <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" style="opacity:0.5"><circle cx="9" cy="5" r="2"/><circle cx="15" cy="5" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="9" cy="19" r="2"/><circle cx="15" cy="19" r="2"/></svg>
               {audioOnly ? L.audioPlayer : L.videoPlayer}
             </span>
-            <button onClick={() => setMinimized(true)} class="text-xs px-1.5 py-0.5 rounded" style="color:var(--ps-text-faint)" aria-label={L.minimize}>
-              ─
+            <button onClick={() => audioOnly ? setMinimized(true) : (playerRef.current?.pauseVideo?.(), setClosed(true))} class="text-xs px-1.5 py-0.5 rounded" style="color:var(--ps-text-faint)" aria-label={audioOnly ? L.minimize : 'Close'}>
+              {audioOnly ? '─' : '✕'}
             </button>
           </div>
 
