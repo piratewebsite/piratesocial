@@ -105,6 +105,20 @@
     "iso": "ISO",
     "dateTaken": "Date Taken"
   },
+  "player": {
+    "audioPlayer": "♫ Audio Player",
+    "videoPlayer": "▶ Player",
+    "play": "Play",
+    "pause": "Pause",
+    "previous": "Previous",
+    "next": "Next",
+    "playlist": "Playlist",
+    "minimize": "Minimize",
+    "expand": "Expand player",
+    "changePosition": "Change position",
+    "track": "Track",
+    "youtubeVideo": "YouTube video"
+  },
   "footer": {
     "poweredBy": "Powered by Pirate Social"
   }

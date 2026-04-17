@@ -1,10 +1,12 @@
 ---
 import YouTubePlayer from '../YouTubePlayer.jsx';
+import labels from '../../content/labels.json';
 
 const { url, heading, caption, audioOnly, display = 'docked', tracks, layout = 'contained' } = Astro.props;
 
 // Floating players are rendered separately in BaseLayout with transition:persist
 const isFloating = display === 'floating';
+const playerLabels = labels.player || {};
 ---
 
 {!isFloating && (
@@ -17,5 +19,6 @@ const isFloating = display === 'floating';
     display="docked"
     tracks={tracks}
     layout={layout}
+    labels={playerLabels}
   />
 )}

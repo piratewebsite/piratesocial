@@ -826,6 +826,23 @@ collections:
               - { label: "Shutter Speed Label", name: shutterSpeed, widget: string, default: "Shutter Speed" }
               - { label: "ISO Label", name: iso, widget: string, default: "ISO" }
               - { label: "Date Taken Label", name: dateTaken, widget: string, default: "Date Taken" }
+          - label: Player
+            name: player
+            widget: object
+            collapsed: true
+            fields:
+              - { label: "Audio Player Label", name: audioPlayer, widget: string, default: "♫ Audio Player" }
+              - { label: "Video Player Label", name: videoPlayer, widget: string, default: "▶ Player" }
+              - { label: "Play", name: play, widget: string, default: "Play" }
+              - { label: "Pause", name: pause, widget: string, default: "Pause" }
+              - { label: "Previous", name: previous, widget: string, default: "Previous" }
+              - { label: "Next", name: next, widget: string, default: "Next" }
+              - { label: "Playlist", name: playlist, widget: string, default: "Playlist" }
+              - { label: "Minimize", name: minimize, widget: string, default: "Minimize" }
+              - { label: "Expand Player", name: expand, widget: string, default: "Expand player" }
+              - { label: "Change Position", name: changePosition, widget: string, default: "Change position" }
+              - { label: "Track", name: track, widget: string, default: "Track" }
+              - { label: "YouTube Video", name: youtubeVideo, widget: string, default: "YouTube video" }
           - label: Footer
             name: footer
             widget: object
