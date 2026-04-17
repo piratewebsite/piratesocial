@@ -150,6 +150,16 @@ const allNavItems = [...visibleNavItems, ...autoNavPages];
       <svg id="theme-icon-moon" class="w-5 h-5 hidden" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z"/></svg>
     </button>
 
+    <!-- Back + Scroll to top -->
+    <div class="fixed bottom-4 right-4 z-50 flex items-center gap-2">
+      <button id="back-btn" class="hidden rounded-full p-2.5 bg-theme-surface-hover text-theme-muted hover:bg-theme-card-hover transition shadow-lg border border-theme-border" aria-label="Go back">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 12H5m0 0l7 7m-7-7l7-7"/></svg>
+      </button>
+      <button id="top-btn" class="hidden rounded-full p-2.5 bg-theme-surface-hover text-theme-muted hover:bg-theme-card-hover transition shadow-lg border border-theme-border" aria-label="Back to top">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 15l7-7 7 7"/></svg>
+      </button>
+    </div>
+
     {/* Floating players — in layout so they persist across all page navigations */}
     {floatingPlayers.map((block: any, i: number) => (
       <div transition:persist={`floating-player-${i}`}>
@@ -213,6 +223,22 @@ const allNavItems = [...visibleNavItems, ...autoNavPages];
         localStorage.setItem('ps_theme', isDark ? 'dark' : 'light');
         updateThemeUI();
       });
+
+      // Back button — show only when there's history to go back to
+      const backBtn = document.getElementById('back-btn');
+      if (backBtn && window.history.length > 1 && document.referrer && new URL(document.referrer).origin === window.location.origin) {
+        backBtn.classList.remove('hidden');
+        backBtn.addEventListener('click', () => window.history.back());
+      }
+
+      // Scroll to top button — show after scrolling down
+      const topBtn = document.getElementById('top-btn');
+      if (topBtn) {
+        const toggleTop = () => topBtn.classList.toggle('hidden', window.scrollY < 300);
+        toggleTop();
+        window.addEventListener('scroll', toggleTop, { passive: true });
+        topBtn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+      }
     </script>
   </body>
 </html>
