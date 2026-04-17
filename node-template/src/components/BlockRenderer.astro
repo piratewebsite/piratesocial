@@ -7,14 +7,10 @@ import GalleryBlock from './blocks/GalleryBlock.astro';
 import TextBlock from './blocks/TextBlock.astro';
 import ImageBlock from './blocks/ImageBlock.astro';
 import LocationBlock from './blocks/LocationBlock.astro';
-import YouTubePlayer from './YouTubePlayer.jsx';
 
 const { blocks = [] } = Astro.props;
 
 const hasLightbox = blocks.some((b: any) => b.type === 'gallery' || (b.type === 'image' && b.lightbox !== false));
-
-// Separate floating YouTube players — they'll be rendered with transition:persist
-const floatingPlayers = blocks.filter((b: any) => b.type === 'youtube' && b.display === 'floating');
 ---
 
 {blocks.map((block: any) => (
@@ -28,22 +24,6 @@ const floatingPlayers = blocks.filter((b: any) => b.type === 'youtube' && b.disp
     {block.type === 'image' && <ImageBlock {...block} />}
     {block.type === 'location' && <LocationBlock {...block} />}
   </>
-))}
-
-{/* Floating players — persisted across page navigations */}
-{floatingPlayers.map((block: any, i: number) => (
-  <div transition:persist={`floating-player-${i}`}>
-    <YouTubePlayer
-      client:load
-      url={block.url}
-      heading={block.heading}
-      caption={block.caption}
-      audioOnly={block.audioOnly}
-      display="floating"
-      tracks={block.tracks}
-      layout={block.layout}
-    />
-  </div>
 ))}
 
 {hasLightbox && (

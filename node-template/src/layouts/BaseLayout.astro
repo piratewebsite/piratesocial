@@ -5,6 +5,11 @@ import theme from '../content/theme.json';
 import labels from '../content/labels.json';
 import pwa from '../content/pwa.json';
 import settings from '../content/settings.json';
+import home from '../content/home.json';
+import YouTubePlayer from '../components/YouTubePlayer.jsx';
+
+// Floating YouTube players from home blocks — rendered in layout so they persist across all pages
+const floatingPlayers = (home.blocks || []).filter((b: any) => b.type === 'youtube' && b.display === 'floating');
 
 interface Props {
   title?: string;
@@ -103,7 +108,7 @@ const allNavItems = [...visibleNavItems, ...autoNavPages];
 
     <ClientRouter />
 
-    <script is:inline>
+    <script is:inline data-astro-rerun>
       (function() {
         const saved = localStorage.getItem('ps_theme');
         const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -145,6 +150,22 @@ const allNavItems = [...visibleNavItems, ...autoNavPages];
       <svg id="theme-icon-moon" class="w-5 h-5 hidden" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z"/></svg>
     </button>
 
+    {/* Floating players — in layout so they persist across all page navigations */}
+    {floatingPlayers.map((block: any, i: number) => (
+      <div transition:persist={`floating-player-${i}`}>
+        <YouTubePlayer
+          client:load
+          url={block.url}
+          heading={block.heading}
+          caption={block.caption}
+          audioOnly={block.audioOnly}
+          display="floating"
+          tracks={block.tracks}
+          layout={block.layout}
+        />
+      </div>
+    ))}
+
     <footer class="border-t border-theme-border bg-theme-footer mt-16">
       <div class="mx-auto max-w-6xl px-4 py-8 text-center text-sm text-theme-faint">
         <p>{labels.footer.poweredBy.split('Pirate Social')[0]}<a href="https://github.com/piratesocial" class="underline hover:text-theme-text">Pirate Social</a></p>
@@ -152,7 +173,7 @@ const allNavItems = [...visibleNavItems, ...autoNavPages];
       </div>
     </footer>
 
-    <script is:inline define:vars={{ hubUrl: siteConfig.hubUrl, socialEnabled: enableSocial }}>
+    <script is:inline define:vars={{ hubUrl: siteConfig.hubUrl, socialEnabled: enableSocial }} data-astro-rerun>
       // Handle auth token from OAuth redirect
       if (socialEnabled) {
         const params = new URLSearchParams(window.location.search);
@@ -176,8 +197,8 @@ const allNavItems = [...visibleNavItems, ...autoNavPages];
       // Theme toggle
       function updateThemeUI() {
         const isDark = document.documentElement.classList.contains('dark');
-        document.getElementById('theme-icon-sun').classList.toggle('hidden', !isDark);
-        document.getElementById('theme-icon-moon').classList.toggle('hidden', isDark);
+        document.getElementById('theme-icon-sun')?.classList.toggle('hidden', !isDark);
+        document.getElementById('theme-icon-moon')?.classList.toggle('hidden', isDark);
         const meta = document.getElementById('meta-theme-color');
         if (meta) meta.content = isDark ? '#09090b' : '#ffffff';
       }
