@@ -727,7 +727,7 @@ import { siteConfig } from '../lib/config';
   let allSquads = [];
 
   async function renderSquadsView() {
-    loadMoreContainer.classList.add('hidden');
+    scrollSentinel.classList.add('hidden');
     // Fire profile fetch in background — don't block rendering
     initSquadsProfile();
 
