@@ -15,7 +15,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 ---
 
 <!doctype html>
-<html lang="en" class="dark">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -37,21 +37,30 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
     <link rel="icon" type="image/png" sizes="192x192" href={`${base}/images/icon192.png`} />
     <link rel="apple-touch-icon" href={`${base}/images/icon192.png`} />
     <link rel="manifest" href={`${base}/manifest.json`} />
-    <meta name="theme-color" content="#09090b" />
+    <meta name="theme-color" content="#09090b" id="meta-theme-color" />
+    <script is:inline>
+      (function() {
+        const saved = localStorage.getItem('ps_theme');
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const dark = saved ? saved === 'dark' : prefersDark;
+        if (dark) document.documentElement.classList.add('dark');
+        else document.documentElement.classList.remove('dark');
+      })();
+    </script>
   </head>
-  <body class="min-h-screen bg-zinc-950 text-zinc-100 antialiased">
-    <header class="border-b border-zinc-800">
+  <body class="min-h-screen bg-white text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100 antialiased transition-colors duration-200">
+    <header class="border-b border-zinc-200 dark:border-zinc-800">
       <nav class="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
         <a href={`${base}/`} class="flex items-center">
           <img src={`${base}/images/logoImage.svg`} alt={siteConfig.title} class="h-8" />
         </a>
         <div class="flex items-center gap-6 text-sm">
-          <a href={`${base}/posts`} class="hover:text-white text-zinc-400 transition">Posts</a>
-          <a href={`${base}/galleries`} class="hover:text-white text-zinc-400 transition">Galleries</a>
-          <a href={`${base}/social`} class="hover:text-white text-zinc-400 transition">Social</a>
-          <a href={`${base}/settings`} class="hover:text-white text-zinc-400 transition">Settings</a>
-          <a href={`${base}/about`} class="hover:text-white text-zinc-400 transition">About</a>
-          <button id="auth-btn" class="rounded bg-zinc-800 px-3 py-1.5 text-xs hover:bg-zinc-700 transition">
+          <a href={`${base}/posts`} class="text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white transition">Posts</a>
+          <a href={`${base}/galleries`} class="text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white transition">Galleries</a>
+          <a href={`${base}/social`} class="text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white transition">Social</a>
+          <a href={`${base}/settings`} class="text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white transition">Settings</a>
+          <a href={`${base}/about`} class="text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white transition">About</a>
+          <button id="auth-btn" class="rounded bg-zinc-200 dark:bg-zinc-800 px-3 py-1.5 text-xs hover:bg-zinc-300 dark:hover:bg-zinc-700 transition">
             Sign In
           </button>
         </div>
@@ -62,7 +71,13 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
       <slot />
     </main>
 
-    <footer class="border-t border-zinc-800 mt-16">
+    <!-- Theme toggle -->
+    <button id="theme-toggle" class="fixed bottom-4 left-4 z-50 rounded-full p-2.5 bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-300 dark:hover:bg-zinc-700 transition shadow-lg border border-zinc-300 dark:border-zinc-700" aria-label="Toggle theme">
+      <svg id="theme-icon-sun" class="w-5 h-5 hidden" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+      <svg id="theme-icon-moon" class="w-5 h-5 hidden" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z"/></svg>
+    </button>
+
+    <footer class="border-t border-zinc-200 dark:border-zinc-800 mt-16">
       <div class="mx-auto max-w-6xl px-4 py-8 text-center text-sm text-zinc-500">
         <p>Powered by <a href="https://github.com/piratesocial" class="underline hover:text-white">Pirate Social</a></p>
         <p class="mt-1">Part of the distributed photography network &middot; <a href={`${base}/feed.xml`} class="underline">RSS</a></p>
@@ -87,6 +102,22 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
       } else if (btn) {
         btn.addEventListener('click', () => window.location.href = `${hubUrl}/api/auth/github`);
       }
+
+      // Theme toggle
+      function updateThemeUI() {
+        const isDark = document.documentElement.classList.contains('dark');
+        document.getElementById('theme-icon-sun').classList.toggle('hidden', !isDark);
+        document.getElementById('theme-icon-moon').classList.toggle('hidden', isDark);
+        const meta = document.getElementById('meta-theme-color');
+        if (meta) meta.content = isDark ? '#09090b' : '#ffffff';
+      }
+      updateThemeUI();
+
+      document.getElementById('theme-toggle')?.addEventListener('click', () => {
+        const isDark = document.documentElement.classList.toggle('dark');
+        localStorage.setItem('ps_theme', isDark ? 'dark' : 'light');
+        updateThemeUI();
+      });
     </script>
   </body>
 </html>
