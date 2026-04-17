@@ -88,7 +88,8 @@ function InteractivePlayer({ playlist, audioOnly, isFloating, heading, caption, 
   const progressInterval = useRef(null);
   const isDragging = useRef(false);
   const playerReadyRef = useRef(false);
-  const nextTrackRef = useRef(null);
+  const handleNextRef = useRef(null);
+  const lastAdvanceTimeRef = useRef(0);
   const hasPlaylist = playlist.length > 1;
   const current = playlist[currentIndex] || playlist[0];
   const currentRef = useRef(current);
@@ -106,65 +107,73 @@ function InteractivePlayer({ playlist, audioOnly, isFloating, heading, caption, 
     document.head.appendChild(tag);
   }, []);
 
-  // Create player ONCE when started (never recreated for track changes)
+  const onPlayerReady = useCallback((e) => {
+    playerReadyRef.current = true;
+    e.target.setVolume(volume);
+  }, []);
+
+  const onPlayerStateChange = useCallback((e) => {
+    if (e.data === window.YT.PlayerState.PLAYING) {
+      setIsPlaying(true);
+      setStarted(true);
+      const fullDur = e.target.getDuration();
+      const cur = currentRef.current;
+      setDuration((cur.endTime || fullDur) - (cur.startTime || 0));
+      clearInterval(progressInterval.current);
+      progressInterval.current = setInterval(() => {
+        if (playerRef.current && playerRef.current.getCurrentTime) {
+          const t = playerRef.current.getCurrentTime();
+          const cur = currentRef.current;
+          const cs = cur.startTime || 0;
+          setProgress(Math.max(0, t - cs));
+          // Safety net: enforce endTime
+          if (cur.endTime && t >= cur.endTime) {
+            clearInterval(progressInterval.current);
+            handleNextRef.current?.();
+          }
+        }
+      }, 500);
+    } else if (e.data === window.YT.PlayerState.PAUSED) {
+      setIsPlaying(false);
+      clearInterval(progressInterval.current);
+    } else if (e.data === window.YT.PlayerState.ENDED) {
+      clearInterval(progressInterval.current);
+      // Debounce to prevent double-advance (matches slider)
+      const now = Date.now();
+      if (now - lastAdvanceTimeRef.current > 500) {
+        lastAdvanceTimeRef.current = now;
+        handleNextRef.current?.();
+      }
+    }
+  }, []);
+
+  // Initialize player ONCE immediately (matches slider — establishes session early)
   useEffect(() => {
-    if (!started) return;
-    if (playerRef.current) return; // already created
+    if (playerRef.current) return;
+
+    const first = playlist[0];
+    if (!first) return;
 
     function initPlayer() {
       if (playerRef.current) return;
       if (!iframeRef.current) return;
 
-      const c = currentRef.current;
       playerRef.current = new window.YT.Player(iframeRef.current, {
-        videoId: c.id,
+        width: '100%',
+        height: '100%',
+        videoId: first.id,
         playerVars: {
-          autoplay: 1,
-          controls: 0,
+          autoplay: 0,
+          controls: 1,
           modestbranding: 1,
           rel: 0,
           playsinline: 1,
-          start: c.startTime || 0,
-          end: c.endTime || undefined,
+          start: first.startTime || 0,
+          end: first.endTime,
         },
         events: {
-          onReady: (e) => {
-            playerReadyRef.current = true;
-            e.target.setVolume(volume);
-            e.target.playVideo();
-            setIsPlaying(true);
-            const fullDur = e.target.getDuration();
-            const cur = currentRef.current;
-            setDuration((cur.endTime || fullDur) - (cur.startTime || 0));
-          },
-          onStateChange: (e) => {
-            if (e.data === window.YT.PlayerState.PLAYING) {
-              setIsPlaying(true);
-              const fullDur = e.target.getDuration();
-              const cur = currentRef.current;
-              setDuration((cur.endTime || fullDur) - (cur.startTime || 0));
-              clearInterval(progressInterval.current);
-              progressInterval.current = setInterval(() => {
-                if (playerRef.current && playerRef.current.getCurrentTime) {
-                  const t = playerRef.current.getCurrentTime();
-                  const cur = currentRef.current;
-                  const cs = cur.startTime || 0;
-                  setProgress(Math.max(0, t - cs));
-                  // Safety net: enforce endTime
-                  if (cur.endTime && t >= cur.endTime) {
-                    clearInterval(progressInterval.current);
-                    nextTrackRef.current?.();
-                  }
-                }
-              }, 500);
-            } else if (e.data === window.YT.PlayerState.PAUSED) {
-              setIsPlaying(false);
-              clearInterval(progressInterval.current);
-            } else if (e.data === window.YT.PlayerState.ENDED) {
-              clearInterval(progressInterval.current);
-              nextTrackRef.current?.();
-            }
-          },
+          onReady: onPlayerReady,
+          onStateChange: onPlayerStateChange,
         },
       });
     }
@@ -172,28 +181,33 @@ function InteractivePlayer({ playlist, audioOnly, isFloating, heading, caption, 
     if (window.YT && window.YT.Player) {
       initPlayer();
     } else {
-      window.onYouTubeIframeAPIReady = initPlayer;
+      const checkInterval = setInterval(() => {
+        if (window.YT && window.YT.Player) {
+          clearInterval(checkInterval);
+          initPlayer();
+        }
+      }, 100);
+      return () => clearInterval(checkInterval);
     }
+  }, [playlist]);
 
-    return () => clearInterval(progressInterval.current);
-  }, [started]);
-
-  // Load video when currentIndex changes (player init handles the first video)
-  const mountedRef = useRef(false);
+  // Load video when track changes (matches slider pattern exactly)
   useEffect(() => {
-    if (!playerReadyRef.current || !playerRef.current) return;
-    // Skip the very first render — the player init already loaded this video
-    if (!mountedRef.current) {
-      mountedRef.current = true;
-      return;
-    }
+    if (!playerRef.current || !playerReadyRef.current) return;
 
-    playerRef.current.loadVideoById({
-      videoId: current.id,
-      startSeconds: current.startTime || 0,
-      endSeconds: current.endTime || undefined,
-    });
-  }, [currentIndex]);
+    const track = playlist[currentIndex];
+    if (!track) return;
+
+    try {
+      playerRef.current.loadVideoById({
+        videoId: track.id,
+        startSeconds: track.startTime || 0,
+        endSeconds: track.endTime,
+      });
+    } catch (error) {
+      console.error('Error loading video:', error);
+    }
+  }, [currentIndex, playlist]);
 
   // Volume changes
   useEffect(() => {
@@ -203,15 +217,12 @@ function InteractivePlayer({ playlist, audioOnly, isFloating, heading, caption, 
   }, [volume]);
 
   const togglePlay = useCallback(() => {
-    if (!started) {
-      setStarted(true);
-      return;
-    }
     if (!playerRef.current) return;
-    if (isPlaying) {
-      playerRef.current.pauseVideo();
-    } else {
+    if (!started || !isPlaying) {
+      setStarted(true);
       playerRef.current.playVideo();
+    } else {
+      playerRef.current.pauseVideo();
     }
   }, [started, isPlaying]);
 
@@ -220,18 +231,16 @@ function InteractivePlayer({ playlist, audioOnly, isFloating, heading, caption, 
   }, []);
 
   const prevTrack = useCallback(() => {
-    const idx = currentIndexRef.current > 0 ? currentIndexRef.current - 1 : playlist.length - 1;
-    skipTo(idx);
-  }, [playlist.length, skipTo]);
+    setCurrentIndex((prev) => (prev > 0 ? prev - 1 : playlist.length - 1));
+  }, [playlist.length]);
 
   const nextTrack = useCallback(() => {
-    const idx = currentIndexRef.current < playlist.length - 1 ? currentIndexRef.current + 1 : 0;
-    skipTo(idx);
-  }, [playlist.length, skipTo]);
+    setCurrentIndex((prev) => (prev < playlist.length - 1 ? prev + 1 : 0));
+  }, [playlist.length]);
 
-  // Keep nextTrackRef always pointing to latest nextTrack
+  // Keep handleNextRef always pointing to latest nextTrack (matches slider's handleNextRef pattern)
   useEffect(() => {
-    nextTrackRef.current = nextTrack;
+    handleNextRef.current = nextTrack;
   }, [nextTrack]);
 
   const seekTo = useCallback((e) => {
