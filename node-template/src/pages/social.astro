@@ -345,8 +345,8 @@ const sl = labels.social;
           ${primaryImage ? `<div class="bg-black flex justify-center"><img src="${escapeHtml(primaryImage)}" alt="${escapeHtml(embed.images?.[0]?.alt || post.title)}" style="width:100%;max-height:28rem;object-fit:contain" loading="lazy" onerror="this.parentElement.style.display='none'" /></div>` : ''}
           <div class="p-4">
             <div class="mb-3">${authorHtml}</div>
-            <h3 class="font-semibold"><a href="${escapeHtml(post.link)}" target="_blank" class="hover:underline">${formatText(post.title)}</a></h3>
-            ${post.description && post.description !== post.title ? `<p class="mt-1 text-sm text-theme-muted">${formatText(post.description)}</p>` : ''}
+            ${!embed.external?.uri ? `<h3 class="font-semibold"><a href="${escapeHtml(post.link)}" target="_blank" class="hover:underline">${formatText(post.title)}</a></h3>` : ''}
+            ${post.description && post.description !== post.title && !embed.external?.uri ? `<p class="mt-1 text-sm text-theme-muted">${formatText(post.description)}</p>` : ''}
             ${embedHtml}
             ${post.exifData ? `<div class="mt-2 text-xs text-theme-faint">${formatExif(post.exifData)}</div>` : ''}
             <div class="mt-3 flex items-center gap-4 text-sm text-theme-muted">
