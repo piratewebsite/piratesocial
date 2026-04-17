@@ -2,6 +2,7 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { getCollection } from 'astro:content';
 import { withBase } from '../../lib/config';
+import labels from '../../data/labels.json';
 
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 const galleries = (await getCollection('galleries'))
@@ -9,7 +10,7 @@ const galleries = (await getCollection('galleries'))
 ---
 
 <BaseLayout title="Galleries">
-  <h1 class="mb-8 text-2xl font-bold">Photo Galleries</h1>
+  <h1 class="mb-8 text-2xl font-bold">{labels.galleries.heading}</h1>
   <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
     {galleries.map((gallery) => (
       <a

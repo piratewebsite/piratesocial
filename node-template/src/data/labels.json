@@ -1,0 +1,103 @@
+{
+  "nav": {
+    "posts": "Posts",
+    "galleries": "Galleries",
+    "social": "Social",
+    "settings": "Settings",
+    "about": "About",
+    "signIn": "Sign In",
+    "rss": "RSS"
+  },
+  "home": {
+    "recentPhotos": "Recent Photos",
+    "viewAllPosts": "View all posts →"
+  },
+  "social": {
+    "heading": "Social Feed",
+    "tabSquads": "Squads",
+    "tabTimeline": "Timeline",
+    "tabBluesky": "Bluesky",
+    "tabDiscover": "Discover",
+    "tabPeople": "People",
+    "signInPrompt": "Sign in to see your timeline",
+    "signInButton": "Sign in with GitHub",
+    "loading": "Loading...",
+    "noPosts": "No posts yet",
+    "noUsers": "No users yet",
+    "failedToLoad": "Failed to load feed",
+    "shareButton": "↗ Share",
+    "readButton": "↗ Read",
+    "viewButton": "↗ View",
+    "connectBluesky": "Connect your Bluesky account in Settings to see your feed"
+  },
+  "posts": {
+    "heading": "All Posts"
+  },
+  "galleries": {
+    "heading": "Photo Galleries",
+    "allPhotos": "All Photos",
+    "gallery": "Gallery"
+  },
+  "about": {
+    "heading": "About This Site"
+  },
+  "settings": {
+    "heading": "Settings",
+    "rssFeeds": "RSS Feeds",
+    "bluesky": "Bluesky",
+    "signInPrompt": "Sign in to manage your settings",
+    "signInButton": "Sign in with GitHub"
+  },
+  "feeds": {
+    "heading": "External RSS Feeds",
+    "addFeed": "Add Feed",
+    "tabMyFeeds": "My Feeds",
+    "tabAllPosts": "All Posts",
+    "backToFeeds": "← Back to feeds",
+    "noFeeds": "No feeds yet. Add one above!",
+    "loadMore": "Load More",
+    "adding": "Adding..."
+  },
+  "bluesky": {
+    "heading": "Bluesky Integration",
+    "connectionStatus": "Connection Status",
+    "connectHeading": "Connect Bluesky",
+    "handleLabel": "Bluesky Handle",
+    "passwordLabel": "App Password",
+    "connectButton": "Connect Bluesky Account",
+    "active": "Active",
+    "paused": "Paused",
+    "notConnected": "Not Connected",
+    "noAccount": "No Bluesky account connected.",
+    "pauseCrosspost": "Pause Cross-posting",
+    "enableCrosspost": "Enable Cross-posting"
+  },
+  "squads": {
+    "heading": "Squads",
+    "signInPrompt": "Sign in and connect Bluesky to use Squads",
+    "placeholder": "Squad name (e.g. Photo Friends)",
+    "createButton": "Create Squad",
+    "deleteButton": "Delete",
+    "viewFeed": "View Squad Feed",
+    "hideFeed": "Hide Squad Feed",
+    "noPosts": "No posts"
+  },
+  "components": {
+    "comments": "Comments",
+    "share": "↗ Share",
+    "viewOnBluesky": "View on Bluesky ↗",
+    "commentPlaceholder": "Write a comment...",
+    "postButton": "Post",
+    "exifData": "EXIF Data",
+    "camera": "Camera",
+    "lens": "Lens",
+    "focalLength": "Focal Length",
+    "aperture": "Aperture",
+    "shutterSpeed": "Shutter Speed",
+    "iso": "ISO",
+    "dateTaken": "Date Taken"
+  },
+  "footer": {
+    "poweredBy": "Powered by Pirate Social"
+  }
+}

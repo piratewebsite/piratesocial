@@ -1,5 +1,6 @@
 ---
 import { withBase } from '../lib/config';
+import labels from '../data/labels.json';
 
 interface Photo {
   src: ImageMetadata | string;
@@ -15,7 +16,7 @@ const { photos } = Astro.props;
 ---
 
 <div class="my-8">
-  <h3 class="mb-4 text-lg font-semibold">Gallery</h3>
+  <h3 class="mb-4 text-lg font-semibold">{labels.galleries.gallery}</h3>
   <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
     {photos.map((photo, i) => (
       <button

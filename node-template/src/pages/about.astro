@@ -1,6 +1,7 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { siteConfig } from '../lib/config';
+import labels from '../data/labels.json';
 ---
 
 <BaseLayout title="About">
@@ -38,7 +39,7 @@ import { siteConfig } from '../lib/config';
       </div>
 
       <div class="mt-8 rounded-lg border border-theme-card-border bg-theme-card p-6 text-left w-full">
-        <h2 class="text-lg font-semibold mb-3">About This Site</h2>
+        <h2 class="text-lg font-semibold mb-3">{labels.about.heading}</h2>
         <p class="text-theme-muted text-sm leading-relaxed">
           This is a node on the <strong class="text-theme-text">Pirate Social</strong> network — a distributed
           photography platform where every photographer owns their own site and content. Sites connect

@@ -2,7 +2,7 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import Slideshow from '../../components/Slideshow.astro';
 import { getCollection } from 'astro:content';
-
+import labels from '../../data/labels.json';
 export async function getStaticPaths() {
   const galleries = await getCollection('galleries');
   return galleries.map(g => ({ params: { slug: g.id.replace(/\.(md|mdx)$/, '') }, props: { gallery: g } }));
@@ -40,7 +40,7 @@ const { Content } = await gallery.render();
     </div>
 
     <!-- Grid view -->
-    <h2 class="mt-12 mb-6 text-xl font-semibold">All Photos</h2>
+    <h2 class="mt-12 mb-6 text-xl font-semibold">{labels.galleries.allPhotos}</h2>
     <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
       {gallery.data.photos.map((photo, i) => (
         <button

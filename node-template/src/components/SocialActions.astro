@@ -1,5 +1,6 @@
 ---
 import { siteConfig } from '../lib/config';
+import labels from '../data/labels.json';
 
 interface Props {
   postSlug: string;
@@ -14,13 +15,13 @@ const { postSlug } = Astro.props;
       ♡ <span class="like-count">0</span>
     </button>
     <button class="comment-toggle hover:text-blue-400 transition cursor-pointer" data-slug={postSlug}>
-      💬 <span class="comment-count">0</span> Comments
+      💬 <span class="comment-count">0</span> {labels.components.comments}
     </button>
     <button class="post-share-btn hover:text-green-400 transition cursor-pointer" data-slug={postSlug}>
-      ↗ Share
+      {labels.components.share}
     </button>
     <a class="bsky-link hidden text-blue-400 hover:text-blue-300 transition text-xs" data-slug={postSlug} href="#" target="_blank" rel="noopener">
-      View on Bluesky ↗
+      {labels.components.viewOnBluesky}
     </a>
   </div>
 
@@ -37,11 +38,11 @@ const { postSlug } = Astro.props;
       <input
         type="text"
         class="comment-input flex-1 rounded bg-theme-input-bg border border-theme-input-border px-3 py-2 text-sm text-theme-text placeholder-theme-faint focus:outline-none focus:border-theme-primary"
-        placeholder="Write a comment..."
+        placeholder={labels.components.commentPlaceholder}
         maxlength="2000"
       />
       <button class="comment-submit rounded bg-theme-surface-hover px-4 py-2 text-sm hover:bg-theme-card-hover transition cursor-pointer">
-        Post
+        {labels.components.postButton}
       </button>
     </div>
   </div>

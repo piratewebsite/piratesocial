@@ -255,3 +255,145 @@ collections:
               - { label: "Card Hover Border", name: cardHover, widget: color, enableAlpha: true, default: "rgba(63, 63, 70, 1)" }
               - { label: "Header Background", name: headerBg, widget: color, enableAlpha: true, default: "rgba(9, 9, 11, 1)" }
               - { label: "Footer Background", name: footerBg, widget: color, enableAlpha: true, default: "rgba(9, 9, 11, 1)" }
+
+      - label: Labels & Text
+        name: labels
+        file: src/data/labels.json
+        fields:
+          - label: Navigation
+            name: nav
+            widget: object
+            collapsed: false
+            fields:
+              - { label: "Posts Link", name: posts, widget: string, default: "Posts" }
+              - { label: "Galleries Link", name: galleries, widget: string, default: "Galleries" }
+              - { label: "Social Link", name: social, widget: string, default: "Social" }
+              - { label: "Settings Link", name: settings, widget: string, default: "Settings" }
+              - { label: "About Link", name: about, widget: string, default: "About" }
+              - { label: "Sign In Button", name: signIn, widget: string, default: "Sign In" }
+              - { label: "RSS Link", name: rss, widget: string, default: "RSS" }
+          - label: Home Page
+            name: home
+            widget: object
+            collapsed: true
+            fields:
+              - { label: "Recent Photos Heading", name: recentPhotos, widget: string, default: "Recent Photos" }
+              - { label: "View All Posts Link", name: viewAllPosts, widget: string, default: "View all posts →" }
+          - label: Social Page
+            name: social
+            widget: object
+            collapsed: true
+            fields:
+              - { label: "Page Heading", name: heading, widget: string, default: "Social Feed" }
+              - { label: "Squads Tab", name: tabSquads, widget: string, default: "Squads" }
+              - { label: "Timeline Tab", name: tabTimeline, widget: string, default: "Timeline" }
+              - { label: "Bluesky Tab", name: tabBluesky, widget: string, default: "Bluesky" }
+              - { label: "Discover Tab", name: tabDiscover, widget: string, default: "Discover" }
+              - { label: "People Tab", name: tabPeople, widget: string, default: "People" }
+              - { label: "Sign In Prompt", name: signInPrompt, widget: string, default: "Sign in to see your timeline" }
+              - { label: "Sign In Button", name: signInButton, widget: string, default: "Sign in with GitHub" }
+              - { label: "Loading Text", name: loading, widget: string, default: "Loading..." }
+              - { label: "No Posts Message", name: noPosts, widget: string, default: "No posts yet" }
+              - { label: "No Users Message", name: noUsers, widget: string, default: "No users yet" }
+              - { label: "Load Error", name: failedToLoad, widget: string, default: "Failed to load feed" }
+              - { label: "Share Button", name: shareButton, widget: string, default: "↗ Share" }
+              - { label: "Read Link", name: readButton, widget: string, default: "↗ Read" }
+              - { label: "View Link", name: viewButton, widget: string, default: "↗ View" }
+              - { label: "Connect Bluesky Prompt", name: connectBluesky, widget: string, default: "Connect your Bluesky account in Settings to see your feed" }
+          - label: Posts Page
+            name: posts
+            widget: object
+            collapsed: true
+            fields:
+              - { label: "Page Heading", name: heading, widget: string, default: "All Posts" }
+          - label: Galleries Page
+            name: galleries
+            widget: object
+            collapsed: true
+            fields:
+              - { label: "Page Heading", name: heading, widget: string, default: "Photo Galleries" }
+              - { label: "All Photos Heading", name: allPhotos, widget: string, default: "All Photos" }
+              - { label: "Gallery Label", name: gallery, widget: string, default: "Gallery" }
+          - label: About Page
+            name: about
+            widget: object
+            collapsed: true
+            fields:
+              - { label: "Page Heading", name: heading, widget: string, default: "About This Site" }
+          - label: Settings Pages
+            name: settings
+            widget: object
+            collapsed: true
+            fields:
+              - { label: "Page Heading", name: heading, widget: string, default: "Settings" }
+              - { label: "RSS Feeds Card", name: rssFeeds, widget: string, default: "RSS Feeds" }
+              - { label: "Bluesky Card", name: bluesky, widget: string, default: "Bluesky" }
+              - { label: "Sign In Prompt", name: signInPrompt, widget: string, default: "Sign in to manage your settings" }
+              - { label: "Sign In Button", name: signInButton, widget: string, default: "Sign in with GitHub" }
+          - label: RSS Feeds Settings
+            name: feeds
+            widget: object
+            collapsed: true
+            fields:
+              - { label: "Page Heading", name: heading, widget: string, default: "External RSS Feeds" }
+              - { label: "Add Feed Button", name: addFeed, widget: string, default: "Add Feed" }
+              - { label: "My Feeds Tab", name: tabMyFeeds, widget: string, default: "My Feeds" }
+              - { label: "All Posts Tab", name: tabAllPosts, widget: string, default: "All Posts" }
+              - { label: "Back Link", name: backToFeeds, widget: string, default: "← Back to feeds" }
+              - { label: "No Feeds Message", name: noFeeds, widget: string, default: "No feeds yet. Add one above!" }
+              - { label: "Load More Button", name: loadMore, widget: string, default: "Load More" }
+              - { label: "Adding Text", name: adding, widget: string, default: "Adding..." }
+          - label: Bluesky Settings
+            name: bluesky
+            widget: object
+            collapsed: true
+            fields:
+              - { label: "Page Heading", name: heading, widget: string, default: "Bluesky Integration" }
+              - { label: "Connection Status", name: connectionStatus, widget: string, default: "Connection Status" }
+              - { label: "Connect Heading", name: connectHeading, widget: string, default: "Connect Bluesky" }
+              - { label: "Handle Label", name: handleLabel, widget: string, default: "Bluesky Handle" }
+              - { label: "Password Label", name: passwordLabel, widget: string, default: "App Password" }
+              - { label: "Connect Button", name: connectButton, widget: string, default: "Connect Bluesky Account" }
+              - { label: "Active Badge", name: active, widget: string, default: "Active" }
+              - { label: "Paused Badge", name: paused, widget: string, default: "Paused" }
+              - { label: "Not Connected Badge", name: notConnected, widget: string, default: "Not Connected" }
+              - { label: "No Account Message", name: noAccount, widget: string, default: "No Bluesky account connected." }
+              - { label: "Pause Cross-posting", name: pauseCrosspost, widget: string, default: "Pause Cross-posting" }
+              - { label: "Enable Cross-posting", name: enableCrosspost, widget: string, default: "Enable Cross-posting" }
+          - label: Squads Settings
+            name: squads
+            widget: object
+            collapsed: true
+            fields:
+              - { label: "Page Heading", name: heading, widget: string, default: "Squads" }
+              - { label: "Sign In Prompt", name: signInPrompt, widget: string, default: "Sign in and connect Bluesky to use Squads" }
+              - { label: "Name Placeholder", name: placeholder, widget: string, default: "Squad name (e.g. Photo Friends)" }
+              - { label: "Create Button", name: createButton, widget: string, default: "Create Squad" }
+              - { label: "Delete Button", name: deleteButton, widget: string, default: "Delete" }
+              - { label: "View Feed Button", name: viewFeed, widget: string, default: "View Squad Feed" }
+              - { label: "Hide Feed Button", name: hideFeed, widget: string, default: "Hide Squad Feed" }
+              - { label: "No Posts Message", name: noPosts, widget: string, default: "No posts" }
+          - label: Components
+            name: components
+            widget: object
+            collapsed: true
+            fields:
+              - { label: "Comments Label", name: comments, widget: string, default: "Comments" }
+              - { label: "Share Button", name: share, widget: string, default: "↗ Share" }
+              - { label: "View on Bluesky Link", name: viewOnBluesky, widget: string, default: "View on Bluesky ↗" }
+              - { label: "Comment Placeholder", name: commentPlaceholder, widget: string, default: "Write a comment..." }
+              - { label: "Post Button", name: postButton, widget: string, default: "Post" }
+              - { label: "EXIF Heading", name: exifData, widget: string, default: "EXIF Data" }
+              - { label: "Camera Label", name: camera, widget: string, default: "Camera" }
+              - { label: "Lens Label", name: lens, widget: string, default: "Lens" }
+              - { label: "Focal Length Label", name: focalLength, widget: string, default: "Focal Length" }
+              - { label: "Aperture Label", name: aperture, widget: string, default: "Aperture" }
+              - { label: "Shutter Speed Label", name: shutterSpeed, widget: string, default: "Shutter Speed" }
+              - { label: "ISO Label", name: iso, widget: string, default: "ISO" }
+              - { label: "Date Taken Label", name: dateTaken, widget: string, default: "Date Taken" }
+          - label: Footer
+            name: footer
+            widget: object
+            collapsed: true
+            fields:
+              - { label: "Powered By Text", name: poweredBy, widget: string, default: "Powered by Pirate Social" }

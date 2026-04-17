@@ -1,19 +1,20 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { siteConfig } from '../../lib/config';
+import labels from '../../data/labels.json';
 
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 ---
 
 <BaseLayout title="Settings">
   <div class="mx-auto max-w-xl">
-    <h1 class="text-2xl font-bold mb-8">Settings</h1>
+    <h1 class="text-2xl font-bold mb-8">{labels.settings.heading}</h1>
 
     <div class="space-y-3">
       <a href={`${base}/settings/feeds/`} class="block rounded-lg border border-theme-card-border bg-theme-card p-5 hover:border-theme-card-hover transition group">
         <div class="flex items-center justify-between">
           <div>
-            <h2 class="font-semibold group-hover:text-theme-text transition">RSS Feeds</h2>
+            <h2 class="font-semibold group-hover:text-theme-text transition">{labels.settings.rssFeeds}</h2>
             <p class="text-sm text-theme-muted mt-1">Subscribe to external RSS feeds and see updates in your timeline</p>
           </div>
           <span class="text-theme-faint group-hover:text-theme-muted transition">→</span>
@@ -23,7 +24,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
       <a href={`${base}/settings/bluesky/`} class="block rounded-lg border border-theme-card-border bg-theme-card p-5 hover:border-theme-card-hover transition group">
         <div class="flex items-center justify-between">
           <div>
-            <h2 class="font-semibold group-hover:text-theme-text transition">Bluesky</h2>
+            <h2 class="font-semibold group-hover:text-theme-text transition">{labels.settings.bluesky}</h2>
             <p class="text-sm text-theme-muted mt-1">Connect your Bluesky account to cross-post photos</p>
           </div>
           <span class="text-theme-faint group-hover:text-theme-muted transition">→</span>

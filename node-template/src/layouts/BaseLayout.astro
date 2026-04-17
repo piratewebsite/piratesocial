@@ -1,6 +1,7 @@
 ---
 import { siteConfig } from '../lib/config';
 import theme from '../data/theme.json';
+import labels from '../data/labels.json';
 
 interface Props {
   title?: string;
@@ -90,13 +91,13 @@ const fontVars = `--ps-font-heading:${theme.fonts.heading};--ps-font-body:${them
           <img src={`${base}/images/logoImage.svg`} alt={siteConfig.title} class="h-8" />
         </a>
         <div class="flex items-center gap-6 text-sm">
-          <a href={`${base}/posts`} class="text-theme-muted hover:text-theme-text transition">Posts</a>
-          <a href={`${base}/galleries`} class="text-theme-muted hover:text-theme-text transition">Galleries</a>
-          <a href={`${base}/social`} class="text-theme-muted hover:text-theme-text transition">Social</a>
-          <a href={`${base}/settings`} class="text-theme-muted hover:text-theme-text transition">Settings</a>
-          <a href={`${base}/about`} class="text-theme-muted hover:text-theme-text transition">About</a>
+          <a href={`${base}/posts`} class="text-theme-muted hover:text-theme-text transition">{labels.nav.posts}</a>
+          <a href={`${base}/galleries`} class="text-theme-muted hover:text-theme-text transition">{labels.nav.galleries}</a>
+          <a href={`${base}/social`} class="text-theme-muted hover:text-theme-text transition">{labels.nav.social}</a>
+          <a href={`${base}/settings`} class="text-theme-muted hover:text-theme-text transition">{labels.nav.settings}</a>
+          <a href={`${base}/about`} class="text-theme-muted hover:text-theme-text transition">{labels.nav.about}</a>
           <button id="auth-btn" class="rounded bg-theme-surface-hover px-3 py-1.5 text-xs hover:bg-theme-card-hover transition">
-            Sign In
+            {labels.nav.signIn}
           </button>
         </div>
       </nav>
@@ -114,8 +115,8 @@ const fontVars = `--ps-font-heading:${theme.fonts.heading};--ps-font-body:${them
 
     <footer class="border-t border-theme-border bg-theme-footer mt-16">
       <div class="mx-auto max-w-6xl px-4 py-8 text-center text-sm text-theme-faint">
-        <p>Powered by <a href="https://github.com/piratesocial" class="underline hover:text-theme-text">Pirate Social</a></p>
-        <p class="mt-1">Part of the distributed photography network &middot; <a href={`${base}/feed.xml`} class="underline">RSS</a></p>
+        <p>{labels.footer.poweredBy.split('Pirate Social')[0]}<a href="https://github.com/piratesocial" class="underline hover:text-theme-text">Pirate Social</a></p>
+        <p class="mt-1">Part of the distributed photography network &middot; <a href={`${base}/feed.xml`} class="underline">{labels.nav.rss}</a></p>
       </div>
     </footer>
 

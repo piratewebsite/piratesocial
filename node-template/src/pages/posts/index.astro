@@ -2,6 +2,7 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { getCollection } from 'astro:content';
 import { withBase, cleanSlug } from '../../lib/config';
+import labels from '../../data/labels.json';
 
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 const posts = (await getCollection('posts'))
@@ -10,7 +11,7 @@ const posts = (await getCollection('posts'))
 ---
 
 <BaseLayout title="Posts">
-  <h1 class="mb-8 text-2xl font-bold">All Posts</h1>
+  <h1 class="mb-8 text-2xl font-bold">{labels.posts.heading}</h1>
   <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
     {posts.map((post) => (
       <a

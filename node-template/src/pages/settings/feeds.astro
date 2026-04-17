@@ -1,13 +1,14 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { siteConfig } from '../../lib/config';
+import labels from '../../data/labels.json';
 
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 ---
 
 <BaseLayout title="RSS Feeds">
   <div class="mx-auto max-w-2xl">
-    <h1 class="text-2xl font-bold mb-2">External RSS Feeds</h1>
+    <h1 class="text-2xl font-bold mb-2">{labels.feeds.heading}</h1>
     <p class="text-theme-muted text-sm mb-8">
       Subscribe to any RSS feed to see updates in your timeline. Blog posts, photo sites, news — anything with an RSS feed.
     </p>
@@ -15,7 +16,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
     <div id="auth-required" class="hidden text-center py-12 text-theme-faint">
       <p>Sign in to manage your RSS subscriptions</p>
       <a href={`${base}/social/`} class="mt-4 inline-block rounded bg-theme-primary text-white px-4 py-2 text-sm font-medium hover:bg-theme-primary-hover transition">
-        Sign in with GitHub
+        {labels.settings.signInButton}
       </a>
     </div>
 
@@ -25,7 +26,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
         <input type="text" id="feed-url-input" placeholder="https://example.com/feed.xml or @handle.bsky.social" required
           class="flex-1 rounded bg-theme-input-bg border border-theme-input-border px-3 py-2 text-sm focus:outline-none focus:border-theme-primary" />
         <button type="submit" id="add-feed-btn" class="rounded bg-theme-primary px-4 py-2 text-sm font-medium text-white hover:bg-theme-primary-hover transition whitespace-nowrap">
-          Add Feed
+          {labels.feeds.addFeed}
         </button>
       </form>
       <p class="text-theme-faint text-xs mb-6">Paste any RSS/Atom URL, or a Bluesky handle (e.g. <code class="text-theme-muted">alice.bsky.social</code> or <code class="text-theme-muted">@alice.bsky.social</code>)</p>
@@ -34,10 +35,10 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
       <!-- Filter tabs -->
       <div class="flex gap-2 mb-6">
         <button id="view-feeds" class="rounded bg-theme-surface-hover px-3 py-1.5 text-sm transition active-view">
-          My Feeds
+          {labels.feeds.tabMyFeeds}
         </button>
         <button id="view-posts" class="rounded bg-theme-input-bg px-3 py-1.5 text-sm hover:bg-theme-surface-hover transition">
-          All Posts
+          {labels.feeds.tabAllPosts}
         </button>
       </div>
 
@@ -50,20 +51,20 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
       <!-- Feed detail view (hidden by default) -->
       <div id="feed-detail" class="hidden">
         <button id="back-to-feeds" class="text-sm text-theme-muted hover:text-theme-text mb-4 flex items-center gap-1 transition">
-          ← Back to feeds
+          {labels.feeds.backToFeeds}
         </button>
         <div id="feed-detail-header" class="mb-6"></div>
         <div id="feed-detail-posts" class="space-y-4"></div>
       </div>
 
       <!-- Loading / empty states -->
-      <div id="loading" class="text-center py-8 text-theme-faint hidden">Loading...</div>
-      <div id="empty" class="text-center py-8 text-theme-faint hidden">No feeds yet. Add one above!</div>
+      <div id="loading" class="text-center py-8 text-theme-faint hidden">{labels.social.loading}</div>
+      <div id="empty" class="text-center py-8 text-theme-faint hidden">{labels.feeds.noFeeds}</div>
 
       <!-- Load more -->
       <div id="load-more-container" class="mt-8 text-center hidden">
         <button id="load-more" class="rounded bg-theme-input-bg px-6 py-2 text-sm hover:bg-theme-surface-hover transition">
-          Load More
+          {labels.feeds.loadMore}
         </button>
       </div>
     </div>
@@ -71,7 +72,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 </BaseLayout>
 
 <script is:inline src="https://cdn.jsdelivr.net/npm/hls.js@latest/dist/hls.min.js"></script>
-<script is:inline define:vars={{ hubUrl: siteConfig.hubUrl }}>
+<script is:inline define:vars={{ hubUrl: siteConfig.hubUrl, FL: labels.feeds }}>
   const token = localStorage.getItem('ps_token');
 
   if (!token) {
@@ -134,7 +135,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 
     errorEl.classList.add('hidden');
     btn.disabled = true;
-    btn.textContent = 'Adding...';
+    btn.textContent = FL.adding;
 
     try {
       const res = await fetch(`${hubUrl}/api/external-feeds`, {
@@ -260,7 +261,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
       if (append) {
         container.insertAdjacentHTML('beforeend', html);
       } else {
-        container.innerHTML = html || '<div class="text-center py-8 text-theme-faint">No external posts yet. Add some feeds and wait for them to sync!</div>';
+        container.innerHTML = html || `<div class="text-center py-8 text-theme-faint">${FL.noFeeds}</div>`;
       }
 
       document.getElementById('load-more-container').classList.toggle('hidden', !data.hasMore);
@@ -310,7 +311,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
       if (append) {
         container.insertAdjacentHTML('beforeend', html);
       } else {
-        container.innerHTML = html || '<div class="text-center py-8 text-theme-faint">No posts from this feed yet</div>';
+        container.innerHTML = html || `<div class="text-center py-8 text-theme-faint">${FL.noFeeds}</div>`;
       }
 
       document.getElementById('load-more-container').classList.toggle('hidden', !data.hasMore);

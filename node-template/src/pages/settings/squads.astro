@@ -1,31 +1,33 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { siteConfig } from '../../lib/config';
+import labels from '../../data/labels.json';
+const sq = labels.squads;
 
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 ---
 
 <BaseLayout title="Squads">
   <div class="mx-auto max-w-2xl">
-    <h1 class="text-2xl font-bold mb-2">Squads</h1>
+    <h1 class="text-2xl font-bold mb-2">{sq.heading}</h1>
     <p class="text-theme-muted text-sm mb-8">
       Create groups of Bluesky users. See who's active at a glance and browse their posts.
     </p>
 
     <div id="auth-required" class="hidden text-center py-12 text-theme-faint">
-      <p>Sign in and connect Bluesky to use Squads</p>
+      <p>{sq.signInPrompt}</p>
       <a href={`${base}/social/`} class="mt-4 inline-block rounded bg-white text-black px-4 py-2 text-sm font-medium hover:bg-theme-surface-hover transition">
-        Sign in with GitHub
+        {labels.settings.signInButton}
       </a>
     </div>
 
     <div id="squads-app" class="hidden">
       <!-- Create squad -->
       <form id="create-squad-form" class="flex gap-2 mb-8">
-        <input type="text" id="squad-name-input" placeholder="Squad name (e.g. Photo Friends)" required
+        <input type="text" id="squad-name-input" placeholder={sq.placeholder} required
           class="flex-1 rounded bg-theme-surface border border-theme-border px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
         <button type="submit" class="rounded bg-blue-600 px-4 py-2 text-sm font-medium hover:bg-blue-500 transition whitespace-nowrap">
-          Create Squad
+          {sq.createButton}
         </button>
       </form>
 
@@ -35,7 +37,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
   </div>
 </BaseLayout>
 
-<script is:inline define:vars={{ hubUrl: siteConfig.hubUrl }}>
+<script is:inline define:vars={{ hubUrl: siteConfig.hubUrl, SQ: labels.squads }}>
   const token = localStorage.getItem('ps_token');
 
   let myAvatar = null;
@@ -119,7 +121,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
       <div class="flex items-center justify-between mb-4">
         <h2 class="text-lg font-semibold">${esc(squad.name)}</h2>
         <div class="flex items-center gap-2">
-          <button class="delete-squad-btn text-xs text-red-400 hover:text-red-300 transition" data-squad-id="${squad.id}">Delete</button>
+          <button class="delete-squad-btn text-xs text-red-400 hover:text-red-300 transition" data-squad-id="${squad.id}">${SQ.deleteButton}</button>
         </div>
       </div>
 
@@ -183,7 +185,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
       <!-- View feed button -->
       ${squad.members.length ? `
       <button class="view-squad-feed-btn mt-4 w-full rounded bg-theme-surface py-2 text-sm hover:bg-theme-surface-hover transition" data-squad-id="${squad.id}">
-        View Squad Feed
+        ${SQ.viewFeed}
       </button>
       <div class="squad-feed hidden mt-4 space-y-4" data-squad-id="${squad.id}"></div>
       ` : ''}
@@ -286,7 +288,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
         const feedEl = document.querySelector(`.squad-feed[data-squad-id="${btn.dataset.squadId}"]`);
         if (!feedEl.classList.contains('hidden')) {
           feedEl.classList.add('hidden');
-          btn.textContent = 'View Squad Feed';
+          btn.textContent = SQ.viewFeed;
           return;
         }
 
@@ -296,13 +298,13 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
             headers: { Authorization: `Bearer ${token}` },
           });
           const data = await res.json();
-          feedEl.innerHTML = (data.posts || []).map(post => renderBskyCard(post)).join('') || '<div class="text-center py-4 text-theme-faint">No posts</div>';
+          feedEl.innerHTML = (data.posts || []).map(post => renderBskyCard(post)).join('') || `<div class="text-center py-4 text-theme-faint">${SQ.noPosts}</div>`;
           feedEl.classList.remove('hidden');
-          btn.textContent = 'Hide Squad Feed';
+          btn.textContent = SQ.hideFeed;
         } catch {
           feedEl.innerHTML = '<div class="text-center py-4 text-red-400">Failed to load</div>';
           feedEl.classList.remove('hidden');
-          btn.textContent = 'Hide Squad Feed';
+          btn.textContent = SQ.hideFeed;
         }
       });
     });
@@ -322,13 +324,13 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
             headers: { Authorization: `Bearer ${token}` },
           });
           const data = await res.json();
-          feedEl.innerHTML = (data.posts || []).map(post => renderBskyCard(post)).join('') || '<div class="text-center py-4 text-theme-faint">No posts</div>';
+          feedEl.innerHTML = (data.posts || []).map(post => renderBskyCard(post)).join('') || `<div class="text-center py-4 text-theme-faint">${SQ.noPosts}</div>`;
           feedEl.classList.remove('hidden');
-          feedBtn.textContent = 'Hide Squad Feed';
+          feedBtn.textContent = SQ.hideFeed;
         } catch {
           feedEl.innerHTML = '<div class="text-center py-4 text-red-400">Failed to load</div>';
           feedEl.classList.remove('hidden');
-          feedBtn.textContent = 'Hide Squad Feed';
+          feedBtn.textContent = SQ.hideFeed;
         }
       });
     });

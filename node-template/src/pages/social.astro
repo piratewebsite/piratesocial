@@ -1,27 +1,29 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { siteConfig } from '../lib/config';
+import labels from '../data/labels.json';
+const sl = labels.social;
 ---
 
 <BaseLayout title="Social">
   <div class="mx-auto max-w-3xl">
     <div class="mb-8 flex items-center justify-between">
-      <h1 class="text-2xl font-bold font-heading">Social Feed</h1>
+      <h1 class="text-2xl font-bold font-heading">{sl.heading}</h1>
       <div class="flex gap-2 flex-wrap">
         <button id="tab-squads" class="rounded bg-theme-input-bg px-3 py-1.5 text-sm hover:bg-theme-surface-hover transition">
-          Squads
+          {sl.tabSquads}
         </button>
         <button id="tab-timeline" class="rounded bg-theme-input-bg px-3 py-1.5 text-sm hover:bg-theme-surface-hover transition active-tab">
-          Timeline
+          {sl.tabTimeline}
         </button>
         <button id="tab-bluesky" class="rounded bg-theme-input-bg px-3 py-1.5 text-sm hover:bg-theme-surface-hover transition">
-          Bluesky
+          {sl.tabBluesky}
         </button>
         <button id="tab-discover" class="rounded bg-theme-input-bg px-3 py-1.5 text-sm hover:bg-theme-surface-hover transition">
-          Discover
+          {sl.tabDiscover}
         </button>
         <button id="tab-people" class="rounded bg-theme-input-bg px-3 py-1.5 text-sm hover:bg-theme-surface-hover transition">
-          People
+          {sl.tabPeople}
         </button>
       </div>
     </div>
@@ -29,9 +31,9 @@ import { siteConfig } from '../lib/config';
     <!-- Timeline container -->
     <div id="feed-container" class="space-y-6">
       <div class="text-center text-theme-faint py-12">
-        <p>Sign in to see your timeline</p>
+        <p>{sl.signInPrompt}</p>
         <button id="social-login" class="mt-4 rounded bg-theme-primary text-white px-4 py-2 text-sm font-medium hover:bg-theme-primary-hover transition">
-          Sign in with GitHub
+          {sl.signInButton}
         </button>
       </div>
     </div>
@@ -44,7 +46,7 @@ import { siteConfig } from '../lib/config';
 </BaseLayout>
 
 <script is:inline src="https://cdn.jsdelivr.net/npm/hls.js@latest/dist/hls.min.js"></script>
-<script is:inline define:vars={{ hubUrl: siteConfig.hubUrl }}>
+<script is:inline define:vars={{ hubUrl: siteConfig.hubUrl, L: labels.social }}>
   const token = localStorage.getItem('ps_token');
   const feedContainer = document.getElementById('feed-container');
   const scrollSentinel = document.getElementById('scroll-sentinel');
@@ -160,7 +162,7 @@ import { siteConfig } from '../lib/config';
     if (isLoading) return;
     isLoading = true;
     if (!append) {
-      feedContainer.innerHTML = '<div class="text-center py-8 text-theme-faint">Loading...</div>';
+      feedContainer.innerHTML = `<div class="text-center py-8 text-theme-faint">${L.loading}</div>`;
       hasMore = true;
     }
     scrollSentinel.classList.toggle('hidden', !append);
@@ -182,7 +184,7 @@ import { siteConfig } from '../lib/config';
         const session = await ensureBskySession();
         console.log('[PS] Bluesky session:', session ? 'got accessJwt' : 'NONE');
         if (!session?.accessJwt) {
-          feedContainer.innerHTML = '<div class="text-center py-8 text-theme-faint">Connect your Bluesky account in Settings to see your feed</div>';
+          feedContainer.innerHTML = `<div class="text-center py-8 text-theme-faint">${L.connectBluesky}</div>`;
           isLoading = false;
           hasMore = false;
           scrollSentinel.classList.add('hidden');
@@ -223,7 +225,7 @@ import { siteConfig } from '../lib/config';
         } catch (err) {
           console.error('[PS] Proxy error:', err.message);
         }
-        feedContainer.innerHTML = '<div class="text-center py-8 text-red-400">Failed to load Bluesky feed. Try refreshing the page.</div>';
+        feedContainer.innerHTML = `<div class="text-center py-8 text-red-400">${L.failedToLoad}</div>`;
         isLoading = false;
         hasMore = false;
         scrollSentinel.classList.add('hidden');
@@ -244,7 +246,7 @@ import { siteConfig } from '../lib/config';
       const data = await res.json();
       renderPosts(data, append);
     } catch (err) {
-      if (!append) feedContainer.innerHTML = '<div class="text-center py-8 text-red-400">Failed to load feed</div>';
+      if (!append) feedContainer.innerHTML = `<div class="text-center py-8 text-red-400">${L.failedToLoad}</div>`;
       hasMore = false;
     } finally {
       isLoading = false;
@@ -275,9 +277,9 @@ import { siteConfig } from '../lib/config';
           </div>`;
 
       // Interaction bar: only Pirate posts have likes/comments
-      const shareBtn = `<button class="share-btn hover:text-green-500 transition" data-url="${escapeHtml(post.link || '')}" data-title="${escapeHtml(post.title || '')}">↗ Share</button>`;
+      const shareBtn = `<button class="share-btn hover:text-green-500 transition" data-url="${escapeHtml(post.link || '')}" data-title="${escapeHtml(post.title || '')}">${L.shareButton}</button>`;
       const actionsHtml = isExternal
-        ? `<a href="${escapeHtml(post.link)}" target="_blank" rel="noopener noreferrer" class="hover:text-theme-text">↗ Read</a>${shareBtn}`
+        ? `<a href="${escapeHtml(post.link)}" target="_blank" rel="noopener noreferrer" class="hover:text-theme-text">${L.readButton}</a>${shareBtn}`
         : `<button class="like-btn hover:text-red-400 transition ${post.hasLiked ? 'text-red-400' : ''}" data-post-id="${post.id}">
               ${post.hasLiked ? '♥' : '♡'} ${post.likeCount || post._count?.likes || 0}
             </button>
@@ -285,7 +287,7 @@ import { siteConfig } from '../lib/config';
               💬 ${post.commentCount || post._count?.comments || 0}
             </button>
             ${shareBtn}
-            ${post.link ? `<a href="${escapeHtml(post.link)}" target="_blank" class="hover:text-theme-text ml-auto">↗ View</a>` : ''}`;
+            ${post.link ? `<a href="${escapeHtml(post.link)}" target="_blank" class="hover:text-theme-text ml-auto">${L.viewButton}</a>` : ''}`;
 
       // Build embed HTML for rich content (Bluesky images, videos, link cards, quotes)
       const embed = post.embedData || {};
@@ -358,7 +360,7 @@ import { siteConfig } from '../lib/config';
     if (append) {
       feedContainer.insertAdjacentHTML('beforeend', html);
     } else {
-      feedContainer.innerHTML = html || '<div class="text-center py-8 text-theme-faint">No posts yet</div>';
+      feedContainer.innerHTML = html || `<div class="text-center py-8 text-theme-faint">${L.noPosts}</div>`;
     }
 
     hasMore = !!data.hasMore;
@@ -443,7 +445,7 @@ import { siteConfig } from '../lib/config';
               <span>♡ ${post.likeCount}</span>
               <span>🔁 ${post.repostCount}</span>
               <span>💬 ${post.replyCount}</span>
-              <button class="share-btn hover:text-green-500 transition ml-auto" data-url="${escapeHtml(post.link)}" data-title="${escapeHtml(post.text?.slice(0, 100) || '')}">↗ Share</button>
+              <button class="share-btn hover:text-green-500 transition ml-auto" data-url="${escapeHtml(post.link)}" data-title="${escapeHtml(post.text?.slice(0, 100) || '')}">${L.shareButton}</button>
               <a href="${escapeHtml(post.link)}" target="_blank" rel="noopener noreferrer" class="hover:text-theme-text">↗ Open</a>
             </div>
           </div>
@@ -454,7 +456,7 @@ import { siteConfig } from '../lib/config';
     if (append) {
       feedContainer.insertAdjacentHTML('beforeend', html);
     } else {
-      feedContainer.innerHTML = html || '<div class="text-center py-8 text-theme-faint">Connect your Bluesky account in Settings to see your feed</div>';
+      feedContainer.innerHTML = html || `<div class="text-center py-8 text-theme-faint">${L.connectBluesky}</div>`;
     }
 
     hasMore = !!bskyCursor;
@@ -484,7 +486,7 @@ import { siteConfig } from '../lib/config';
     if (append) {
       feedContainer.insertAdjacentHTML('beforeend', html);
     } else {
-      feedContainer.innerHTML = html || '<div class="text-center py-8 text-theme-faint">No users yet</div>';
+      feedContainer.innerHTML = html || `<div class="text-center py-8 text-theme-faint">${L.noUsers}</div>`;
     }
 
     hasMore = !!data.hasMore;
@@ -824,7 +826,7 @@ import { siteConfig } from '../lib/config';
       select.value = targetId;
       showSquad(targetId);
     } catch {
-      container.innerHTML = '<div class="text-center py-8 text-red-400">Failed to load squads</div>';
+      container.innerHTML = `<div class="text-center py-8 text-red-400">${L.failedToLoad}</div>`;
     }
   }
 
@@ -1028,15 +1030,15 @@ import { siteConfig } from '../lib/config';
         }
         const squad = allSquads.find(s => String(s.id) === btn.dataset.squadId);
         if (!squad || !squad.members.length) return;
-        btn.textContent = 'Loading...';
+        btn.textContent = L.loading;
         try {
           const posts = await fetchSquadFeedDirect(squad.members);
-          feedEl.innerHTML = posts.map(post => renderSquadCard(post)).join('') || '<div class="text-center py-4 text-theme-faint">No posts</div>';
+          feedEl.innerHTML = posts.map(post => renderSquadCard(post)).join('') || `<div class="text-center py-4 text-theme-faint">${L.noPosts}</div>`;
           feedEl.classList.remove('hidden');
           btn.textContent = 'Hide Squad Feed';
           initHlsVideos();
         } catch {
-          feedEl.innerHTML = '<div class="text-center py-4 text-red-400">Failed to load</div>';
+          feedEl.innerHTML = `<div class="text-center py-4 text-red-400">${L.failedToLoad}</div>`;
           feedEl.classList.remove('hidden');
           btn.textContent = 'Hide Squad Feed';
         }
@@ -1053,12 +1055,12 @@ import { siteConfig } from '../lib/config';
         feedBtn.textContent = `Loading @${handle}...`;
         try {
           const data = await fetchAuthorFeedDirect(handle, 10);
-          feedEl.innerHTML = data.map(post => renderSquadCard(post)).join('') || '<div class="text-center py-4 text-theme-faint">No posts</div>';
+          feedEl.innerHTML = data.map(post => renderSquadCard(post)).join('') || `<div class="text-center py-4 text-theme-faint">${L.noPosts}</div>`;
           feedEl.classList.remove('hidden');
           feedBtn.textContent = 'Hide Squad Feed';
           initHlsVideos();
         } catch {
-          feedEl.innerHTML = '<div class="text-center py-4 text-red-400">Failed to load</div>';
+          feedEl.innerHTML = `<div class="text-center py-4 text-red-400">${L.failedToLoad}</div>`;
           feedEl.classList.remove('hidden');
           feedBtn.textContent = 'Hide Squad Feed';
         }
