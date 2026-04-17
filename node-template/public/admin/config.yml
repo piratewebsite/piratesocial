@@ -99,6 +99,34 @@ collections:
           - { label: Avatar, name: avatar, widget: image }
           - { label: Location, name: location, widget: string, required: false }
           - { label: Camera, name: camera, widget: string, required: false }
+          - label: "Site Logo"
+            name: logo
+            widget: object
+            collapsed: false
+            fields:
+              - label: "Logo Type"
+                name: type
+                widget: select
+                options:
+                  - { label: "Image", value: "image" }
+                  - { label: "Text", value: "text" }
+                default: "image"
+                hint: "Choose whether to show an image or text in the header"
+              - { label: "Logo Image", name: image, widget: image, default: "/images/logoImage.svg", required: false, hint: "Used when Logo Type is 'Image'" }
+              - { label: "Logo Text", name: text, widget: string, required: false, hint: "Used when Logo Type is 'Text' (e.g. your site name)" }
+          - label: "Show Sign In Button"
+            name: showSignIn
+            widget: boolean
+            default: true
+            hint: "Show or hide the Sign In button in the header"
+          - label: "Navigation Menu"
+            name: navItems
+            widget: list
+            hint: "Drag to reorder. Toggle visibility to show/hide without deleting."
+            fields:
+              - { label: "Label", name: label, widget: string }
+              - { label: "URL", name: url, widget: string, hint: "Path like /posts or full URL like https://example.com" }
+              - { label: "Visible", name: visible, widget: boolean, default: true }
 
       - label: PWA & Open Graph
         name: pwa

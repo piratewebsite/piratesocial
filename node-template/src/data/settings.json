@@ -8,5 +8,18 @@
   "location": "",
   "title": "My Photo Site",
   "avatar": "/images/avatar.jpg",
-  "description": "A photography site on the Pirate Social network"
+  "description": "A photography site on the Pirate Social network",
+  "logo": {
+    "type": "image",
+    "image": "/images/logoImage.svg",
+    "text": ""
+  },
+  "navItems": [
+    { "label": "Posts", "url": "/posts", "visible": true },
+    { "label": "Galleries", "url": "/galleries", "visible": true },
+    { "label": "Social", "url": "/social", "visible": true },
+    { "label": "Settings", "url": "/settings", "visible": true },
+    { "label": "About", "url": "/about", "visible": true }
+  ],
+  "showSignIn": true
 }
