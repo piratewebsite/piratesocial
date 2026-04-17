@@ -36,11 +36,9 @@ import { siteConfig } from '../lib/config';
       </div>
     </div>
 
-    <!-- Load more -->
-    <div id="load-more-container" class="mt-8 text-center hidden">
-      <button id="load-more" class="rounded bg-zinc-800 px-6 py-2 text-sm hover:bg-zinc-700 transition">
-        Load More
-      </button>
+    <!-- Scroll sentinel for infinite scroll -->
+    <div id="scroll-sentinel" class="mt-8 flex justify-center py-4 hidden">
+      <div class="loader-spinner h-6 w-6 border-2 border-zinc-600 border-t-zinc-300 rounded-full animate-spin"></div>
     </div>
   </div>
 </BaseLayout>
@@ -49,12 +47,22 @@ import { siteConfig } from '../lib/config';
 <script is:inline define:vars={{ hubUrl: siteConfig.hubUrl }}>
   const token = localStorage.getItem('ps_token');
   const feedContainer = document.getElementById('feed-container');
-  const loadMoreBtn = document.getElementById('load-more');
-  const loadMoreContainer = document.getElementById('load-more-container');
+  const scrollSentinel = document.getElementById('scroll-sentinel');
 
   let currentPage = 1;
   let currentTab = 'timeline';
   let bskyCursor = null;
+  let isLoading = false;
+  let hasMore = true;
+
+  // Infinite scroll via IntersectionObserver
+  const scrollObserver = new IntersectionObserver((entries) => {
+    if (entries[0].isIntersecting && !isLoading && hasMore) {
+      currentPage++;
+      loadFeed(true);
+    }
+  }, { rootMargin: '400px' });
+  scrollObserver.observe(scrollSentinel);
 
   function fetchWithTimeout(url, opts = {}, ms = 8000) {
     const ctrl = new AbortController();
@@ -138,6 +146,7 @@ import { siteConfig } from '../lib/config';
       currentTab = btn.id.replace('tab-', '');
       currentPage = 1;
       bskyCursor = null;
+      hasMore = true;
       loadFeed();
     });
   });
@@ -148,7 +157,13 @@ import { siteConfig } from '../lib/config';
   });
 
   async function loadFeed(append = false) {
-    if (!append) feedContainer.innerHTML = '<div class="text-center py-8 text-zinc-500">Loading...</div>';
+    if (isLoading) return;
+    isLoading = true;
+    if (!append) {
+      feedContainer.innerHTML = '<div class="text-center py-8 text-zinc-500">Loading...</div>';
+      hasMore = true;
+    }
+    scrollSentinel.classList.toggle('hidden', !append);
 
     try {
       let url;
@@ -156,6 +171,9 @@ import { siteConfig } from '../lib/config';
 
       if (currentTab === 'squads' && token) {
         renderSquadsView();
+        isLoading = false;
+        hasMore = false;
+        scrollSentinel.classList.add('hidden');
         return;
       } else if (currentTab === 'timeline' && token) {
         url = `${hubUrl}/api/timeline?page=${currentPage}`;
@@ -165,10 +183,13 @@ import { siteConfig } from '../lib/config';
         console.log('[PS] Bluesky session:', session ? 'got accessJwt' : 'NONE');
         if (!session?.accessJwt) {
           feedContainer.innerHTML = '<div class="text-center py-8 text-zinc-500">Connect your Bluesky account in Settings to see your feed</div>';
+          isLoading = false;
+          hasMore = false;
+          scrollSentinel.classList.add('hidden');
           return;
         }
         try {
-          let proxyUrl = `${hubUrl}/api/bluesky-feed/proxy/timeline?limit=30`;
+          let proxyUrl = `${hubUrl}/api/bluesky-feed/proxy/timeline?limit=20`;
           if (bskyCursor) proxyUrl += `&cursor=${encodeURIComponent(bskyCursor)}`;
           console.log('[PS] Fetching timeline via hub proxy...');
           const res = await fetch(proxyUrl, {
@@ -203,6 +224,9 @@ import { siteConfig } from '../lib/config';
           console.error('[PS] Proxy error:', err.message);
         }
         feedContainer.innerHTML = '<div class="text-center py-8 text-red-400">Failed to load Bluesky feed. Try refreshing the page.</div>';
+        isLoading = false;
+        hasMore = false;
+        scrollSentinel.classList.add('hidden');
         return;
       } else if (currentTab === 'discover' || (currentTab === 'timeline' && !token)) {
         url = `${hubUrl}/api/timeline/discover?page=${currentPage}`;
@@ -211,6 +235,8 @@ import { siteConfig } from '../lib/config';
         const res = await fetchWithTimeout(url, { headers });
         const data = await res.json();
         renderPeople(data, append);
+        isLoading = false;
+        scrollSentinel.classList.toggle('hidden', !hasMore);
         return;
       }
 
@@ -218,7 +244,11 @@ import { siteConfig } from '../lib/config';
       const data = await res.json();
       renderPosts(data, append);
     } catch (err) {
-      feedContainer.innerHTML = '<div class="text-center py-8 text-red-400">Failed to load feed</div>';
+      if (!append) feedContainer.innerHTML = '<div class="text-center py-8 text-red-400">Failed to load feed</div>';
+      hasMore = false;
+    } finally {
+      isLoading = false;
+      scrollSentinel.classList.toggle('hidden', !hasMore);
     }
   }
 
@@ -331,7 +361,7 @@ import { siteConfig } from '../lib/config';
       feedContainer.innerHTML = html || '<div class="text-center py-8 text-zinc-500">No posts yet</div>';
     }
 
-    loadMoreContainer.classList.toggle('hidden', !data.hasMore);
+    hasMore = !!data.hasMore;
     attachInteractionListeners();
     attachShareListeners();
     initHlsVideos();
@@ -427,7 +457,9 @@ import { siteConfig } from '../lib/config';
       feedContainer.innerHTML = html || '<div class="text-center py-8 text-zinc-500">Connect your Bluesky account in Settings to see your feed</div>';
     }
 
-    loadMoreContainer.classList.toggle('hidden', !bskyCursor);
+    hasMore = !!bskyCursor;
+    isLoading = false;
+    scrollSentinel.classList.toggle('hidden', !hasMore);
     attachShareListeners();
     initHlsVideos();
   }
@@ -455,7 +487,7 @@ import { siteConfig } from '../lib/config';
       feedContainer.innerHTML = html || '<div class="text-center py-8 text-zinc-500">No users yet</div>';
     }
 
-    loadMoreContainer.classList.toggle('hidden', !data.hasMore);
+    hasMore = !!data.hasMore;
     attachInteractionListeners();
     attachShareListeners();
     initHlsVideos();
@@ -520,11 +552,7 @@ import { siteConfig } from '../lib/config';
     return escapeHtml(text).replace(/\n/g, '<br>');
   }
 
-  // Load more
-  loadMoreBtn?.addEventListener('click', () => {
-    currentPage++;
-    loadFeed(true);
-  });
+
 
   // --- Share modal ---
   const shareOverlay = document.createElement('div');
@@ -1123,6 +1151,8 @@ import { siteConfig } from '../lib/config';
   .active-tab {
     background-color: rgb(82 82 91); /* zinc-600 */
   }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .animate-spin { animation: spin .6s linear infinite; }
   input[type="range"] {
     height: 4px;
     border-radius: 2px;
