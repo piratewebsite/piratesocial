@@ -1902,8 +1902,8 @@ const sl = labels.social;
       if (content.tagName === 'IFRAME' && content._savedSrc) {
         content.src = content._savedSrc;
         delete content._savedSrc;
-        // Re-arm click listener so mini-player only triggers on next user click
-        miniPlayerSource.addEventListener('click', () => { content._userActivated = true; }, { once: true });
+        // Re-add overlay so mini-player only triggers on next user click
+        addIframeOverlay(miniPlayerSource, content);
       }
       miniPlayerSource.style.display = '';
     }
@@ -1964,6 +1964,19 @@ const sl = labels.social;
     });
   }, { threshold: 0.15 });
 
+  function addIframeOverlay(container, iframe) {
+    container.style.position = 'relative';
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:absolute;inset:0;z-index:5;cursor:pointer';
+    overlay.addEventListener('click', () => {
+      iframe._userActivated = true;
+      overlay.remove();
+      // Simulate a click-through by briefly setting pointer-events:none isn't needed
+      // The user will naturally click again once overlay is gone
+    });
+    container.appendChild(overlay);
+  }
+
   function observeVideos() {
     document.querySelectorAll('.aspect-video').forEach(container => {
       if (container._miniPlayerObserved) return;
@@ -1975,19 +1988,11 @@ const sl = labels.social;
         video.addEventListener('play', () => { video._wasPlaying = true; });
         video.addEventListener('pause', () => { video._wasPlaying = false; });
       }
-      // For iframes (YouTube), only activate on user click
+      // For iframes (YouTube), add a click overlay to detect user interaction
       const iframe = container.querySelector('iframe');
       if (iframe) {
-        container.addEventListener('click', () => { iframe._userActivated = true; }, { once: true });
-        // Also detect focus (iframe gets focus when user clicks inside it)
-        iframe.addEventListener('load', () => {
-          window.addEventListener('blur', function onBlur() {
-            if (document.activeElement === iframe) {
-              iframe._userActivated = true;
-              window.removeEventListener('blur', onBlur);
-            }
-          });
-        });
+        addIframeOverlay(container, iframe);
+      }
       }
     });
   }
