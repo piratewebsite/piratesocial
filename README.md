@@ -8,7 +8,7 @@
   <p>
     <img src="https://img.shields.io/badge/Astro-6-FF5D01?logo=astro" alt="Astro 6">
     <img src="https://img.shields.io/badge/Preact-10-673AB8?logo=preact" alt="Preact 10">
-    <img src="https://img.shields.io/badge/Tailwind-3-06B6D4?logo=tailwindcss" alt="Tailwind 3">
+    <img src="https://img.shields.io/badge/Tailwind-4-06B6D4?logo=tailwindcss" alt="Tailwind 4">
     <img src="https://img.shields.io/badge/PWA-Enabled-5A0FC8" alt="PWA Enabled">
   </p>
 
@@ -179,7 +179,7 @@ node-template/
 |-------|-----------|
 | Framework | Astro 6 (Static Site Generation) |
 | UI | Preact 10 |
-| Styling | Tailwind CSS 3 |
+| Styling | Tailwind CSS 4 |
 | Content | Markdown + MDX |
 | CMS | Decap CMS (GitHub backend) |
 | Auth | GitHub OAuth |

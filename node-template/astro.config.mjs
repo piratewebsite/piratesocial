@@ -2,7 +2,7 @@
 import { defineConfig } from 'astro/config';
 import mdx from '@astrojs/mdx';
 import sitemap from '@astrojs/sitemap';
-import tailwind from '@astrojs/tailwind';
+import tailwindcss from '@tailwindcss/vite';
 import preact from '@astrojs/preact';
 
 // For project sites (e.g. user.github.io/reponame), BASE_PATH must be set
@@ -11,7 +11,10 @@ const base = process.env.BASE_PATH || undefined;
 export default defineConfig({
   site: process.env.SITE_URL || 'https://twilightscapes.github.io',
   ...(base ? { base } : {}),
-  integrations: [mdx(), sitemap(), tailwind(), preact({ compat: true })],
+  integrations: [mdx(), sitemap(), preact({ compat: true })],
+  vite: {
+    plugins: [tailwindcss()],
+  },
   output: 'static',
   build: {
     assets: '_assets',

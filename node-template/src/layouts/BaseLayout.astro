@@ -7,6 +7,7 @@ import pwa from '../content/pwa.json';
 import settings from '../content/settings.json';
 import home from '../content/pages/home.json';
 import YouTubePlayer from '../components/YouTubePlayer.jsx';
+import '../styles/global.css';
 
 // Floating YouTube players from home blocks — rendered in layout so they persist across all pages
 const floatingPlayers = (home.blocks || []).filter((b: any) => b.type === 'youtube' && b.display === 'floating');
