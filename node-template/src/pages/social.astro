@@ -126,6 +126,10 @@ const sl = labels.social;
   let youtubeWatchlist = [];
   let showYouTubeInFeed = true;
 
+  // Squad state
+  let allSquads = [];
+  let squadsInitialized = false;
+
   // Social settings (persisted in localStorage)
   const defaultSocialSettings = { squadHighlight: true, squadBorderColor: '#eab308', miniPlayerEnabled: true, miniPlayerX: null, miniPlayerY: null };
   let socialSettings = { ...defaultSocialSettings };
@@ -171,6 +175,10 @@ const sl = labels.social;
     try {
       const res = await fetchTimeout(`${hubUrl}/api/bluesky/session`, { headers: { Authorization: `Bearer ${token}` } }, 10000);
       if (res.ok) { const d = await res.json(); saveBskySession(d); return d; }
+      else {
+        const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+        console.warn('[PS] Bluesky session error:', err.error);
+      }
     } catch (err) {
       console.warn('[PS] Bluesky session error:', err.message);
     }
@@ -2009,9 +2017,6 @@ const sl = labels.social;
   // ============================================================
   // SQUADS (kept from original)
   // ============================================================
-  let allSquads = [];
-  let squadsInitialized = false;
-
   async function initSquadsProfile() {
     if (squadsInitialized) return;
     squadsInitialized = true;
@@ -2627,16 +2632,8 @@ const sl = labels.social;
   // ============================================================
   
   if (token) {
-    (async () => {
-      try {
-        await Promise.race([
-          initSquadsProfile(),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Bluesky init timeout')), 5000))
-        ]);
-      } catch (err) {
-        console.warn('[PS] Squads init failed (continuing anyway):', err.message);
-      }
-    })();
+    // Start init in background, don't wait for it
+    initSquadsProfile().catch(err => console.warn('[PS] Squads init error:', err.message));
     updateUI();
     loadCurrentTab();
   } else {
