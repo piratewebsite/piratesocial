@@ -80,9 +80,6 @@ const allNavItems = [...visibleNavItems, ...autoNavPages];
     <meta name="generator" content={Astro.generator} />
     {!pwa.searchEngineVisibility && <meta name="robots" content="noindex, nofollow" />}
 
-    <!-- Content Security Policy — whitelist YouTube player domains, block ad-serving domains -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.youtube.com https://s.ytimg.com *.youtube.com *.youtu.be *.youtube-nocookie.com *.googlevideo.com *.google.com *.googleapis.com *.gstatic.com; style-src 'self' 'unsafe-inline' https: *.googleapis.com; img-src 'self' data: https: http: blob: *.googleapis.com *.gstatic.com *.google.com *.youtube.com *.youtu.be *.youtube-nocookie.com *.ytimg.com *.googlevideo.com; media-src 'self' *.youtube.com *.youtu.be *.youtube-nocookie.com *.googlevideo.com; frame-src *.youtube.com *.youtu.be *.youtube-nocookie.com; connect-src 'self' https: wss: *.youtube.com *.youtu.be *.youtube-nocookie.com *.googlevideo.com; font-src 'self' data: *.gstatic.com *.googleapis.com; frame-ancestors *;" />
-
     <!-- Open Graph -->
     <meta property="og:title" content={pageTitle} />
     <meta property="og:description" content={pageDescription} />
