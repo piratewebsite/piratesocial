@@ -349,6 +349,10 @@ function InteractivePlayer({ playlist, audioOnly, isFloating, heading, caption, 
     if (isFloating && minimized) {
       return { position: 'absolute', width: '1px', height: '1px', overflow: 'hidden', opacity: 0, pointerEvents: 'none' };
     }
+    if (isFloating && !audioOnly) {
+      // Video visible inside the floating card — rendered inline
+      return { aspectRatio: '16/9', background: '#000', width: '100%' };
+    }
     if (audioOnly) {
       return { position: 'absolute', width: '1px', height: '1px', overflow: 'hidden', opacity: 0, pointerEvents: 'none' };
     }
@@ -475,19 +479,21 @@ function InteractivePlayer({ playlist, audioOnly, isFloating, heading, caption, 
         width: minimized ? '48px' : '100%',
       }}
     >
-      {/* Direct youtube-nocookie iframe — fresh src per track */}
-      <div style={getPlayerStyle()}>
-        <iframe
-          ref={iframeRef}
-          key={current.id}
-          src={embedUrl}
-          onLoad={onIframeLoad}
-          style={{ width: '100%', height: '100%', border: 'none' }}
-          allow="autoplay; encrypted-media"
-          allowFullScreen
-          title={current.title}
-        />
-      </div>
+      {/* Hidden iframe for audio-only or minimized — positioned off-screen */}
+      {(audioOnly || minimized) && (
+        <div style={{ position: 'absolute', width: '1px', height: '1px', overflow: 'hidden', opacity: 0, pointerEvents: 'none' }}>
+          <iframe
+            ref={iframeRef}
+            key={current.id}
+            src={embedUrl}
+            onLoad={onIframeLoad}
+            style={{ width: '100%', height: '100%', border: 'none' }}
+            allow="autoplay; encrypted-media"
+            allowFullScreen
+            title={current.title}
+          />
+        </div>
+      )}
 
       {minimized ? (
         <button onClick={() => setMinimized(false)}
@@ -502,6 +508,22 @@ function InteractivePlayer({ playlist, audioOnly, isFloating, heading, caption, 
         </button>
       ) : (
         <div class="rounded-xl shadow-2xl border overflow-hidden" style="background:var(--ps-card-bg);border-color:var(--ps-card-border);backdrop-filter:blur(20px)">
+          {/* Video iframe visible inside the card when not audio-only */}
+          {!audioOnly && (
+            <div style={{ aspectRatio: '16/9', background: '#000', width: '100%' }}>
+              <iframe
+                ref={iframeRef}
+                key={current.id}
+                src={embedUrl}
+                onLoad={onIframeLoad}
+                style={{ width: '100%', height: '100%', border: 'none' }}
+                allow="autoplay; encrypted-media"
+                allowFullScreen
+                title={current.title}
+              />
+            </div>
+          )}
+
           <div class="flex items-center justify-between px-3 py-1.5 border-b"
             style="border-color:var(--ps-border);cursor:grab;user-select:none;-webkit-user-select:none"
             onMouseDown={onDragStart}
