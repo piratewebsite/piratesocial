@@ -50,11 +50,20 @@ jobs:
           if [ -f user-repo/src/data/settings.json ]; then
             cp user-repo/src/data/settings.json build/src/content/settings.json
           fi
-          for f in labels.json theme.json pwa.json home.json; do
+          for f in theme.json pwa.json home.json; do
             if [ -f "user-repo/src/data/$f" ]; then
               cp "user-repo/src/data/$f" "build/src/content/$f"
             fi
           done
+          # Merge labels.json: template is base, user overrides on top (preserves new template keys)
+          if [ -f "user-repo/src/data/labels.json" ]; then
+            node -e "
+              const t = JSON.parse(require('fs').readFileSync('build/src/content/labels.json','utf8'));
+              const u = JSON.parse(require('fs').readFileSync('user-repo/src/data/labels.json','utf8'));
+              const merge = (a,b) => { const r={...a}; for(const k in b){ r[k] = typeof a[k]==='object'&&!Array.isArray(a[k])&&typeof b[k]==='object'&&!Array.isArray(b[k]) ? merge(a[k],b[k]) : b[k]; } return r; };
+              require('fs').writeFileSync('build/src/content/labels.json', JSON.stringify(merge(t,u),null,2));
+            "
+          fi
           if [ -d user-repo/src/data/pages ]; then
             mkdir -p build/src/content/pages
             cp -r user-repo/src/data/pages/. build/src/content/pages/
