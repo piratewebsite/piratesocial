@@ -398,8 +398,10 @@ function InteractivePlayer({ playlist, audioOnly, isFloating, heading, caption, 
               {started && (
                 <div class="flex items-center gap-2 mt-1">
                   <span class="text-xs" style="color:var(--ps-text-faint)">{formatTime(progress)}</span>
-                  <div class="flex-1 h-1.5 rounded-full cursor-pointer" style="background:var(--ps-border)" onClick={seekTo}>
-                    <div class="h-full rounded-full transition-all" style={`width:${duration ? (progress / duration * 100) : 0}%;background:var(--ps-primary)`} />
+                  <div class="flex-1 rounded-full cursor-pointer py-2" onClick={seekTo}>
+                    <div class="h-2 rounded-full relative" style="background:var(--ps-border)">
+                      <div class="h-full rounded-full transition-all" style={`width:${duration ? (progress / duration * 100) : 0}%;background:var(--ps-primary);pointer-events:none`} />
+                    </div>
                   </div>
                   <span class="text-xs" style="color:var(--ps-text-faint)">{formatTime(duration)}</span>
                 </div>
@@ -523,8 +525,10 @@ function InteractivePlayer({ playlist, audioOnly, isFloating, heading, caption, 
           </div>
 
           {started && (
-            <div class="h-1 cursor-pointer" style="background:var(--ps-border)" onClick={seekTo}>
-              <div class="h-full transition-all" style={`width:${duration ? (progress / duration * 100) : 0}%;background:var(--ps-primary)`} />
+            <div class="cursor-pointer py-1" onClick={seekTo}>
+              <div class="h-1.5 relative" style="background:var(--ps-border)">
+                <div class="h-full transition-all" style={`width:${duration ? (progress / duration * 100) : 0}%;background:var(--ps-primary);pointer-events:none`} />
+              </div>
             </div>
           )}
 
