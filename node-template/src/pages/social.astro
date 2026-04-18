@@ -121,7 +121,7 @@ const sl = labels.social;
   let myHandle = null;
   let myDid = null;
   let myAvatar = null;
-  // Track user's own likes/reposts for optimistic UI
+  // Track own likes/reposts for optimistic UI
   let myLikes = {};    // uri -> likeUri
   let myReposts = {};  // uri -> repostUri
 
@@ -999,7 +999,7 @@ const sl = labels.social;
         if (p?.post) { rootUri = p.post.uri; rootCid = p.post.cid; }
       }
 
-      // Track which post we're replying to (default: main post)
+      // Track which post is being replied to (default: main post)
       let replyTarget = { uri: mainPost.uri, cid: mainPost.cid, handle: mainPost.author.handle };
 
       const replyComposer = bskySession?.accessJwt ? `
@@ -1245,7 +1245,7 @@ const sl = labels.social;
         }
       }
 
-      // Fetch Pirate Social timeline (RSS + pirate posts) — only on first load or if filter is 'pirate'
+      // Fetch Pirate Social timeline (RSS + pirate posts) — only on first load or if filter is pirate
       if (token && (!append || currentFilter === 'pirate' || currentFilter === 'all')) {
         try {
           const headers = { Authorization: `Bearer ${token}` };
@@ -1601,7 +1601,7 @@ const sl = labels.social;
       btn.addEventListener('click', () => openShareModal(btn.dataset.url, btn.dataset.title));
     });
 
-    // Feed cards — click to load that feed's posts
+    // Feed cards — click to load that feed posts
     document.querySelectorAll('.feed-card:not([data-bound])').forEach(card => {
       card.dataset.bound = '1';
       card.addEventListener('click', () => {
@@ -1971,8 +1971,6 @@ const sl = labels.social;
     overlay.addEventListener('click', () => {
       iframe._userActivated = true;
       overlay.remove();
-      // Simulate a click-through by briefly setting pointer-events:none isn't needed
-      // The user will naturally click again once overlay is gone
     });
     container.appendChild(overlay);
   }
@@ -1992,7 +1990,6 @@ const sl = labels.social;
       const iframe = container.querySelector('iframe');
       if (iframe) {
         addIframeOverlay(container, iframe);
-      }
       }
     });
   }
