@@ -112,10 +112,8 @@ Every user runs their own independent website. The Pirate Social Hub connects th
 ### Join the network
 
 1. Sign in at [piratesocial.app](https://piratesocial.app) with GitHub
-2. The hub provisions your site repo automatically
-3. Enable GitHub Pages (Settings → Pages → GitHub Actions)
-4. Push — your site auto-builds and connects to the hub
-5. Go to `yoursite.github.io/admin` to manage content via Decap CMS
+2. The hub provisions your site repo and first build triggers automatically
+3. Go to `yoursite.github.io/admin` to manage content via Decap CMS
 
 ### Local Development
 
