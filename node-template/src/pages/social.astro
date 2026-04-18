@@ -348,10 +348,12 @@ const sl = labels.social;
     };
     // Parse facets (links, mentions)
     const facets = [];
+    const urls = [];
     // Detect URLs
     const urlRegex = /https?:\/\/[^\s)>\]]+/g;
     let m;
     while ((m = urlRegex.exec(text)) !== null) {
+      urls.push(m[0]);
       facets.push({
         index: { byteStart: new TextEncoder().encode(text.slice(0, m.index)).length, byteEnd: new TextEncoder().encode(text.slice(0, m.index + m[0].length)).length },
         features: [{ '$type': 'app.bsky.richtext.facet#link', uri: m[0] }],
@@ -372,6 +374,35 @@ const sl = labels.social;
       } catch {}
     }
     if (facets.length) record.facets = facets;
+
+    // Fetch link card for the first URL
+    if (urls.length > 0) {
+      try {
+        const ogRes = await fetch(`${hubUrl}/api/bluesky/og-meta?url=${encodeURIComponent(urls[0])}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const og = await ogRes.json();
+        if (og.title || og.description) {
+          const external = {
+            '$type': 'app.bsky.embed.external',
+            external: { uri: urls[0], title: og.title || '', description: og.description || '' },
+          };
+          // Upload thumbnail if available
+          if (og.image) {
+            try {
+              const blobRes = await fetch(`${hubUrl}/api/bluesky/upload-blob`, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ imageUrl: og.image }),
+              });
+              const blobData = await blobRes.json();
+              if (blobData.blob) external.external.thumb = blobData.blob;
+            } catch {}
+          }
+          record.embed = external;
+        }
+      } catch {}
+    }
 
     if (replyTo) {
       // Need root and parent for reply threading
@@ -830,8 +861,12 @@ const sl = labels.social;
         if (p?.post) { rootUri = p.post.uri; rootCid = p.post.cid; }
       }
 
+      // Track which post we're replying to (default: main post)
+      let replyTarget = { uri: mainPost.uri, cid: mainPost.cid, handle: mainPost.author.handle };
+
       const replyComposer = bskySession?.accessJwt ? `
-        <div class="mt-4 border-t border-theme-border pt-4">
+        <div id="thread-reply-box" class="mt-4 border-t border-theme-border pt-4">
+          <div id="thread-reply-label" style="font-size:.75rem;color:var(--ps-text-faint,#888);margin-bottom:.5rem">Replying to @${escapeHtml(mainPost.author.handle)}</div>
           <div class="flex gap-3">
             <div class="flex-1">
               <textarea id="thread-reply-input" rows="3" placeholder="Write a reply..." style="width:100%;background:var(--ps-input-bg,#1a1a2e);border:1px solid var(--ps-input-border,#333);border-radius:.5rem;padding:.75rem;color:var(--ps-text,#e0e0e0);font-size:.875rem;resize:vertical;outline:none" maxlength="300"></textarea>
@@ -853,6 +888,7 @@ const sl = labels.social;
       const replyInput = document.getElementById('thread-reply-input');
       const replyBtn = document.getElementById('thread-reply-send');
       const replyCount = document.getElementById('thread-reply-count');
+      const replyLabel = document.getElementById('thread-reply-label');
       if (replyInput && replyBtn) {
         replyInput.addEventListener('input', () => {
           const len = replyInput.value.length;
@@ -866,7 +902,7 @@ const sl = labels.social;
           replyBtn.disabled = true;
           replyBtn.textContent = 'Sending...';
           try {
-            await createBskyRecord(text, { uri: mainPost.uri, cid: mainPost.cid, root: { uri: rootUri, cid: rootCid } });
+            await createBskyRecord(text, { uri: replyTarget.uri, cid: replyTarget.cid, root: { uri: rootUri, cid: rootCid } });
             replyInput.value = '';
             replyCount.textContent = '0/300';
             replyBtn.textContent = 'Reply';
@@ -878,6 +914,28 @@ const sl = labels.social;
             replyBtn.disabled = false;
             replyBtn.style.opacity = '1';
           }
+        });
+
+        // Override reply button behavior inside thread panel — clicking reply on any post
+        // in the thread should retarget the composer to that post
+        slideBody.querySelectorAll('.bsky-reply-btn').forEach(btn => {
+          btn.dataset.bound = '1';
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const article = btn.closest('article');
+            if (!article) return;
+            const postUri = article.dataset.uri;
+            const postCid = article.dataset.cid;
+            const handleEl = article.querySelector('.bsky-avatar[data-handle]');
+            const handle = handleEl?.dataset.handle || '';
+            if (postUri && postCid) {
+              replyTarget = { uri: postUri, cid: postCid, handle };
+              replyLabel.textContent = `Replying to @${handle}`;
+              replyLabel.style.color = 'var(--ps-accent, #3b82f6)';
+              replyInput.focus();
+              document.getElementById('thread-reply-box')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+          });
         });
       }
 
