@@ -13,6 +13,9 @@ const sl = labels.social;
         <button id="tab-timeline" class="rounded bg-theme-input-bg px-2 py-1 text-xs md:px-3 md:py-1.5 md:text-sm hover:bg-theme-surface-hover transition active-tab">
           {sl.tabTimeline}
         </button>
+        <select id="tab-feeds" class="rounded bg-theme-input-bg px-2 py-1 text-xs md:px-3 md:py-1.5 md:text-sm hover:bg-theme-surface-hover transition cursor-pointer" style="appearance:none;-webkit-appearance:none;background-image:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23999%22 stroke-width=%222%22><polyline points=%226 9 12 15 18 9%22/></svg>');background-repeat:no-repeat;background-position:right 6px center;padding-right:20px">
+          <option value="" disabled selected>Feeds</option>
+        </select>
         <button id="tab-discover" class="rounded bg-theme-input-bg px-2 py-1 text-xs md:px-3 md:py-1.5 md:text-sm hover:bg-theme-surface-hover transition">
           {sl.tabDiscover}
         </button>
@@ -139,6 +142,20 @@ const sl = labels.social;
   try { const s = JSON.parse(localStorage.getItem('ps_social_settings')); if (s) socialSettings = { ...defaultSocialSettings, ...s }; } catch {}
   function saveSocialSettings() { localStorage.setItem('ps_social_settings', JSON.stringify(socialSettings)); }
 
+  // Subscribed custom feeds (persisted in localStorage)
+  let subscribedFeeds = []; // [{uri, name, avatar}]
+  try { const sf = JSON.parse(localStorage.getItem('ps_subscribed_feeds')); if (Array.isArray(sf)) subscribedFeeds = sf; } catch {}
+  function saveSubscribedFeeds() { localStorage.setItem('ps_subscribed_feeds', JSON.stringify(subscribedFeeds)); }
+  function isSubscribed(feedUri) { return subscribedFeeds.some(f => f.uri === feedUri); }
+  function subscribeFeed(uri, name, avatar) {
+    if (!isSubscribed(uri)) { subscribedFeeds.push({ uri, name, avatar }); saveSubscribedFeeds(); populateFeedsDropdown(); }
+  }
+  function unsubscribeFeed(uri) {
+    subscribedFeeds = subscribedFeeds.filter(f => f.uri !== uri);
+    saveSubscribedFeeds();
+    populateFeedsDropdown();
+  }
+
   // ============================================================
   // SVG ICONS (Feather-style stroke icons + Bluesky butterfly)
   // ============================================================
@@ -226,7 +243,7 @@ const sl = labels.social;
     const headers = {};
     if (auth && bskySession?.accessJwt) headers.Authorization = `Bearer ${bskySession.accessJwt}`;
     const res = await fetchTimeout(url, { headers }, 10000);
-    if (res.status === 401 && auth) {
+    if ((res.status === 401 || res.status === 400) && auth) {
       const refreshed = await refreshBskySession();
       if (refreshed?.accessJwt) {
         headers.Authorization = `Bearer ${refreshed.accessJwt}`;
@@ -305,9 +322,10 @@ const sl = labels.social;
   }
 
   async function searchBskyFeeds(query, cursor) {
-    const params = { q: query, limit: '25' };
+    const params = { limit: '25' };
     if (cursor) params.cursor = cursor;
-    return bskyGet('app.bsky.unspecced.getPopularFeedGenerators', params, true);
+    if (query) params.q = query;
+    return bskyGet('app.bsky.feed.getSuggestedFeeds', params, true);
   }
 
   async function fetchCustomFeed(feedUri, cursor) {
@@ -909,17 +927,19 @@ const sl = labels.social;
   }
 
   function renderFeedCard(feed) {
+    const subbed = isSubscribed(feed.uri);
     return `
-      <div class="feed-card flex items-center gap-4 rounded-lg border border-theme-card-border bg-theme-card p-4 cursor-pointer hover:border-theme-card-hover transition" data-feed-uri="${escapeHtml(feed.uri || '')}" data-feed-name="${escapeHtml(feed.displayName || 'Feed')}">
+      <div class="feed-card flex items-center gap-4 rounded-lg border border-theme-card-border bg-theme-card p-4 cursor-pointer hover:border-theme-card-hover transition" data-feed-uri="${escapeHtml(feed.uri || '')}" data-feed-name="${escapeHtml(feed.displayName || 'Feed')}" data-feed-avatar="${escapeHtml(feed.avatar || '')}">
         ${feed.avatar ? `<img src="${escapeHtml(feed.avatar)}" class="h-12 w-12 rounded-lg" />` : '<div class="h-12 w-12 rounded-lg bg-theme-surface-hover flex items-center justify-center text-theme-muted">📡</div>'}
         <div class="flex-1 min-w-0">
           <span class="font-medium text-sm">${escapeHtml(feed.displayName || 'Untitled Feed')}</span>
           ${feed.description ? `<p class="text-sm text-theme-faint mt-1 line-clamp-2">${escapeHtml(feed.description)}</p>` : ''}
           <p class="text-xs text-theme-faint mt-1">by @${escapeHtml(feed.creator?.handle || '')}</p>
         </div>
-        <div class="text-right text-xs text-theme-faint shrink-0">
-          <div>❤ ${feed.likeCount || 0}</div>
-          <div class="mt-1 text-theme-primary">View →</div>
+        <div class="flex flex-col items-end gap-1 shrink-0">
+          <div class="text-xs text-theme-faint">❤ ${feed.likeCount || 0}</div>
+          <button class="feed-sub-btn text-xs px-2 py-0.5 rounded ${subbed ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30' : 'bg-theme-primary/20 text-theme-primary hover:bg-theme-primary/30'} transition" data-feed-uri="${escapeHtml(feed.uri || '')}" data-feed-name="${escapeHtml(feed.displayName || 'Feed')}" data-feed-avatar="${escapeHtml(feed.avatar || '')}">${subbed ? '− Remove' : '+ Add'}</button>
+          <div class="text-theme-primary text-xs">View →</div>
         </div>
       </div>`;
   }
@@ -1118,21 +1138,49 @@ const sl = labels.social;
 
   function loadMore() {
     if (currentTab === 'timeline') { piratePage++; loadFeedTab(true); }
+    else if (currentTab === 'feeds' && activeFeedUri) { loadCustomFeedView(activeFeedUri, activeFeedName, true); }
     else if (currentTab === 'discover' && activeFeedUri) { loadCustomFeedView(activeFeedUri, activeFeedName, true); }
     else if (currentTab === 'discover' && currentDiscoverSub === 'trending') { loadDiscoverTrending(true); }
     else if (currentTab === 'posts') { loadPostsTab(true); }
   }
 
   // --- Tab switching ---
-  document.querySelectorAll('[id^="tab-"]').forEach(btn => {
+  document.querySelectorAll('[id^="tab-"]:not(#tab-feeds)').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelector('.active-tab')?.classList.remove('active-tab', 'bg-theme-surface-hover');
       btn.classList.add('active-tab', 'bg-theme-surface-hover');
+      document.getElementById('tab-feeds').value = '';
       currentTab = btn.id.replace('tab-', '');
       resetPagination();
       updateUI();
       loadCurrentTab();
     });
+  });
+
+  // --- Feeds dropdown ---
+  const feedsDropdown = document.getElementById('tab-feeds');
+
+  function populateFeedsDropdown() {
+    feedsDropdown.innerHTML = '<option value="" disabled selected>Feeds</option>';
+    subscribedFeeds.forEach(f => {
+      const opt = document.createElement('option');
+      opt.value = f.uri;
+      opt.textContent = f.name || 'Untitled Feed';
+      feedsDropdown.appendChild(opt);
+    });
+    feedsDropdown.style.display = subscribedFeeds.length ? '' : 'none';
+  }
+  populateFeedsDropdown();
+
+  feedsDropdown.addEventListener('change', () => {
+    const uri = feedsDropdown.value;
+    const feed = subscribedFeeds.find(f => f.uri === uri);
+    if (!uri || !feed) return;
+    document.querySelector('.active-tab')?.classList.remove('active-tab', 'bg-theme-surface-hover');
+    currentTab = 'feeds';
+    resetPagination();
+    updateUI();
+    loadCustomFeedView(uri, feed.name);
   });
 
   function resetPagination() {
@@ -1392,17 +1440,27 @@ const sl = labels.social;
       attachAllListeners();
       initHlsVideos();
 
-      // Attach trending topic click handlers
+      // Attach trending topic click handlers — search posts for that topic
       document.querySelectorAll('.trending-topic').forEach(btn => {
-        btn.addEventListener('click', () => {
-          // Switch to search tab with this topic
-          document.querySelector('.active-tab')?.classList.remove('active-tab', 'bg-theme-surface-hover');
-          document.getElementById('tab-search').classList.add('active-tab', 'bg-theme-surface-hover');
-          currentTab = 'search';
-          updateUI();
-          document.getElementById('search-input').value = btn.dataset.topic;
-          resetPagination();
-          loadSearchResults();
+        btn.addEventListener('click', async () => {
+          const topic = btn.dataset.topic;
+          if (!topic) return;
+          feedContainer.innerHTML = `<div class="text-center py-8 text-theme-faint">${L.loading || 'Loading...'}</div>`;
+          try {
+            const data = await searchBskyPosts(topic);
+            const posts = (data.posts || []).map(p => normalizeBskyPost({ post: p }));
+            const backBtn = `<button id="back-to-discover" class="flex items-center gap-1 text-sm text-theme-muted hover:text-theme-text transition mb-4">← Back to discover</button>
+              <h2 class="text-lg font-semibold mb-4">#${escapeHtml(topic)}</h2>`;
+            feedContainer.innerHTML = backBtn + (posts.map(p => renderPostCard(p)).join('') || `<div class="text-center py-8 text-theme-faint">No posts found</div>`);
+            document.getElementById('back-to-discover')?.addEventListener('click', () => {
+              resetPagination();
+              loadDiscoverTrending();
+            });
+            attachAllListeners();
+            initHlsVideos();
+          } catch {
+            feedContainer.innerHTML = `<div class="text-center py-8 text-red-400">Search failed</div>`;
+          }
         });
       });
     } catch {
@@ -1441,6 +1499,7 @@ const sl = labels.social;
       const feeds = data.feeds || [];
       const html = feeds.map(f => renderFeedCard(f)).join('');
       feedContainer.innerHTML = html || `<div class="text-center py-8 text-theme-faint">No feeds found</div>`;
+      attachAllListeners();
     } catch {
       feedContainer.innerHTML = `<div class="text-center py-8 text-red-400">${L.failedToLoad || 'Failed to load'}</div>`;
     } finally { isLoading = false; }
@@ -1465,8 +1524,16 @@ const sl = labels.social;
       const posts = (data.feed || []).map(item => normalizeBskyPost(item));
       const html = posts.map(p => renderPostCard(p)).join('');
 
-      const backBtn = `<button id="back-to-feeds" class="flex items-center gap-1 text-sm text-theme-muted hover:text-theme-text transition mb-4">← Back to feeds</button>
-        <h2 class="text-lg font-semibold mb-4">${escapeHtml(feedName)}</h2>`;
+      const subbed = isSubscribed(feedUri);
+      const subBtn = `<button id="feed-view-sub" class="text-xs px-2 py-0.5 rounded ${subbed ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30' : 'bg-theme-primary/20 text-theme-primary hover:bg-theme-primary/30'} transition ml-2">${subbed ? '− Remove from Feeds' : '+ Add to Feeds'}</button>`;
+      const backLabel = currentTab === 'feeds' ? '← Back' : '← Back to feeds';
+      const backBtn = `<div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-2">
+          <button id="back-to-feeds" class="flex items-center gap-1 text-sm text-theme-muted hover:text-theme-text transition">${backLabel}</button>
+          <h2 class="text-lg font-semibold">${escapeHtml(feedName)}</h2>
+        </div>
+        ${subBtn}
+      </div>`;
 
       if (append) {
         feedContainer.insertAdjacentHTML('beforeend', html);
@@ -1475,7 +1542,28 @@ const sl = labels.social;
         document.getElementById('back-to-feeds')?.addEventListener('click', () => {
           activeFeedUri = null;
           resetPagination();
-          loadDiscoverFeeds();
+          if (currentTab === 'feeds') {
+            // Go back to timeline
+            document.querySelector('.active-tab')?.classList.remove('active-tab', 'bg-theme-surface-hover');
+            document.getElementById('tab-timeline').classList.add('active-tab', 'bg-theme-surface-hover');
+            feedsDropdown.value = '';
+            currentTab = 'timeline';
+            updateUI();
+            loadFeedTab();
+          } else {
+            loadDiscoverFeeds();
+          }
+        });
+        document.getElementById('feed-view-sub')?.addEventListener('click', (e) => {
+          if (isSubscribed(feedUri)) {
+            unsubscribeFeed(feedUri);
+            e.target.textContent = '+ Add to Feeds';
+            e.target.className = e.target.className.replace(/bg-red-500\/20 text-red-400 hover:bg-red-500\/30/, 'bg-theme-primary/20 text-theme-primary hover:bg-theme-primary/30');
+          } else {
+            subscribeFeed(feedUri, feedName, '');
+            e.target.textContent = '− Remove from Feeds';
+            e.target.className = e.target.className.replace(/bg-theme-primary\/20 text-theme-primary hover:bg-theme-primary\/30/, 'bg-red-500/20 text-red-400 hover:bg-red-500/30');
+          }
         });
       }
       attachAllListeners();
@@ -1634,10 +1722,31 @@ const sl = labels.social;
     // Feed cards — click to load that feed posts
     document.querySelectorAll('.feed-card:not([data-bound])').forEach(card => {
       card.dataset.bound = '1';
-      card.addEventListener('click', () => {
+      card.addEventListener('click', (e) => {
+        if (e.target.closest('.feed-sub-btn')) return; // Don't navigate when clicking subscribe
         const uri = card.dataset.feedUri;
         const name = card.dataset.feedName;
         if (uri) loadCustomFeedView(uri, name);
+      });
+    });
+
+    // Feed subscribe/unsubscribe buttons
+    document.querySelectorAll('.feed-sub-btn:not([data-bound])').forEach(btn => {
+      btn.dataset.bound = '1';
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const uri = btn.dataset.feedUri;
+        const name = btn.dataset.feedName;
+        const avatar = btn.dataset.feedAvatar;
+        if (isSubscribed(uri)) {
+          unsubscribeFeed(uri);
+          btn.textContent = '+ Add';
+          btn.className = btn.className.replace(/bg-red-500\/20 text-red-400 hover:bg-red-500\/30/, 'bg-theme-primary/20 text-theme-primary hover:bg-theme-primary/30');
+        } else {
+          subscribeFeed(uri, name, avatar);
+          btn.textContent = '− Remove';
+          btn.className = btn.className.replace(/bg-theme-primary\/20 text-theme-primary hover:bg-theme-primary\/30/, 'bg-red-500/20 text-red-400 hover:bg-red-500/30');
+        }
       });
     });
 
