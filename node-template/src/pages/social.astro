@@ -58,6 +58,15 @@ const sl = labels.social;
       </div>
     </div>
 
+    <!-- Post composer (shown when logged in to Bluesky) -->
+    <div id="compose-box" style="display:none" class="mb-6 rounded-lg border border-theme-card-border bg-theme-card p-4">
+      <textarea id="compose-input" rows="3" placeholder="What's on your mind?" style="width:100%;background:var(--ps-input-bg,#1a1a2e);border:1px solid var(--ps-input-border,#333);border-radius:.5rem;padding:.75rem;color:var(--ps-text,#e0e0e0);font-size:.875rem;resize:vertical;outline:none" maxlength="300"></textarea>
+      <div class="flex items-center justify-between mt-2">
+        <span id="compose-count" class="text-xs text-theme-faint">0/300</span>
+        <button id="compose-send" style="background:var(--ps-accent,#3b82f6);color:#fff;border:none;border-radius:.375rem;padding:.375rem 1rem;font-size:.875rem;cursor:pointer;opacity:.5" disabled>Post</button>
+      </div>
+    </div>
+
     <!-- Main content -->
     <div id="feed-container" class="space-y-6">
       <div class="text-center text-theme-faint py-12">
@@ -328,6 +337,52 @@ const sl = labels.social;
       repo: bskySession.did, collection: 'app.bsky.feed.repost', rkey,
     });
     delete myReposts[uri];
+  }
+
+  // Create a new Bluesky post or reply
+  async function createBskyRecord(text, replyTo) {
+    const record = {
+      '$type': 'app.bsky.feed.post',
+      text,
+      createdAt: new Date().toISOString(),
+    };
+    // Parse facets (links, mentions)
+    const facets = [];
+    // Detect URLs
+    const urlRegex = /https?:\/\/[^\s)>\]]+/g;
+    let m;
+    while ((m = urlRegex.exec(text)) !== null) {
+      facets.push({
+        index: { byteStart: new TextEncoder().encode(text.slice(0, m.index)).length, byteEnd: new TextEncoder().encode(text.slice(0, m.index + m[0].length)).length },
+        features: [{ '$type': 'app.bsky.richtext.facet#link', uri: m[0] }],
+      });
+    }
+    // Detect mentions
+    const mentionRegex = /(?<=^|\s)@([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?/g;
+    while ((m = mentionRegex.exec(text)) !== null) {
+      const handle = m[0].slice(1); // remove @
+      try {
+        const resolved = await bskyGet('com.atproto.identity.resolveHandle', { handle }, false);
+        if (resolved?.did) {
+          facets.push({
+            index: { byteStart: new TextEncoder().encode(text.slice(0, m.index)).length, byteEnd: new TextEncoder().encode(text.slice(0, m.index + m[0].length)).length },
+            features: [{ '$type': 'app.bsky.richtext.facet#mention', did: resolved.did }],
+          });
+        }
+      } catch {}
+    }
+    if (facets.length) record.facets = facets;
+
+    if (replyTo) {
+      // Need root and parent for reply threading
+      record.reply = {
+        root: replyTo.root || { uri: replyTo.uri, cid: replyTo.cid },
+        parent: { uri: replyTo.uri, cid: replyTo.cid },
+      };
+    }
+    return bskyPost('com.atproto.repo.createRecord', {
+      repo: bskySession.did, collection: 'app.bsky.feed.post', record,
+    });
   }
 
   // ============================================================
@@ -763,13 +818,69 @@ const sl = labels.social;
         parentHtml = parents.map((n, i) => renderThreadNode(n, 0)).join('');
       }
 
-      const mainHtml = renderPostCard(normalizeBskyPost({ post: thread.post }));
+      const mainPost = thread.post;
+      const mainHtml = renderPostCard(normalizeBskyPost({ post: mainPost }));
       const repliesHtml = (thread.replies || []).map(r => renderThreadNode(r, 1)).join('');
+
+      // Find root for reply threading
+      let rootUri = mainPost.uri, rootCid = mainPost.cid;
+      if (thread.parent) {
+        let p = thread.parent;
+        while (p?.parent?.post) p = p.parent;
+        if (p?.post) { rootUri = p.post.uri; rootCid = p.post.cid; }
+      }
+
+      const replyComposer = bskySession?.accessJwt ? `
+        <div class="mt-4 border-t border-theme-border pt-4">
+          <div class="flex gap-3">
+            <div class="flex-1">
+              <textarea id="thread-reply-input" rows="3" placeholder="Write a reply..." style="width:100%;background:var(--ps-input-bg,#1a1a2e);border:1px solid var(--ps-input-border,#333);border-radius:.5rem;padding:.75rem;color:var(--ps-text,#e0e0e0);font-size:.875rem;resize:vertical;outline:none" maxlength="300"></textarea>
+              <div class="flex items-center justify-between mt-2">
+                <span id="thread-reply-count" style="font-size:.75rem;color:var(--ps-text-faint,#888)">0/300</span>
+                <button id="thread-reply-send" style="background:var(--ps-accent,#3b82f6);color:#fff;border:none;border-radius:.375rem;padding:.375rem 1rem;font-size:.875rem;cursor:pointer;opacity:.5" disabled>Reply</button>
+              </div>
+            </div>
+          </div>
+        </div>` : '';
 
       slideBody.innerHTML = `
         ${parentHtml ? `<div class="space-y-3 opacity-70 mb-4">${parentHtml}</div><div class="border-t border-theme-border pt-4"></div>` : ''}
         <div class="mb-4">${mainHtml}</div>
-        ${repliesHtml ? `<div class="space-y-3">${repliesHtml}</div>` : '<div class="text-center py-4 text-theme-faint">No replies yet</div>'}`;
+        ${replyComposer}
+        ${repliesHtml ? `<div class="space-y-3 mt-4">${repliesHtml}</div>` : '<div class="text-center py-4 text-theme-faint">No replies yet</div>'}`;
+
+      // Wire reply composer
+      const replyInput = document.getElementById('thread-reply-input');
+      const replyBtn = document.getElementById('thread-reply-send');
+      const replyCount = document.getElementById('thread-reply-count');
+      if (replyInput && replyBtn) {
+        replyInput.addEventListener('input', () => {
+          const len = replyInput.value.length;
+          replyCount.textContent = `${len}/300`;
+          replyBtn.disabled = len === 0 || len > 300;
+          replyBtn.style.opacity = replyBtn.disabled ? '.5' : '1';
+        });
+        replyBtn.addEventListener('click', async () => {
+          const text = replyInput.value.trim();
+          if (!text) return;
+          replyBtn.disabled = true;
+          replyBtn.textContent = 'Sending...';
+          try {
+            await createBskyRecord(text, { uri: mainPost.uri, cid: mainPost.cid, root: { uri: rootUri, cid: rootCid } });
+            replyInput.value = '';
+            replyCount.textContent = '0/300';
+            replyBtn.textContent = 'Reply';
+            // Reload thread to show the new reply
+            openThread(uri);
+          } catch (err) {
+            console.error('Reply error:', err);
+            replyBtn.textContent = 'Failed — Retry';
+            replyBtn.disabled = false;
+            replyBtn.style.opacity = '1';
+          }
+        });
+      }
+
       attachAllListeners();
       initHlsVideos();
     } catch {
@@ -814,6 +925,8 @@ const sl = labels.social;
     filterBar.classList.toggle('hidden', currentTab !== 'feed');
     discoverPills.classList.toggle('hidden', currentTab !== 'discover');
     searchBar.classList.toggle('hidden', currentTab !== 'search');
+    const composeBox = document.getElementById('compose-box');
+    if (composeBox) composeBox.style.display = (currentTab === 'feed' && bskySession?.accessJwt) ? '' : 'none';
   }
 
   function loadCurrentTab() {
@@ -1704,6 +1817,43 @@ const sl = labels.social;
 
     document.querySelectorAll('.squad-member-avatar').forEach(el => {
       el.addEventListener('click', () => openProfile(el.dataset.handle));
+    });
+  }
+
+  // ============================================================
+  // POST COMPOSER
+  // ============================================================
+  const composeInput = document.getElementById('compose-input');
+  const composeSend = document.getElementById('compose-send');
+  const composeCount = document.getElementById('compose-count');
+  if (composeInput && composeSend) {
+    composeInput.addEventListener('input', () => {
+      const len = composeInput.value.length;
+      composeCount.textContent = `${len}/300`;
+      composeSend.disabled = len === 0 || len > 300;
+      composeSend.style.opacity = composeSend.disabled ? '.5' : '1';
+    });
+    composeSend.addEventListener('click', async () => {
+      const text = composeInput.value.trim();
+      if (!text || !bskySession?.accessJwt) return;
+      composeSend.disabled = true;
+      composeSend.textContent = 'Posting...';
+      try {
+        await createBskyRecord(text);
+        composeInput.value = '';
+        composeCount.textContent = '0/300';
+        composeSend.textContent = 'Post';
+        composeSend.disabled = true;
+        composeSend.style.opacity = '.5';
+        // Reload feed to show new post
+        resetPagination();
+        loadFeedTab();
+      } catch (err) {
+        console.error('Post error:', err);
+        composeSend.textContent = 'Failed — Retry';
+        composeSend.disabled = false;
+        composeSend.style.opacity = '1';
+      }
     });
   }
 
