@@ -1883,11 +1883,13 @@ const sl = labels.social;
     if (content) {
       if (content.tagName === 'VIDEO') {
         content.pause();
+        content._wasPlaying = false;
       } else if (content.tagName === 'IFRAME') {
         // Stop YouTube by clearing src
         const oldSrc = content.src;
         content.src = '';
         content._savedSrc = oldSrc;
+        content._userActivated = false;
       }
     }
     // Return content to original container
@@ -1900,6 +1902,8 @@ const sl = labels.social;
       if (content.tagName === 'IFRAME' && content._savedSrc) {
         content.src = content._savedSrc;
         delete content._savedSrc;
+        // Re-arm click listener so mini-player only triggers on next user click
+        miniPlayerSource.addEventListener('click', () => { content._userActivated = true; }, { once: true });
       }
       miniPlayerSource.style.display = '';
     }
