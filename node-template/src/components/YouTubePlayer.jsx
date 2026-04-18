@@ -479,23 +479,8 @@ function InteractivePlayer({ playlist, audioOnly, isFloating, heading, caption, 
         width: minimized ? '48px' : '100%',
       }}
     >
-      {/* Hidden iframe for audio-only or minimized — positioned off-screen */}
-      {(audioOnly || minimized) && (
-        <div style={{ position: 'absolute', width: '1px', height: '1px', overflow: 'hidden', opacity: 0, pointerEvents: 'none' }}>
-          <iframe
-            ref={iframeRef}
-            key={current.id}
-            src={embedUrl}
-            onLoad={onIframeLoad}
-            style={{ width: '100%', height: '100%', border: 'none' }}
-            allow="autoplay; encrypted-media"
-            allowFullScreen
-            title={current.title}
-          />
-        </div>
-      )}
-
-      {minimized ? (
+      {/* Minimized FAB button — shown on top of hidden card */}
+      {minimized && (
         <button onClick={() => setMinimized(false)}
           class="w-12 h-12 rounded-full flex items-center justify-center shadow-lg"
           style="background:var(--ps-primary);color:#fff"
@@ -506,23 +491,33 @@ function InteractivePlayer({ playlist, audioOnly, isFloating, heading, caption, 
             : <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
           }
         </button>
-      ) : (
-        <div class="rounded-xl shadow-2xl border overflow-hidden" style="background:var(--ps-card-bg);border-color:var(--ps-card-border);backdrop-filter:blur(20px)">
-          {/* Video iframe visible inside the card when not audio-only */}
-          {!audioOnly && (
-            <div style={{ aspectRatio: '16/9', background: '#000', width: '100%' }}>
-              <iframe
-                ref={iframeRef}
-                key={current.id}
-                src={embedUrl}
-                onLoad={onIframeLoad}
-                style={{ width: '100%', height: '100%', border: 'none' }}
-                allow="autoplay; encrypted-media"
-                allowFullScreen
-                title={current.title}
-              />
-            </div>
-          )}
+      )}
+
+      {/* Card — always rendered so iframe persists, but hidden when minimized */}
+      <div class="rounded-xl shadow-2xl border overflow-hidden"
+        style={{
+          background: 'var(--ps-card-bg)',
+          borderColor: 'var(--ps-card-border)',
+          backdropFilter: 'blur(20px)',
+          ...(minimized ? { position: 'absolute', width: '1px', height: '1px', overflow: 'hidden', opacity: 0, pointerEvents: 'none' } : {}),
+        }}
+      >
+          {/* Single iframe — visible when video mode, hidden when audio-only */}
+          <div style={audioOnly
+            ? { position: 'absolute', width: '1px', height: '1px', overflow: 'hidden', opacity: 0, pointerEvents: 'none' }
+            : { aspectRatio: '16/9', background: '#000', width: '100%' }
+          }>
+            <iframe
+              ref={iframeRef}
+              key={current.id}
+              src={embedUrl}
+              onLoad={onIframeLoad}
+              style={{ width: '100%', height: '100%', border: 'none' }}
+              allow="autoplay; encrypted-media"
+              allowFullScreen
+              title={current.title}
+            />
+          </div>
 
           <div class="flex items-center justify-between px-3 py-1.5 border-b"
             style="border-color:var(--ps-border);cursor:grab;user-select:none;-webkit-user-select:none"
@@ -602,7 +597,6 @@ function InteractivePlayer({ playlist, audioOnly, isFloating, heading, caption, 
             </div>
           )}
         </div>
-      )}
     </div>
   );
 }
