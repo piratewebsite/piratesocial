@@ -2026,6 +2026,7 @@ const sl = labels.social;
       } else if (content.tagName === 'IFRAME') {
         // Pause via postMessage — never clear src, preserves session
         pauseYTPlayer();
+        content._userActivated = false;
       }
     }
     // Return content to original container
