@@ -1,11 +1,6 @@
 /** @jsxImportSource preact */
 import { useState, useEffect, useRef, useCallback, useMemo } from 'preact/hooks';
 
-// YouTube IFrame API types (global)
-// window.YT available after YouTube iframe_api script loads
-// window.YT.Player - player class
-// window.YT.PlayerState - state constants (UNSTARTED, ENDED, PLAYING, PAUSED, BUFFERING, CUED)
-
 // Extract YouTube video ID from various URL formats
 function getYouTubeId(url) {
   if (!url) return null;
@@ -85,8 +80,8 @@ function InteractivePlayer({ playlist, audioOnly, isFloating, heading, caption, 
   const [dragOffset, setDragOffset] = useState(null);
   const [dragPos, setDragPos] = useState(null);
 
-  // ONE iframe ref — NEVER conditionally rendered, just styled via CSS
-  const iframeRef = useRef(null);
+  // ONE player div ref — NEVER destroyed, player lives for entire component lifetime
+  const youtubePlayerRef = useRef(null);
   const playerRef = useRef(null);
   const containerRef = useRef(null);
   const progressInterval = useRef(null);
@@ -95,68 +90,39 @@ function InteractivePlayer({ playlist, audioOnly, isFloating, heading, caption, 
   const handleNextRef = useRef(null);
   const lastAdvanceTimeRef = useRef(0);
   const currentRef = useRef(null);
-  const hasUserGesturedRef = useRef(false);  // Track if user has clicked/interacted
+  const hasUserGesturedRef = useRef(false);
   const isTouchDeviceRef = useRef(typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0));
 
   const hasPlaylist = playlist.length > 1;
   const current = playlist[currentIndex] || playlist[0];
   currentRef.current = current;
 
-  // ── Load YouTube IFrame API ──
+  // ── Load YouTube IFrame API script ONCE ──
   useEffect(() => {
-    if (!window.YT) {
-      const tag = document.createElement('script');
-      tag.src = 'https://www.youtube.com/iframe_api';
-      const firstScriptTag = document.getElementsByTagName('script')[0];
-      if (firstScriptTag && firstScriptTag.parentNode) {
-        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-      }
+    if (window.YT && window.YT.Player) return;
+    const tag = document.createElement('script');
+    tag.src = 'https://www.youtube.com/iframe_api';
+    const firstScriptTag = document.getElementsByTagName('script')[0];
+    if (firstScriptTag && firstScriptTag.parentNode) {
+      firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
     }
-  }, []);
-
-  // ── Initialize YouTube player ONCE on mount ──
-  useEffect(() => {
-    if (playerRef.current || !iframeRef.current) return;
-
-    const initPlayer = () => {
-      if (!window.YT || !window.YT.Player) {
-        setTimeout(initPlayer, 50);
-        return;
-      }
-      if (playerRef.current) return;
-
-      const first = playlist[0];
-      if (!first) return;
-
-      playerRef.current = new window.YT.Player(iframeRef.current, {
-        width: '100%',
-        height: '100%',
-        videoId: first.id,
-        playerVars: {
-          autoplay: 1,
-          controls: 1,
-          modestbranding: 1,
-          rel: 0,
-          playsinline: 1,
-          start: first.startTime || 0,
-          end: first.endTime || undefined,
-          mute: isTouchDeviceRef.current ? 1 : 0,
-        },
-        events: {
-          onReady: onPlayerReady,
-          onStateChange: onPlayerStateChange,
-        },
-      });
-    };
-
-    initPlayer();
   }, []);
 
   // ── Player event handlers ──
   const onPlayerReady = useCallback((e) => {
     playerReadyRef.current = true;
     e.target.setVolume(volume);
-    console.log('[YouTubePlayer] Player ready, initial mute state:', e.target.isMuted());
+
+    // On touch devices, auto-unmute after short delay (like ClipSlide)
+    if (isTouchDeviceRef.current && !hasUserGesturedRef.current) {
+      e.target.mute();
+      setTimeout(() => {
+        if (playerRef.current) {
+          playerRef.current.unMute();
+          hasUserGesturedRef.current = true;
+        }
+      }, 1500);
+    }
   }, [volume]);
 
   const onPlayerStateChange = useCallback((e) => {
@@ -192,37 +158,74 @@ function InteractivePlayer({ playlist, audioOnly, isFloating, heading, caption, 
     }
   }, []);
 
-  // ── Initialize player ONCE on mount — DISABLED (use youtube-nocookie.com iframes directly) ──
-  // useEffect(() => {
-  //   if (playerRef.current) return;
-  //   const first = playlist[0];
-  //   if (!first || !iframeRef.current) return;
-  //   function initPlayer() { ... }
-  //   // ... rest of init code ...
-  // }, []);
-
-  // ── Load new video when currentIndex changes ──
+  // ── Initialize YouTube player ONCE on mount (like ClipSlide) ──
+  // ONE player instance, NEVER destroyed — use loadVideoById() to switch tracks
   useEffect(() => {
+    if (playerRef.current) return;
+
+    const first = playlist[0];
+    if (!first) return;
+
+    const initPlayer = () => {
+      if (playerRef.current) return;
+      if (!youtubePlayerRef.current) {
+        setTimeout(initPlayer, 50);
+        return;
+      }
+
+      playerRef.current = new window.YT.Player(youtubePlayerRef.current, {
+        width: '100%',
+        height: '100%',
+        videoId: first.id,
+        playerVars: {
+          autoplay: 1,
+          controls: 1,
+          modestbranding: 1,
+          rel: 0,
+          playsinline: 1,
+          start: first.startTime || 0,
+          end: first.endTime || undefined,
+          mute: isTouchDeviceRef.current ? 1 : 0,
+        },
+        events: {
+          onReady: onPlayerReady,
+          onStateChange: onPlayerStateChange,
+        },
+      });
+    };
+
+    // Wait for YouTube API to load
+    if (window.YT && window.YT.Player) {
+      initPlayer();
+    } else {
+      const checkInterval = setInterval(() => {
+        if (window.YT && window.YT.Player) {
+          clearInterval(checkInterval);
+          initPlayer();
+        }
+      }, 100);
+    }
+  }, [playlist]);
+
+  // ── Switch video via loadVideoById — NEVER recreate player (prevents ads) ──
+  const isFirstRender = useRef(true);
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
     if (!playerRef.current || !playerReadyRef.current) return;
 
     const track = playlist[currentIndex];
     if (!track) return;
 
-    try {
-      playerRef.current.loadVideoById({
-        videoId: track.id,
-        startSeconds: track.startTime || 0,
-        endSeconds: track.endTime,
-      });
-
-      // Auto-play when track changes
-      if (hasUserGesturedRef.current) {
-        playerRef.current.playVideo();
-      }
-    } catch (error) {
-      console.error('[YouTubePlayer] Error loading video:', error);
-    }
-  }, [currentIndex, playlist]);
+    // loadVideoById on existing player = same session = NO new ads
+    playerRef.current.loadVideoById({
+      videoId: track.id,
+      startSeconds: track.startTime || 0,
+      endSeconds: track.endTime,
+    });
+  }, [currentIndex]);
 
   // ── Volume ──
   useEffect(() => {
@@ -235,26 +238,26 @@ function InteractivePlayer({ playlist, audioOnly, isFloating, heading, caption, 
   const togglePlay = useCallback(() => {
     if (!playerRef.current) return;
     hasUserGesturedRef.current = true;
-    try {
-      if (isPlaying) {
-        playerRef.current.pauseVideo();
-      } else {
-        playerRef.current.playVideo();
-      }
-    } catch (error) {
-      console.error('[YouTubePlayer] Error toggling play:', error);
+    if (isPlaying) {
+      playerRef.current.pauseVideo();
+    } else {
+      playerRef.current.unMute();
+      playerRef.current.playVideo();
     }
   }, [isPlaying]);
 
   const skipTo = useCallback((idx) => {
+    hasUserGesturedRef.current = true;
     setCurrentIndex(idx);
   }, []);
 
   const prevTrack = useCallback(() => {
+    hasUserGesturedRef.current = true;
     setCurrentIndex((prev) => (prev > 0 ? prev - 1 : playlist.length - 1));
   }, [playlist.length]);
 
   const nextTrack = useCallback(() => {
+    hasUserGesturedRef.current = true;
     setCurrentIndex((prev) => (prev < playlist.length - 1 ? prev + 1 : 0));
   }, [playlist.length]);
 
@@ -266,12 +269,8 @@ function InteractivePlayer({ playlist, audioOnly, isFloating, heading, caption, 
     const pct = (e.clientX - rect.left) / rect.width;
     const clipStart = currentRef.current.startTime || 0;
     const time = clipStart + pct * duration;
-    try {
-      playerRef.current.seekTo(time, true);
-      setProgress(pct * duration);
-    } catch (error) {
-      console.error('[YouTubePlayer] Error seeking:', error);
-    }
+    playerRef.current.seekTo(time, true);
+    setProgress(pct * duration);
   }, [duration]);
 
   const formatTime = (s) => {
@@ -327,15 +326,15 @@ function InteractivePlayer({ playlist, audioOnly, isFloating, heading, caption, 
     };
   }, [isFloating, onDragMove, onDragEnd]);
 
-  // ── Iframe wrapper style — ONE div always in DOM, visibility via CSS only ──
-  const getIframeStyle = () => {
+  // ── Player div style — always in DOM, visibility via CSS only ──
+  const getPlayerStyle = () => {
     if (isFloating && minimized) {
-      return 'position:absolute;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none';
+      return { position: 'absolute', width: '1px', height: '1px', overflow: 'hidden', opacity: 0, pointerEvents: 'none' };
     }
     if (audioOnly) {
-      return 'position:absolute;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none';
+      return { position: 'absolute', width: '1px', height: '1px', overflow: 'hidden', opacity: 0, pointerEvents: 'none' };
     }
-    return 'aspect-ratio:16/9;background:#000;width:100%';
+    return { aspectRatio: '16/9', background: '#000', width: '100%' };
   };
 
   // ═══════════════════════════════════════════
@@ -347,27 +346,22 @@ function InteractivePlayer({ playlist, audioOnly, isFloating, heading, caption, 
       <section class={`mb-12 ${wrapperClass}`}>
         {heading && <h2 class="mb-4 text-xl font-semibold">{heading}</h2>}
 
-        {/* YouTube IFrame API player */}
+        {/* YouTube player div — ONE instance, NEVER destroyed */}
         <div class="rounded-lg overflow-hidden mb-3" style="aspect-ratio:16/9;background:#000">
           <div
-            ref={iframeRef}
+            ref={youtubePlayerRef}
             style={{ width: '100%', height: '100%', backgroundColor: '#000' }}
           />
         </div>
 
         <div class="rounded-lg border overflow-hidden" style="border-color:var(--ps-card-border);background:var(--ps-card-bg)">
           <div class="flex items-center gap-3 p-4">
-            {/* Note: youtube-nocookie embeds have their own built-in play/pause controls, so we don't need a custom button */}
-            {hasPlaylist && (
-              <button onClick={prevTrack} class="p-2 rounded" style="color:var(--ps-text-muted)" title={L.previous}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="19,20 9,12 19,4"/><rect x="5" y="4" width="3" height="16"/></svg>
-              </button>
-            )}
-            {hasPlaylist && (
-              <button onClick={nextTrack} class="p-2 rounded" style="color:var(--ps-text-muted)" title={L.next}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,4 15,12 5,20"/><rect x="16" y="4" width="3" height="16"/></svg>
-              </button>
-            )}
+            <button onClick={togglePlay} class="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center" style="background:var(--ps-primary);color:#fff" aria-label={isPlaying ? L.pause : L.play}>
+              {isPlaying
+                ? <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+                : <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
+              }
+            </button>
             <div class="flex-1 min-w-0">
               <div class="text-sm font-medium truncate" style="color:var(--ps-text)">{current.title}</div>
               {started && (
@@ -448,11 +442,11 @@ function InteractivePlayer({ playlist, audioOnly, isFloating, heading, caption, 
         width: minimized ? '48px' : '100%',
       }}
     >
-      {/* YouTube IFrame API player */}
-      <div style={getIframeStyle()}>
+      {/* YouTube player div — ONE instance, NEVER destroyed */}
+      <div style={getPlayerStyle()}>
         <div
-          ref={iframeRef}
-          style={{ width: '100%', height: '100%', backgroundColor: '#000', display: audioOnly || minimized ? 'none' : 'block' }}
+          ref={youtubePlayerRef}
+          style={{ width: '100%', height: '100%', backgroundColor: '#000' }}
         />
       </div>
 
