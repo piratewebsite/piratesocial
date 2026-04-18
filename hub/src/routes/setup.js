@@ -92,7 +92,7 @@ router.post('/repair', authenticate, async (req, res) => {
   try {
     // Fetch latest deploy workflow from template
     const templateRes = await fetch(
-      'https://api.github.com/repos/twilightscapes/piratesocial/contents/node-template/.github/workflows/deploy.yml',
+      'https://api.github.com/repos/piratewebsite/piratesocial/contents/node-template/.github/workflows/deploy.yml',
       { headers }
     );
     if (!templateRes.ok) throw new Error('Failed to fetch template workflow');

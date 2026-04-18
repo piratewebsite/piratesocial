@@ -8,7 +8,7 @@
  * 4. Enable GitHub Pages with Actions source
  */
 
-const TEMPLATE_OWNER = 'twilightscapes';
+const TEMPLATE_OWNER = 'piratewebsite';
 const TEMPLATE_REPO = 'piratesocial';
 const TEMPLATE_PATH = 'node-template';
 const HUB_URL = process.env.HUB_URL || 'https://piratesocial.app';

@@ -29,7 +29,7 @@ jobs:
       - name: Fetch latest template
         uses: actions/checkout@v6
         with:
-          repository: twilightscapes/piratesocial
+          repository: piratewebsite/piratesocial
           path: template-source
           sparse-checkout: node-template
           sparse-checkout-cone-mode: true
@@ -80,7 +80,7 @@ jobs:
           # The template version handles SITE_URL and BASE_PATH via env vars.
           
           echo "✅ Merged template + user content"
-          echo "Template files from: twilightscapes/piratesocial/node-template"
+          echo "Template files from: piratewebsite/piratesocial/node-template"
           echo "User content from: ${{ github.repository }}"
 
       - name: Self-update workflow
