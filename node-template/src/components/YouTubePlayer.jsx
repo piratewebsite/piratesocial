@@ -1,33 +1,12 @@
 /** @jsxImportSource preact */
-import { useState, useEffect, useRef, useCallback, useMemo } from 'preact/hooks';
+import { useState, useRef, useCallback, useMemo } from 'preact/hooks';
 
-// Extract YouTube video ID from various URL formats
 function getYouTubeId(url) {
   if (!url) return null;
   const m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([^&?\s]+)/);
   return m ? m[1] : null;
 }
 
-// Build youtube-nocookie.com embed URL (no ads, no tracking)
-// youtube-nocookie.com is YouTube's official ad-free embed for privacy compliance
-function getNoCookieEmbedUrl(videoId, startTime = 0, endTime = undefined, autoplay = 0, muted = 1) {
-  let url = `https://www.youtube-nocookie.com/embed/${videoId}?`;
-  const params = new URLSearchParams({
-    autoplay: autoplay.toString(),
-    muted: muted.toString(),
-    start: Math.floor(startTime).toString(),
-    controls: '1',
-    modestbranding: '1',
-    rel: '0',
-    playsinline: '1',
-  });
-  if (endTime) {
-    params.append('end', Math.floor(endTime).toString());
-  }
-  return url + params.toString();
-}
-
-// Default labels
 const defaults = {
   audioPlayer: '♫ Audio Player',
   videoPlayer: '▶ Player',
@@ -43,11 +22,17 @@ const defaults = {
   youtubeVideo: 'YouTube video',
 };
 
-export default function YouTubePlayer({ url, heading, caption, audioOnly, display = 'docked', tracks, layout = 'contained', labels: userLabels = {}, startTime, endTime, useNativeControls = false }) {
+export default function YouTubePlayer({ url, heading, caption, audioOnly, display = 'docked', tracks, layout = 'contained', labels: userLabels = {}, startTime, endTime }) {
   const L = { ...defaults, ...userLabels };
   const isFloating = display === 'floating';
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [minimized, setMinimized] = useState(false);
+  const [position, setPosition] = useState({ side: 'bottom' });
+  const [dragOffset, setDragOffset] = useState(null);
+  const [dragPos, setDragPos] = useState(null);
+  const containerRef = useRef(null);
 
-  // Build playlist once — useMemo prevents new array reference on every render
+  // Build playlist
   const playlist = useMemo(() => {
     const items = [];
     const mainId = getYouTubeId(url);
@@ -73,296 +58,21 @@ export default function YouTubePlayer({ url, heading, caption, audioOnly, displa
 
   if (playlist.length === 0) return null;
 
-  return <InteractivePlayer
-    playlist={playlist}
-    audioOnly={audioOnly}
-    isFloating={isFloating}
-    heading={heading}
-    caption={caption}
-    layout={layout}
-    L={L}
-    useNativeControls={useNativeControls}
-  />;
-}
+  const current = playlist[currentIndex];
+  const embedUrl = `https://www.youtube-nocookie.com/embed/${current.id}?autoplay=0&muted=1&controls=1&modestbranding=1&rel=0&playsinline=1${current.startTime ? `&start=${Math.floor(current.startTime)}` : ''}${current.endTime ? `&end=${Math.floor(current.endTime)}` : ''}`;
 
-function InteractivePlayer({ playlist, audioOnly, isFloating, heading, caption, layout, L, useNativeControls }) {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [started, setStarted] = useState(false);
-  const [volume, setVolume] = useState(80);
-  const [showPlaylist, setShowPlaylist] = useState(false);
-  const [minimized, setMinimized] = useState(false);
-  const [closed, setClosed] = useState(false);
-  const [position, setPosition] = useState({ side: 'bottom' });
-  const [progress, setProgress] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [dragOffset, setDragOffset] = useState(null);
-  const [dragPos, setDragPos] = useState(null);
-
-  // ONE iframe ref — NEVER conditionally rendered, just styled via CSS
-  const iframeRef = useRef(null);
-  const playerRef = useRef(null);
-  const containerRef = useRef(null);
-  const progressInterval = useRef(null);
-  const isDragging = useRef(false);
-  const playerReadyRef = useRef(false);
-  const handleNextRef = useRef(null);
-  const lastAdvanceTimeRef = useRef(0);
-  const currentRef = useRef(null);
-  const hasUserGesturedRef = useRef(false);  // Track if user has clicked/interacted
-  const isTouchDeviceRef = useRef(typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0));
-
-  const hasPlaylist = playlist.length > 1;
-  const current = playlist[currentIndex] || playlist[0];
-  currentRef.current = current;
-
-  // ── YouTube IFrame API loader ──
-  useEffect(() => {
-    if (window.YT && window.YT.Player) return;
-    const tag = document.createElement('script');
-    tag.src = 'https://www.youtube.com/iframe_api';
-    document.head.appendChild(tag);
-  }, []);
-
-  // ── Player event handlers (stable via useCallback, use refs for current state) ──
-  const onPlayerReady = useCallback((e) => {
-    playerReadyRef.current = true;
-    e.target.setVolume(volume);
-    console.log('[YouTubePlayer] Player ready, initial mute state:', e.target.isMuted());
-  }, [volume]);
-
-  const onPlayerStateChange = useCallback((e) => {
-    if (e.data === window.YT.PlayerState.PLAYING) {
-      setIsPlaying(true);
-      setStarted(true);
-      const fullDur = e.target.getDuration();
-      const cur = currentRef.current;
-      setDuration((cur.endTime || fullDur) - (cur.startTime || 0));
-      clearInterval(progressInterval.current);
-      progressInterval.current = setInterval(() => {
-        if (playerRef.current && playerRef.current.getCurrentTime) {
-          const t = playerRef.current.getCurrentTime();
-          const cur = currentRef.current;
-          const cs = cur.startTime || 0;
-          setProgress(Math.max(0, t - cs));
-          if (cur.endTime && t >= cur.endTime) {
-            clearInterval(progressInterval.current);
-            // Auto-advance: Only auto-unmute if user has already gestured
-            if (hasUserGesturedRef.current && playerRef.current && playerRef.current.unMute) {
-              playerRef.current.unMute();
-            }
-            handleNextRef.current?.();
-          }
-        }
-      }, 500);
-    } else if (e.data === window.YT.PlayerState.PAUSED) {
-      setIsPlaying(false);
-      clearInterval(progressInterval.current);
-    } else if (e.data === window.YT.PlayerState.ENDED) {
-      clearInterval(progressInterval.current);
-      const now = Date.now();
-      if (now - lastAdvanceTimeRef.current > 500) {
-        lastAdvanceTimeRef.current = now;
-        handleNextRef.current?.();
-      }
-    }
-  }, []);
-
-  // ── Initialize player ONCE on mount — empty deps ──
-  useEffect(() => {
-    if (playerRef.current) return;
-
-    const first = playlist[0];
-    if (!first || !iframeRef.current) return;
-
-    function initPlayer() {
-      if (playerRef.current) return;
-      if (!iframeRef.current) return;
-
-      playerRef.current = new window.YT.Player(iframeRef.current, {
-        width: '100%',
-        height: '100%',
-        playerVars: {
-          autoplay: 0,
-          controls: useNativeControls ? 1 : 0,
-          modestbranding: 1,
-          rel: 0,
-          playsinline: 1,
-          mute: 1,
-        },
-        events: {
-          onReady: onPlayerReady,
-          onStateChange: onPlayerStateChange,
-        },
-      });
-      console.log('[YouTubePlayer] Player initialized EMPTY (no videoId) - will load on first click to bypass ads');
-    }
-
-    if (window.YT && window.YT.Player) {
-      initPlayer();
-    } else {
-      const checkInterval = setInterval(() => {
-        if (window.YT && window.YT.Player) {
-          clearInterval(checkInterval);
-          initPlayer();
-        }
-      }, 100);
-      return () => clearInterval(checkInterval);
-    }
-  }, []); // truly once
-
-  // ── Load new video ONLY when currentIndex changes (skip first render) ──
-  // NOTE: On user gesture (click), we already load synchronously in the callback
-  // This effect handles other cases and ensures state consistency
-  const isFirstRender = useRef(true);
-  useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      return;
-    }
-    if (!playerRef.current || !playerReadyRef.current) return;
-
-    const track = playlist[currentIndex];
-    if (!track) return;
-
-    // If user gestured recently, they already loaded via callback - just ensure player is set up
-    // Otherwise load now (e.g., programmatic index change)
-    playerRef.current.loadVideoById({
-      videoId: track.id,
-      startSeconds: track.startTime || 0,
-      endSeconds: track.endTime,
-    });
-  }, [currentIndex]); // ONLY currentIndex
-
-  // ── Volume ──
-  useEffect(() => {
-    if (playerRef.current && playerRef.current.setVolume) {
-      playerRef.current.setVolume(volume);
-    }
-  }, [volume]);
-
-  // ── Controls ──
-  const togglePlay = useCallback(() => {
-    if (!playerRef.current || !playerReadyRef.current) return;
-    try {
-      // IMPORTANT: Mark gesture within the sync click context (before any async)
-      hasUserGesturedRef.current = true;
-      console.log('[YouTubePlayer] User clicked play - marking gesture');
-      
-      // Unmute synchronously in this gesture context
-      if (playerRef.current.unMute) {
-        playerRef.current.unMute();
-        console.log('[YouTubePlayer] Unmuted synchronously in click handler');
-      }
-      
-      // If this is the first play and no video is loaded yet, load the first one now
-      let currentlyLoadedVideoId = null;
-      try {
-        currentlyLoadedVideoId = playerRef.current.getVideoData?.()?.video_id;
-      } catch (e) {
-        // getVideoData might throw if no video loaded yet
-      }
-      
-      if (!currentlyLoadedVideoId && playlist[currentIndex]) {
-        const track = playlist[currentIndex];
-        playerRef.current.cueVideoById({
-          videoId: track.id,
-          startSeconds: track.startTime || 0,
-          endSeconds: track.endTime,
-        });
-        console.log('[YouTubePlayer] Loaded video on first click:', track.id);
-      }
-      
-      const state = playerRef.current.getPlayerState?.();
-      if (state === 1) { // YT.PlayerState.PLAYING
-        playerRef.current.pauseVideo();
-        console.log('[YouTubePlayer] Paused');
-      } else {
-        setStarted(true);
-        playerRef.current.playVideo();
-        console.log('[YouTubePlayer] Playing');
-      }
-    } catch (e) { 
-      console.error('[YouTubePlayer] Error in togglePlay:', e);
-    }
-  }, [playlist, currentIndex]); // Include deps for proper closure
-
-  const skipTo = useCallback((idx) => {
-    if (!playerRef.current || !playerReadyRef.current) return;
-    hasUserGesturedRef.current = true;
-    
-    // Unmute synchronously (in gesture context)
-    if (playerRef.current.unMute) {
-      playerRef.current.unMute();
-    }
-    
-    // Update index — effect will load the video
-    setCurrentIndex(idx);
-  }, []);
-
-  const prevTrack = useCallback(() => {
-    if (!playerRef.current || !playerReadyRef.current) return;
-    hasUserGesturedRef.current = true;
-    
-    // Unmute synchronously (in gesture context)
-    if (playerRef.current.unMute) {
-      playerRef.current.unMute();
-    }
-    
-    setCurrentIndex((prev) => (prev > 0 ? prev - 1 : playlist.length - 1));
-  }, [playlist.length]);
-
-  const nextTrack = useCallback(() => {
-    if (!playerRef.current || !playerReadyRef.current) return;
-    hasUserGesturedRef.current = true;
-    
-    // Unmute synchronously (in gesture context)
-    if (playerRef.current.unMute) {
-      playerRef.current.unMute();
-    }
-    
-    setCurrentIndex((prev) => (prev < playlist.length - 1 ? prev + 1 : 0));
-  }, [playlist.length]);
-
-  useEffect(() => { handleNextRef.current = nextTrack; }, [nextTrack]);
-
-  const seekTo = useCallback((e) => {
-    if (!playerRef.current || !duration) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const pct = (e.clientX - rect.left) / rect.width;
-    const clipStart = currentRef.current.startTime || 0;
-    const time = clipStart + pct * duration;
-    playerRef.current.seekTo(time, true);
-    setProgress(pct * duration);
-  }, [duration]);
-
-  const formatTime = (s) => {
-    if (!s || isNaN(s)) return '0:00';
-    const m = Math.floor(s / 60);
-    const sec = Math.floor(s % 60);
-    return `${m}:${sec.toString().padStart(2, '0')}`;
-  };
-
-  const cycleSide = useCallback(() => {
-    setDragPos(null);
-    const sides = ['bottom', 'right', 'left'];
-    const idx = sides.indexOf(position.side);
-    setPosition({ side: sides[(idx + 1) % sides.length] });
-  }, [position.side]);
-
-  // ── Drag handlers ──
-  const onDragStart = useCallback((e) => {
-    if (!isFloating || !containerRef.current) return;
-    if (e.target.closest('button, input, [role="button"]')) return;
+  const handleDragStart = useCallback((e) => {
+    if (!isFloating || e.target.closest('button, input, [role="button"]')) return;
     e.preventDefault();
     const touch = e.touches ? e.touches[0] : e;
-    const rect = containerRef.current.getBoundingClientRect();
-    isDragging.current = true;
-    setDragOffset({ x: touch.clientX - rect.left, y: touch.clientY - rect.top });
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (rect) {
+      setDragOffset({ x: touch.clientX - rect.left, y: touch.clientY - rect.top });
+    }
   }, [isFloating]);
 
-  const onDragMove = useCallback((e) => {
-    if (!isDragging.current || !dragOffset) return;
+  const handleDragMove = useCallback((e) => {
+    if (!dragOffset) return;
     e.preventDefault();
     const touch = e.touches ? e.touches[0] : e;
     const x = Math.max(0, Math.min(window.innerWidth - 60, touch.clientX - dragOffset.x));
@@ -370,231 +80,139 @@ function InteractivePlayer({ playlist, audioOnly, isFloating, heading, caption, 
     setDragPos({ x, y });
   }, [dragOffset]);
 
-  const onDragEnd = useCallback(() => {
-    isDragging.current = false;
+  const handleDragEnd = useCallback(() => {
     setDragOffset(null);
   }, []);
 
-  useEffect(() => {
-    if (!isFloating) return;
-    window.addEventListener('mousemove', onDragMove);
-    window.addEventListener('mouseup', onDragEnd);
-    window.addEventListener('touchmove', onDragMove, { passive: false });
-    window.addEventListener('touchend', onDragEnd);
-    return () => {
-      window.removeEventListener('mousemove', onDragMove);
-      window.removeEventListener('mouseup', onDragEnd);
-      window.removeEventListener('touchmove', onDragMove);
-      window.removeEventListener('touchend', onDragEnd);
-    };
-  }, [isFloating, onDragMove, onDragEnd]);
-
-  // ── Iframe wrapper style — ONE div always in DOM, visibility via CSS only ──
-  const getIframeStyle = () => {
-    if (isFloating && minimized) {
-      return 'position:absolute;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none';
-    }
-    if (audioOnly) {
-      return 'position:absolute;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none';
-    }
-    return 'aspect-ratio:16/9;background:#000;width:100%';
-  };
-
-  // ═══════════════════════════════════════════
-  // ── DOCKED PLAYER ──
-  // ═══════════════════════════════════════════
+  // Simplified player for docked layout
   if (!isFloating) {
-    const wrapperClass = layout === 'full' ? '' : 'max-w-4xl mx-auto';
     return (
-      <section class={`mb-12 ${wrapperClass}`}>
+      <section class={`mb-12 ${layout === 'full' ? '' : 'max-w-4xl mx-auto'}`}>
         {heading && <h2 class="mb-4 text-xl font-semibold">{heading}</h2>}
-
-        {/* SINGLE iframe div — always in DOM */}
-        <div style={getIframeStyle()} class={audioOnly ? '' : 'rounded-lg overflow-hidden mb-3'}>
-          <div ref={iframeRef} style="width:100%;height:100%" />
+        <div class="rounded-lg overflow-hidden mb-3">
+          <div style="aspect-ratio:16/9;background:#000;width:100%">
+            <iframe
+              width="100%"
+              height="100%"
+              src={embedUrl}
+              title={L.youtubeVideo}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              style={{ border: 'none', display: 'block' }}
+            />
+          </div>
         </div>
 
+        {/* Controls */}
         <div class="rounded-lg border overflow-hidden" style="border-color:var(--ps-card-border);background:var(--ps-card-bg)">
           <div class="flex items-center gap-3 p-4">
-            <button onClick={togglePlay} class="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center" style="background:var(--ps-primary);color:#fff" aria-label={isPlaying ? L.pause : L.play}>
-              {isPlaying
-                ? <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
-                : <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
-              }
-            </button>
+            {playlist.length > 1 && (
+              <>
+                <button onClick={() => setCurrentIndex(p => p > 0 ? p - 1 : playlist.length - 1)} class="p-2 rounded" style="color:var(--ps-text-muted)" title={L.previous}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="19,20 9,12 19,4" /><rect x="5" y="4" width="3" height="16" /></svg>
+                </button>
+                <button onClick={() => setCurrentIndex(p => p < playlist.length - 1 ? p + 1 : 0)} class="p-2 rounded" style="color:var(--ps-text-muted)" title={L.next}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,4 15,12 5,20" /><rect x="16" y="4" width="3" height="16" /></svg>
+                </button>
+              </>
+            )}
             <div class="flex-1 min-w-0">
               <div class="text-sm font-medium truncate" style="color:var(--ps-text)">{current.title}</div>
-              {started && (
-                <div class="flex items-center gap-2 mt-1">
-                  <span class="text-xs" style="color:var(--ps-text-faint)">{formatTime(progress)}</span>
-                  <div class="flex-1 h-1.5 rounded-full cursor-pointer" style="background:var(--ps-border)" onClick={seekTo}>
-                    <div class="h-full rounded-full transition-all" style={`width:${duration ? (progress / duration * 100) : 0}%;background:var(--ps-primary)`} />
-                  </div>
-                  <span class="text-xs" style="color:var(--ps-text-faint)">{formatTime(duration)}</span>
-                </div>
-              )}
             </div>
-            {hasPlaylist && (
-              <div class="flex items-center gap-1">
-                <button onClick={prevTrack} class="p-1.5 rounded" style="color:var(--ps-text-muted)" aria-label={L.previous}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="19,20 9,12 19,4"/><rect x="5" y="4" width="3" height="16"/></svg>
-                </button>
-                <button onClick={nextTrack} class="p-1.5 rounded" style="color:var(--ps-text-muted)" aria-label={L.next}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,4 15,12 5,20"/><rect x="16" y="4" width="3" height="16"/></svg>
-                </button>
-              </div>
-            )}
-            <div class="flex items-center gap-1.5 w-24">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--ps-text-faint);flex-shrink:0"><polygon points="11,5 6,9 2,9 2,15 6,15 11,19"/><path d="M19.07 4.93a10 10 0 010 14.14M15.54 8.46a5 5 0 010 7.07"/></svg>
-              <input type="range" min="0" max="100" value={volume} onInput={(e) => setVolume(Number(e.target.value))}
-                class="w-full h-1 rounded-full appearance-none cursor-pointer"
-                style="accent-color:var(--ps-primary);background:var(--ps-border)"
-              />
-            </div>
-            {hasPlaylist && (
-              <button onClick={() => setShowPlaylist(!showPlaylist)} class="p-1.5 rounded" style={`color:${showPlaylist ? 'var(--ps-primary)' : 'var(--ps-text-muted)'}`} aria-label={L.playlist}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-              </button>
-            )}
           </div>
-          {hasPlaylist && showPlaylist && (
-            <div class="border-t px-2 py-1 max-h-48 overflow-y-auto" style="border-color:var(--ps-border)">
-              {playlist.map((track, i) => (
-                <button key={track.id} onClick={() => skipTo(i)}
-                  class="w-full flex items-center gap-2 px-3 py-2 rounded text-left text-sm transition"
-                  style={`color:${i === currentIndex ? 'var(--ps-primary)' : 'var(--ps-text)'};background:${i === currentIndex ? 'var(--ps-surface-hover)' : 'transparent'}`}
-                >
-                  <span class="w-5 text-xs text-right flex-shrink-0" style="color:var(--ps-text-faint)">
-                    {i === currentIndex && isPlaying ? '♫' : `${i + 1}`}
-                  </span>
-                  <span class="truncate">{track.title}</span>
-                </button>
-              ))}
+          {playlist.length > 1 && (
+            <div class="border-t px-2 py-2" style="border-color:var(--ps-border)">
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(50px,1fr));gap:4px">
+                {playlist.map((track, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setCurrentIndex(i)}
+                    class="px-2 py-1 text-xs rounded font-medium transition"
+                    style={{
+                      background: i === currentIndex ? 'var(--ps-primary)' : 'var(--ps-surface)',
+                      color: i === currentIndex ? '#fff' : 'var(--ps-text)',
+                    }}
+                  >
+                    {i + 1}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
         </div>
-        {caption && <p class="mt-2 text-sm text-center" style="color:var(--ps-text-muted)">{caption}</p>}
       </section>
     );
   }
 
-  // ═══════════════════════════════════════════
-  // ── FLOATING MINI PLAYER ──
-  // ═══════════════════════════════════════════
-  if (closed) return null;
-
-  const floatingWidth = !audioOnly && !minimized ? '420px' : (minimized ? '48px' : '380px');
-  const posStyles = {
-    bottom: { bottom: '72px', left: '50%', transform: 'translateX(-50%)', maxWidth: floatingWidth },
-    right: { bottom: '72px', right: '16px', maxWidth: floatingWidth },
-    left: { bottom: '72px', left: '16px', maxWidth: floatingWidth },
-  };
-  const pos = dragPos
-    ? { left: `${dragPos.x}px`, top: `${dragPos.y}px`, maxWidth: floatingWidth }
-    : (posStyles[position.side] || posStyles.bottom);
+  // Floating player
+  const pos = dragPos ? { left: `${dragPos.x}px`, top: `${dragPos.y}px` } : { bottom: '20px', right: '20px' };
 
   return (
-    <div ref={containerRef}
+    <div
+      ref={containerRef}
       style={{
-        position: 'fixed', zIndex: 9999,
-        transition: isDragging.current ? 'none' : 'all 0.3s ease',
+        position: 'fixed',
+        zIndex: 9999,
+        transition: dragOffset ? 'none' : 'all 0.3s ease',
         ...pos,
-        width: minimized ? '48px' : '100%',
+        width: minimized ? '48px' : '320px',
       }}
+      onMouseDown={handleDragStart}
+      onMouseMove={handleDragMove}
+      onMouseUp={handleDragEnd}
+      onMouseLeave={handleDragEnd}
+      onTouchStart={handleDragStart}
+      onTouchMove={handleDragMove}
+      onTouchEnd={handleDragEnd}
     >
-      {/* SINGLE iframe div — always in DOM, visibility via CSS */}
-      <div style={getIframeStyle()}>
-        <div ref={iframeRef} style="width:100%;height:100%" />
-      </div>
-
       {minimized ? (
-        <button onClick={() => setMinimized(false)}
+        <button
+          onClick={() => setMinimized(false)}
           class="w-12 h-12 rounded-full flex items-center justify-center shadow-lg"
           style="background:var(--ps-primary);color:#fff"
-          aria-label={L.expand}
+          title={L.expand}
         >
-          {isPlaying
-            ? <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55C7.79 13 6 14.79 6 17s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
-            : <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
-          }
+          ▶
         </button>
       ) : (
-        <div class="rounded-xl shadow-2xl border overflow-hidden" style="background:var(--ps-card-bg);border-color:var(--ps-card-border);backdrop-filter:blur(20px)">
-          <div class="flex items-center justify-between px-3 py-1.5 border-b"
-            style="border-color:var(--ps-border);cursor:grab;user-select:none;-webkit-user-select:none"
-            onMouseDown={onDragStart}
-            onTouchStart={onDragStart}
-          >
-            <button onClick={cycleSide} class="text-xs px-1.5 py-0.5 rounded" style="color:var(--ps-text-faint)" aria-label={L.changePosition} title={L.changePosition}>
-              ⇄
-            </button>
-            <span class="text-xs font-medium truncate mx-2 flex items-center gap-1" style="color:var(--ps-text-faint)">
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" style="opacity:0.5"><circle cx="9" cy="5" r="2"/><circle cx="15" cy="5" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="9" cy="19" r="2"/><circle cx="15" cy="19" r="2"/></svg>
-              {audioOnly ? L.audioPlayer : L.videoPlayer}
-            </span>
-            <div class="flex items-center gap-1">
-              <button onClick={() => setMinimized(true)} class="text-xs px-1.5 py-0.5 rounded" style="color:var(--ps-text-faint)" aria-label={L.minimize} title={L.minimize}>
-                ─
-              </button>
-              <button onClick={() => { playerRef.current?.pauseVideo?.(); setClosed(true); }} class="text-xs px-1.5 py-0.5 rounded" style="color:var(--ps-text-faint)" aria-label="Close" title="Close">
-                ✕
-              </button>
-            </div>
-          </div>
-
-          {started && (
-            <div class="h-1 cursor-pointer" style="background:var(--ps-border)" onClick={seekTo}>
-              <div class="h-full transition-all" style={`width:${duration ? (progress / duration * 100) : 0}%;background:var(--ps-primary)`} />
-            </div>
-          )}
-
-          <div class="flex items-center gap-2 px-3 py-2">
-            {hasPlaylist && (
-              <button onClick={prevTrack} class="p-1 rounded" style="color:var(--ps-text-muted)" aria-label={L.previous}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="19,20 9,12 19,4"/><rect x="5" y="4" width="3" height="16"/></svg>
-              </button>
-            )}
-            <button onClick={togglePlay} class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center" style="background:var(--ps-primary);color:#fff" aria-label={isPlaying ? L.pause : L.play}>
-              {isPlaying
-                ? <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
-                : <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
-              }
-            </button>
-            {hasPlaylist && (
-              <button onClick={nextTrack} class="p-1 rounded" style="color:var(--ps-text-muted)" aria-label={L.next}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,4 15,12 5,20"/><rect x="16" y="4" width="3" height="16"/></svg>
-              </button>
-            )}
-            <div class="flex-1 min-w-0 mx-1">
-              <div class="text-xs font-medium truncate" style="color:var(--ps-text)">{current.title}</div>
-              {started && <div class="text-xs" style="color:var(--ps-text-faint)">{formatTime(progress)} / {formatTime(duration)}</div>}
-            </div>
-            <input type="range" min="0" max="100" value={volume} onInput={(e) => setVolume(Number(e.target.value))}
-              class="w-14 h-1 rounded-full appearance-none cursor-pointer"
-              style="accent-color:var(--ps-primary);background:var(--ps-border)"
+        <div class="rounded-lg overflow-hidden shadow-lg" style="background:#000;border-radius:12px">
+          <div style="aspect-ratio:16/9;background:#000">
+            <iframe
+              width="100%"
+              height="100%"
+              src={embedUrl}
+              title={L.youtubeVideo}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              style={{ border: 'none', display: 'block' }}
             />
-            {hasPlaylist && (
-              <button onClick={() => setShowPlaylist(!showPlaylist)} class="p-1 rounded" style={`color:${showPlaylist ? 'var(--ps-primary)' : 'var(--ps-text-muted)'}`} aria-label={L.playlist}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-              </button>
-            )}
           </div>
 
-          {hasPlaylist && showPlaylist && (
-            <div class="border-t px-1 py-1 max-h-40 overflow-y-auto" style="border-color:var(--ps-border)">
-              {playlist.map((track, i) => (
-                <button key={track.id} onClick={() => skipTo(i)}
-                  class="w-full flex items-center gap-2 px-2 py-1.5 rounded text-left text-xs transition"
-                  style={`color:${i === currentIndex ? 'var(--ps-primary)' : 'var(--ps-text)'};background:${i === currentIndex ? 'var(--ps-surface-hover)' : 'transparent'}`}
-                >
-                  <span class="w-4 text-right flex-shrink-0" style="color:var(--ps-text-faint)">
-                    {i === currentIndex && isPlaying ? '♫' : `${i + 1}`}
-                  </span>
-                  <span class="truncate">{track.title}</span>
-                </button>
-              ))}
+          {/* Mini controls */}
+          <div class="px-3 py-2 text-xs" style="background:rgba(0,0,0,0.8);color:#fff">
+            <div class="flex items-center justify-between gap-2 mb-1.5">
+              <div class="font-medium truncate flex-1">{current.title}</div>
+              <button onClick={() => setMinimized(true)} class="text-xs px-1" title={L.minimize}>−</button>
             </div>
-          )}
+            {playlist.length > 1 && (
+              <div style="display:flex;gap:2px;overflow-x:auto">
+                {playlist.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setCurrentIndex(i)}
+                    class="px-1.5 py-0.5 text-xs rounded transition"
+                    style={{
+                      background: i === currentIndex ? '#fff' : 'rgba(255,255,255,0.3)',
+                      color: i === currentIndex ? '#000' : '#fff',
+                      flexShrink: 0,
+                    }}
+                  >
+                    {i + 1}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
