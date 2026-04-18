@@ -2111,8 +2111,8 @@ const sl = labels.social;
       </div>
       <div class="mb-4 flex items-center gap-3">
         <label class="text-xs text-theme-faint whitespace-nowrap cursor-pointer" for="feed-toggle-${squad.id}">Show in Feed</label>
-        <button id="feed-toggle-${squad.id}" class="squad-feed-toggle relative w-9 h-5 rounded-full transition-colors" data-squad-id="${squad.id}" style="background:${squad.feedEnabled ? 'var(--ps-input-border,#444)' : 'var(--ps-accent,#3b82f6)'};flex-shrink:0">
-          <span style="position:absolute;top:2px;${squad.feedEnabled ? 'left:2px' : 'right:2px'};width:16px;height:16px;border-radius:50%;background:#fff;transition:all .15s"></span>
+        <button id="feed-toggle-${squad.id}" class="squad-feed-toggle relative w-9 h-5 rounded-full transition-colors" data-squad-id="${squad.id}" style="background:${squad.feedEnabled ? 'var(--ps-accent,#3b82f6)' : 'var(--ps-input-border,#444)'};flex-shrink:0">
+          <span style="position:absolute;top:2px;${squad.feedEnabled ? 'right:2px' : 'left:2px'};width:16px;height:16px;border-radius:50%;background:#fff;transition:all .15s"></span>
         </button>
         <span class="text-xs text-theme-muted">${squad.feedEnabled ? 'In main Feed' : 'Squad-only'}</span>
       </div>
@@ -2229,10 +2229,10 @@ const sl = labels.social;
         if (!squad) return;
         const newVal = !squad.feedEnabled;
         squad.feedEnabled = newVal;
-        btn.style.background = newVal ? 'var(--ps-input-border,#444)' : 'var(--ps-accent,#3b82f6)';
+        btn.style.background = newVal ? 'var(--ps-accent,#3b82f6)' : 'var(--ps-input-border,#444)';
         const dot = btn.querySelector('span');
-        dot.style.left = newVal ? '2px' : '';
-        dot.style.right = newVal ? '' : '2px';
+        dot.style.left = newVal ? '' : '2px';
+        dot.style.right = newVal ? '2px' : '';
         btn.nextElementSibling.textContent = newVal ? 'In main Feed' : 'Squad-only';
         await fetch(`${hubUrl}/api/bluesky-feed/squads/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ feedEnabled: newVal }) });
       });
