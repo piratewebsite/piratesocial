@@ -163,23 +163,20 @@ function InteractivePlayer({ playlist, audioOnly, isFloating, heading, caption, 
       playerRef.current = new window.YT.Player(iframeRef.current, {
         width: '100%',
         height: '100%',
-        videoId: first.id,
         playerVars: {
-          autoplay: 0,  // Don't autoplay first video - wait for user click (no ads that way)
+          autoplay: 0,
           controls: useNativeControls ? 1 : 0,
           modestbranding: 1,
           rel: 0,
           playsinline: 1,
-          start: first.startTime || 0,
-          end: first.endTime,
-          mute: 1,  // Start muted so IF autoplay somehow triggers, at least no audio
+          mute: 1,
         },
         events: {
           onReady: onPlayerReady,
           onStateChange: onPlayerStateChange,
         },
       });
-      console.log('[YouTubePlayer] Initialized with videoId:', first.id, 'autoplay: 0 (wait for click), mute: 1');
+      console.log('[YouTubePlayer] Player initialized EMPTY (no videoId) - will load on first click to bypass ads');
     }
 
     if (window.YT && window.YT.Player) {
@@ -227,7 +224,7 @@ function InteractivePlayer({ playlist, audioOnly, isFloating, heading, caption, 
 
   // ── Controls ──
   const togglePlay = useCallback(() => {
-    if (!playerRef.current) return;
+    if (!playerRef.current || !playerReadyRef.current) return;
     try {
       // IMPORTANT: Mark gesture within the sync click context (before any async)
       hasUserGesturedRef.current = true;
@@ -239,7 +236,25 @@ function InteractivePlayer({ playlist, audioOnly, isFloating, heading, caption, 
         console.log('[YouTubePlayer] Unmuted synchronously in click handler');
       }
       
-      const state = playerRef.current.getPlayerState();
+      // If this is the first play and no video is loaded yet, load the first one now
+      let currentlyLoadedVideoId = null;
+      try {
+        currentlyLoadedVideoId = playerRef.current.getVideoData?.()?.video_id;
+      } catch (e) {
+        // getVideoData might throw if no video loaded yet
+      }
+      
+      if (!currentlyLoadedVideoId && playlist[currentIndex]) {
+        const track = playlist[currentIndex];
+        playerRef.current.cueVideoById({
+          videoId: track.id,
+          startSeconds: track.startTime || 0,
+          endSeconds: track.endTime,
+        });
+        console.log('[YouTubePlayer] Loaded video on first click:', track.id);
+      }
+      
+      const state = playerRef.current.getPlayerState?.();
       if (state === 1) { // YT.PlayerState.PLAYING
         playerRef.current.pauseVideo();
         console.log('[YouTubePlayer] Paused');
@@ -251,53 +266,43 @@ function InteractivePlayer({ playlist, audioOnly, isFloating, heading, caption, 
     } catch (e) { 
       console.error('[YouTubePlayer] Error in togglePlay:', e);
     }
-  }, []); // no deps — reads player state directly
+  }, [playlist, currentIndex]); // Include deps for proper closure
 
   const skipTo = useCallback((idx) => {
-    // IMPORTANT: Handle unmute + load synchronously during the click gesture
-    if (playerRef.current && playerReadyRef.current) {
-      hasUserGesturedRef.current = true;
-      
-      // Unmute synchronously (in gesture context)
-      if (playerRef.current.unMute) {
-        playerRef.current.unMute();
-      }
-      
-      // Load video synchronously
-      const track = playlist[idx];
-      if (track) {
-        playerRef.current.loadVideoById({
-          videoId: track.id,
-          startSeconds: track.startTime || 0,
-          endSeconds: track.endTime,
-        });
-      }
+    if (!playerRef.current || !playerReadyRef.current) return;
+    hasUserGesturedRef.current = true;
+    
+    // Unmute synchronously (in gesture context)
+    if (playerRef.current.unMute) {
+      playerRef.current.unMute();
     }
     
-    // Update state asynchronously (gesture context already recorded)
+    // Update index — effect will load the video
     setCurrentIndex(idx);
-  }, [playlist]);
+  }, []);
 
   const prevTrack = useCallback(() => {
+    if (!playerRef.current || !playerReadyRef.current) return;
     hasUserGesturedRef.current = true;
-    setCurrentIndex((prev) => {
-      const nextIdx = prev > 0 ? prev - 1 : playlist.length - 1;
-      if (playerRef.current && playerReadyRef.current && playerRef.current.unMute) {
-        playerRef.current.unMute();
-      }
-      return nextIdx;
-    });
+    
+    // Unmute synchronously (in gesture context)
+    if (playerRef.current.unMute) {
+      playerRef.current.unMute();
+    }
+    
+    setCurrentIndex((prev) => (prev > 0 ? prev - 1 : playlist.length - 1));
   }, [playlist.length]);
 
   const nextTrack = useCallback(() => {
+    if (!playerRef.current || !playerReadyRef.current) return;
     hasUserGesturedRef.current = true;
-    setCurrentIndex((prev) => {
-      const nextIdx = prev < playlist.length - 1 ? prev + 1 : 0;
-      if (playerRef.current && playerReadyRef.current && playerRef.current.unMute) {
-        playerRef.current.unMute();
-      }
-      return nextIdx;
-    });
+    
+    // Unmute synchronously (in gesture context)
+    if (playerRef.current.unMute) {
+      playerRef.current.unMute();
+    }
+    
+    setCurrentIndex((prev) => (prev < playlist.length - 1 ? prev + 1 : 0));
   }, [playlist.length]);
 
   useEffect(() => { handleNextRef.current = nextTrack; }, [nextTrack]);
