@@ -123,8 +123,8 @@ const sl = labels.social;
   let myLikes = {};    // uri -> likeUri
   let myReposts = {};  // uri -> repostUri
 
-  // Squad member lookup for highlighting in feed
-  let squadMemberHandles = new Set();
+  // Squad member lookup for highlighting (handle -> color)
+  let squadMemberHandles = new Map();
 
   // Social settings (persisted in localStorage)
   const defaultSocialSettings = { squadHighlight: true, squadBorderColor: '#eab308', miniPlayerEnabled: true, miniPlayerX: null, miniPlayerY: null };
@@ -767,9 +767,10 @@ const sl = labels.social;
         ? `<div class="flex items-center gap-1 text-xs text-theme-faint mb-2">${ICON.repost} Reposted by ${escapeHtml(post.repostBy.displayName)}</div>`
         : '';
 
-      const isSquadMember = squadMemberHandles.has(post.author.handle);
-      const squadBorder = isSquadMember && socialSettings.squadHighlight ? `border-color:${socialSettings.squadBorderColor}` : '';
-      const squadBadgeHtml = isSquadMember && socialSettings.squadHighlight ? `<span style="color:${socialSettings.squadBorderColor};display:inline-flex;vertical-align:middle;margin-left:4px" title="Squad member">${ICON.squadBadge}</span>` : '';
+      const squadColor = squadMemberHandles.get(post.author.handle);
+      const isSquadMember = !!squadColor;
+      const squadBorder = isSquadMember && socialSettings.squadHighlight ? `border-color:${squadColor}` : '';
+      const squadBadgeHtml = isSquadMember && socialSettings.squadHighlight ? `<span style="color:${squadColor};display:inline-flex;vertical-align:middle;margin-left:4px" title="Squad member">${ICON.squadBadge}</span>` : '';
 
       return `
         <article class="rounded-lg border border-theme-card-border bg-theme-card overflow-hidden" data-uri="${escapeHtml(post.uri)}" data-cid="${escapeHtml(post.cid)}" style="${squadBorder}">
@@ -1217,10 +1218,13 @@ const sl = labels.social;
             allSquads = await sRes.json();
           }
           if (allSquads.length) {
-            // Build squad member lookup for highlighting
-            squadMemberHandles = new Set();
+            // Build squad member lookup: handle -> border color
+            squadMemberHandles = new Map();
             for (const squad of allSquads) {
-              for (const m of (squad.members || [])) { squadMemberHandles.add(m.handle); }
+              const color = squad.borderColor || '#eab308';
+              for (const m of (squad.members || [])) {
+                if (!squadMemberHandles.has(m.handle)) squadMemberHandles.set(m.handle, color);
+              }
             }
             const seenDids = new Set();
             const uniqueMembers = [];
@@ -2116,6 +2120,11 @@ const sl = labels.social;
         </button>
         <span class="text-xs text-theme-muted">${squad.feedEnabled ? 'In main Feed' : 'Squad-only'}</span>
       </div>
+      <div class="mb-4 flex items-center gap-3">
+        <label class="text-xs text-theme-faint whitespace-nowrap">Feed color</label>
+        <input type="color" value="${squad.borderColor || '#eab308'}" class="squad-color-picker w-7 h-7 rounded border-none cursor-pointer" data-squad-id="${squad.id}" style="background:transparent" />
+        <span class="squad-color-hex text-xs text-theme-faint" data-squad-id="${squad.id}">${squad.borderColor || '#eab308'}</span>
+      </div>
       <div class="squad-circle relative flex justify-center items-center my-6" style="min-height:16rem">
         <div class="my-center-avatar absolute rounded-full border-2 border-blue-500 overflow-hidden bg-theme-input-bg flex items-center justify-center" style="width:4rem;height:4rem;z-index:2">
           ${myAvatar ? `<img src="${escapeHtml(myAvatar)}" alt="You" class="w-full h-full object-cover" />` : `<span class="text-lg">👤</span>`}
@@ -2235,6 +2244,20 @@ const sl = labels.social;
         dot.style.right = newVal ? '2px' : '';
         btn.nextElementSibling.textContent = newVal ? 'In main Feed' : 'Squad-only';
         await fetch(`${hubUrl}/api/bluesky-feed/squads/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ feedEnabled: newVal }) });
+      });
+    });
+
+    // Color picker per squad
+    document.querySelectorAll('.squad-color-picker').forEach(picker => {
+      picker.addEventListener('input', () => {
+        const hex = document.querySelector(`.squad-color-hex[data-squad-id="${picker.dataset.squadId}"]`);
+        if (hex) hex.textContent = picker.value;
+      });
+      picker.addEventListener('change', async () => {
+        const id = picker.dataset.squadId;
+        const squad = allSquads.find(s => String(s.id) === String(id));
+        if (squad) squad.borderColor = picker.value;
+        await fetch(`${hubUrl}/api/bluesky-feed/squads/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ borderColor: picker.value }) });
       });
     });
 

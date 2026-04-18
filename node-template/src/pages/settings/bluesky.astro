@@ -75,16 +75,11 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
             <div>
               <div class="text-sm font-medium">Highlight Squad Posts</div>
               <div class="text-xs text-theme-muted">Show a badge and colored border on posts from squad members</div>
+              <div class="text-xs text-theme-faint mt-1">Set colors per squad in the Squads tab on Social</div>
             </div>
             <button id="squad-highlight-toggle" class="relative w-10 h-5 rounded-full transition-colors" style="background:var(--ps-input-border,#444)">
               <span class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-all"></span>
             </button>
-          </div>
-
-          <div id="squad-border-row" class="flex items-center gap-3">
-            <label class="text-sm text-theme-muted whitespace-nowrap">Border color</label>
-            <input type="color" id="squad-border-color" value="#eab308" class="w-8 h-8 rounded border-none cursor-pointer" style="background:transparent" />
-            <span id="squad-border-hex" class="text-xs text-theme-faint">#eab308</span>
           </div>
 
           <!-- Mini Player -->
@@ -116,9 +111,6 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 
   function initSocialSettings() {
     const highlightToggle = document.getElementById('squad-highlight-toggle');
-    const borderRow = document.getElementById('squad-border-row');
-    const borderColor = document.getElementById('squad-border-color');
-    const borderHex = document.getElementById('squad-border-hex');
     const miniToggle = document.getElementById('miniplayer-toggle');
     const resetPos = document.getElementById('reset-miniplayer-pos');
 
@@ -131,22 +123,10 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 
     updateToggle(highlightToggle, socialSettings.squadHighlight);
     updateToggle(miniToggle, socialSettings.miniPlayerEnabled);
-    borderColor.value = socialSettings.squadBorderColor;
-    borderHex.textContent = socialSettings.squadBorderColor;
-    borderRow.style.opacity = socialSettings.squadHighlight ? '1' : '.4';
-    borderRow.style.pointerEvents = socialSettings.squadHighlight ? '' : 'none';
 
     highlightToggle.addEventListener('click', () => {
       socialSettings.squadHighlight = !socialSettings.squadHighlight;
       updateToggle(highlightToggle, socialSettings.squadHighlight);
-      borderRow.style.opacity = socialSettings.squadHighlight ? '1' : '.4';
-      borderRow.style.pointerEvents = socialSettings.squadHighlight ? '' : 'none';
-      saveSocialSettings();
-    });
-
-    borderColor.addEventListener('input', () => {
-      socialSettings.squadBorderColor = borderColor.value;
-      borderHex.textContent = borderColor.value;
       saveSocialSettings();
     });
 
