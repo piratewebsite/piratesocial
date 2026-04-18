@@ -1943,10 +1943,11 @@ const sl = labels.social;
       if (!socialSettings.miniPlayerEnabled) return;
       const container = entry.target;
       if (!entry.isIntersecting) {
-        // Scrolled out of view — activate mini player
+        // Scrolled out of view — activate mini player only if user was watching
         const content = container.querySelector('video, iframe');
         if (!content) return;
         if (content.tagName === 'VIDEO' && content.paused) return;
+        if (content.tagName === 'IFRAME' && !content._userActivated) return;
         if (miniPlayerSource === container) return; // already active
         if (miniPlayerEl) closeMiniPlayer(); // close any existing
         activateMiniPlayer(container);
@@ -1964,11 +1965,25 @@ const sl = labels.social;
       if (container._miniPlayerObserved) return;
       container._miniPlayerObserved = true;
       miniPlayerObserver.observe(container);
-      // For HLS videos, only trigger mini-player when playing
+      // For HLS videos, track play/pause
       const video = container.querySelector('video');
       if (video) {
         video.addEventListener('play', () => { video._wasPlaying = true; });
         video.addEventListener('pause', () => { video._wasPlaying = false; });
+      }
+      // For iframes (YouTube), only activate on user click
+      const iframe = container.querySelector('iframe');
+      if (iframe) {
+        container.addEventListener('click', () => { iframe._userActivated = true; }, { once: true });
+        // Also detect focus (iframe gets focus when user clicks inside it)
+        iframe.addEventListener('load', () => {
+          window.addEventListener('blur', function onBlur() {
+            if (document.activeElement === iframe) {
+              iframe._userActivated = true;
+              window.removeEventListener('blur', onBlur);
+            }
+          });
+        });
       }
     });
   }
