@@ -297,9 +297,15 @@ const sl = labels.social;
         body: JSON.stringify({ channelId, name })
       });
       if (subRes.ok) {
-        youtubeChannels = await subRes.json();
-        document.getElementById('yt-search').value = '';
-        renderYouTubeChannels();
+        // Fetch full channels list after subscribing
+        const listRes = await fetchWithTimeout(`${hubUrl}/api/youtube/channels`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (listRes.ok) {
+          youtubeChannels = await listRes.json();
+          document.getElementById('yt-search').value = '';
+          renderYouTubeChannels();
+        }
       } else {
         const e = await subRes.json();
         alert(e.error || 'Failed to subscribe');
