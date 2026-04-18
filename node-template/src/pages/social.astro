@@ -423,10 +423,18 @@ const sl = labels.social;
 
   function renderLinkPreview(container, card) {
     if (!card || card.removed) { container.innerHTML = ''; return; }
+    const imgHtml = `
+      <div data-lp-img-area style="position:relative;cursor:pointer;min-height:3rem;background:var(--ps-input-bg,#1a1a2e)">
+        ${card.image ? `<img data-lp-img src="${escapeHtml(card.image)}" style="width:100%;max-height:10rem;object-fit:cover;display:block" onerror="this.style.display='none'" />` : ''}
+        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.35);opacity:0;transition:opacity .15s" data-lp-img-overlay>
+          <span style="color:#fff;font-size:.75rem;background:rgba(0,0,0,.6);padding:.25rem .625rem;border-radius:.25rem">${card.image ? 'Replace image' : 'Add image'}</span>
+        </div>
+        <input data-lp-file type="file" accept="image/*" style="display:none" />
+      </div>`;
     container.innerHTML = `
       <div style="margin-top:.75rem;border:1px solid var(--ps-card-border,#333);border-radius:.5rem;overflow:hidden;position:relative">
-        <button data-lp-remove style="position:absolute;top:.5rem;right:.5rem;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:50%;width:1.5rem;height:1.5rem;font-size:.75rem;cursor:pointer;z-index:1;display:flex;align-items:center;justify-content:center">\u2715</button>
-        ${card.image ? `<img src="${escapeHtml(card.image)}" style="width:100%;max-height:10rem;object-fit:cover" onerror="this.style.display='none'" />` : ''}
+        <button data-lp-remove style="position:absolute;top:.5rem;right:.5rem;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:50%;width:1.5rem;height:1.5rem;font-size:.75rem;cursor:pointer;z-index:2;display:flex;align-items:center;justify-content:center">\u2715</button>
+        ${imgHtml}
         <div style="padding:.75rem">
           <input data-lp-title type="text" value="${escapeHtml(card.title || '')}" placeholder="Title" style="width:100%;background:transparent;border:none;color:var(--ps-text,#e0e0e0);font-size:.875rem;font-weight:600;outline:none;margin-bottom:.25rem" />
           <textarea data-lp-desc rows="2" placeholder="Description" style="width:100%;background:transparent;border:none;color:var(--ps-text-muted,#aaa);font-size:.8rem;outline:none;resize:none">${escapeHtml(card.description || '')}</textarea>
@@ -437,6 +445,40 @@ const sl = labels.social;
     container.querySelector('[data-lp-title]').addEventListener('input', (e) => { card.title = e.target.value; });
     container.querySelector('[data-lp-desc]').addEventListener('input', (e) => { card.description = e.target.value; });
     container.querySelector('[data-lp-remove]').addEventListener('click', () => { card.removed = true; container.innerHTML = ''; });
+    // Image hover overlay
+    const imgArea = container.querySelector('[data-lp-img-area]');
+    const overlay = container.querySelector('[data-lp-img-overlay]');
+    const fileInput = container.querySelector('[data-lp-file]');
+    imgArea.addEventListener('mouseenter', () => { overlay.style.opacity = '1'; });
+    imgArea.addEventListener('mouseleave', () => { overlay.style.opacity = '0'; });
+    imgArea.addEventListener('click', (e) => { if (e.target.closest('[data-lp-remove]')) return; fileInput.click(); });
+    fileInput.addEventListener('change', async () => {
+      const file = fileInput.files?.[0];
+      if (!file || !file.type.startsWith('image/')) return;
+      if (file.size > 1000000) { alert('Image must be under 1 MB'); return; }
+      // Show local preview immediately
+      const localUrl = URL.createObjectURL(file);
+      let img = imgArea.querySelector('[data-lp-img]');
+      if (!img) { img = document.createElement('img'); img.dataset.lpImg = ''; img.style.cssText = 'width:100%;max-height:10rem;object-fit:cover;display:block'; imgArea.prepend(img); }
+      img.src = localUrl;
+      card.image = localUrl;
+      overlay.querySelector('span').textContent = 'Uploading...';
+      overlay.style.opacity = '1';
+      try {
+        // Upload directly to Bluesky using existing session
+        const uploadRes = await fetch('https://bsky.social/xrpc/com.atproto.repo.uploadBlob', {
+          method: 'POST', headers: { Authorization: `Bearer ${bskySession.accessJwt}`, 'Content-Type': file.type },
+          body: file,
+        });
+        const uploadData = await uploadRes.json();
+        if (uploadData.blob) { card.thumb = uploadData.blob; }
+        overlay.querySelector('span').textContent = 'Replace image';
+        overlay.style.opacity = '0';
+      } catch {
+        overlay.querySelector('span').textContent = 'Upload failed — tap to retry';
+        overlay.style.opacity = '1';
+      }
+    });
   }
 
   function setupLinkPreview(inputEl, previewContainer) {
