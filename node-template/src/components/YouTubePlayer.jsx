@@ -171,10 +171,29 @@ function InteractivePlayer({ playlist, audioOnly, isFloating, heading, caption, 
   // ── When iframe loads, subscribe to its events via postMessage ──
   const onIframeLoad = useCallback(() => {
     if (!iframeRef.current) return;
-    // Subscribe to events by sending 'listening' message
+    // Send 'listening' to establish postMessage channel
     iframeRef.current.contentWindow.postMessage(JSON.stringify({
       event: 'listening',
     }), '*');
+
+    // YouTube postMessage API requires explicit calls to get time/duration info
+    // Poll for current time updates to drive the scrubber
+    clearInterval(progressInterval.current);
+    progressInterval.current = setInterval(() => {
+      if (!iframeRef.current || !iframeRef.current.contentWindow) {
+        clearInterval(progressInterval.current);
+        return;
+      }
+      // Request current time and duration via postMessage
+      iframeRef.current.contentWindow.postMessage(JSON.stringify({
+        event: 'command',
+        func: 'getCurrentTime',
+      }), '*');
+      iframeRef.current.contentWindow.postMessage(JSON.stringify({
+        event: 'command',
+        func: 'getDuration',
+      }), '*');
+    }, 500);
 
     // Auto-unmute on touch devices after delay
     if (isTouchDeviceRef.current && !hasUserGesturedRef.current) {
@@ -184,6 +203,11 @@ function InteractivePlayer({ playlist, audioOnly, isFloating, heading, caption, 
       }, 1500);
     }
   }, [sendCommand]);
+
+  // Clean up progress interval on unmount
+  useEffect(() => {
+    return () => clearInterval(progressInterval.current);
+  }, []);
 
   // ── Volume ──
   useEffect(() => {
@@ -203,16 +227,22 @@ function InteractivePlayer({ playlist, audioOnly, isFloating, heading, caption, 
 
   const skipTo = useCallback((idx) => {
     hasUserGesturedRef.current = true;
+    setProgress(0);
+    setDuration(0);
     setCurrentIndex(idx);
   }, []);
 
   const prevTrack = useCallback(() => {
     hasUserGesturedRef.current = true;
+    setProgress(0);
+    setDuration(0);
     setCurrentIndex((prev) => (prev > 0 ? prev - 1 : playlist.length - 1));
   }, [playlist.length]);
 
   const nextTrack = useCallback(() => {
     hasUserGesturedRef.current = true;
+    setProgress(0);
+    setDuration(0);
     setCurrentIndex((prev) => (prev < playlist.length - 1 ? prev + 1 : 0));
   }, [playlist.length]);
 
