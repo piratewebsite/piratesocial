@@ -61,6 +61,7 @@ const sl = labels.social;
     <!-- Post composer (shown when logged in to Bluesky) -->
     <div id="compose-box" style="display:none" class="mb-6 rounded-lg border border-theme-card-border bg-theme-card p-4">
       <textarea id="compose-input" rows="3" placeholder="What's on your mind?" style="width:100%;background:var(--ps-input-bg,#1a1a2e);border:1px solid var(--ps-input-border,#333);border-radius:.5rem;padding:.75rem;color:var(--ps-text,#e0e0e0);font-size:.875rem;resize:vertical;outline:none" maxlength="300"></textarea>
+      <div id="compose-link-preview"></div>
       <div class="flex items-center justify-between mt-2">
         <span id="compose-count" class="text-xs text-theme-faint">0/300</span>
         <button id="compose-send" style="background:var(--ps-accent,#3b82f6);color:#fff;border:none;border-radius:.375rem;padding:.375rem 1rem;font-size:.875rem;cursor:pointer;opacity:.5" disabled>Post</button>
@@ -340,7 +341,8 @@ const sl = labels.social;
   }
 
   // Create a new Bluesky post or reply
-  async function createBskyRecord(text, replyTo) {
+  // linkCard can be passed from the preview UI to avoid re-fetching
+  async function createBskyRecord(text, replyTo, linkCard) {
     const record = {
       '$type': 'app.bsky.feed.post',
       text,
@@ -349,7 +351,7 @@ const sl = labels.social;
     // Parse facets (links, mentions)
     const facets = [];
     const urls = [];
-    // Detect URLs
+    // Detect full URLs
     const urlRegex = /https?:\/\/[^\s)>\]]+/g;
     let m;
     while ((m = urlRegex.exec(text)) !== null) {
@@ -359,10 +361,22 @@ const sl = labels.social;
         features: [{ '$type': 'app.bsky.richtext.facet#link', uri: m[0] }],
       });
     }
+    // Detect bare domains (e.g. toddlambert.com, news.ycombinator.com)
+    const bareDomainRegex = /(?<=^|\s)((?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}(?:\/[^\s)>\]]*)?)(?=\s|$)/g;
+    while ((m = bareDomainRegex.exec(text)) !== null) {
+      const fullUrl = `https://${m[1]}`;
+      // Skip if this position was already matched as a full URL
+      if (urls.some(u => text.indexOf(u) <= m.index && text.indexOf(u) + u.length >= m.index + m[0].length)) continue;
+      urls.push(fullUrl);
+      facets.push({
+        index: { byteStart: new TextEncoder().encode(text.slice(0, m.index)).length, byteEnd: new TextEncoder().encode(text.slice(0, m.index + m[0].length)).length },
+        features: [{ '$type': 'app.bsky.richtext.facet#link', uri: fullUrl }],
+      });
+    }
     // Detect mentions
     const mentionRegex = /(?<=^|\s)@([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?/g;
     while ((m = mentionRegex.exec(text)) !== null) {
-      const handle = m[0].slice(1); // remove @
+      const handle = m[0].slice(1);
       try {
         const resolved = await bskyGet('com.atproto.identity.resolveHandle', { handle }, false);
         if (resolved?.did) {
@@ -375,37 +389,17 @@ const sl = labels.social;
     }
     if (facets.length) record.facets = facets;
 
-    // Fetch link card for the first URL
-    if (urls.length > 0) {
-      try {
-        const ogRes = await fetch(`${hubUrl}/api/bluesky/og-meta?url=${encodeURIComponent(urls[0])}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const og = await ogRes.json();
-        if (og.title || og.description) {
-          const external = {
-            '$type': 'app.bsky.embed.external',
-            external: { uri: urls[0], title: og.title || '', description: og.description || '' },
-          };
-          // Upload thumbnail if available
-          if (og.image) {
-            try {
-              const blobRes = await fetch(`${hubUrl}/api/bluesky/upload-blob`, {
-                method: 'POST',
-                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ imageUrl: og.image }),
-              });
-              const blobData = await blobRes.json();
-              if (blobData.blob) external.external.thumb = blobData.blob;
-            } catch {}
-          }
-          record.embed = external;
-        }
-      } catch {}
+    // Attach link card embed — use pre-fetched card if provided
+    if (linkCard && !linkCard.removed) {
+      const external = {
+        '$type': 'app.bsky.embed.external',
+        external: { uri: linkCard.url, title: linkCard.title || '', description: linkCard.description || '' },
+      };
+      if (linkCard.thumb) external.external.thumb = linkCard.thumb;
+      record.embed = external;
     }
 
     if (replyTo) {
-      // Need root and parent for reply threading
       record.reply = {
         root: replyTo.root || { uri: replyTo.uri, cid: replyTo.cid },
         parent: { uri: replyTo.uri, cid: replyTo.cid },
@@ -414,6 +408,72 @@ const sl = labels.social;
     return bskyPost('com.atproto.repo.createRecord', {
       repo: bskySession.did, collection: 'app.bsky.feed.post', record,
     });
+  }
+
+  // ============================================================
+  // LINK PREVIEW SYSTEM
+  // ============================================================
+  function extractFirstUrl(text) {
+    const full = text.match(/https?:\/\/[^\s)>\]]+/);
+    if (full) return full[0];
+    const bare = text.match(/(?:^|\s)((?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}(?:\/[^\s)>\]]*)?)/);
+    if (bare) return `https://${bare[1]}`;
+    return null;
+  }
+
+  function renderLinkPreview(container, card) {
+    if (!card || card.removed) { container.innerHTML = ''; return; }
+    container.innerHTML = `
+      <div style="margin-top:.75rem;border:1px solid var(--ps-card-border,#333);border-radius:.5rem;overflow:hidden;position:relative">
+        <button data-lp-remove style="position:absolute;top:.5rem;right:.5rem;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:50%;width:1.5rem;height:1.5rem;font-size:.75rem;cursor:pointer;z-index:1;display:flex;align-items:center;justify-content:center">\u2715</button>
+        ${card.image ? `<img src="${escapeHtml(card.image)}" style="width:100%;max-height:10rem;object-fit:cover" onerror="this.style.display='none'" />` : ''}
+        <div style="padding:.75rem">
+          <input data-lp-title type="text" value="${escapeHtml(card.title || '')}" placeholder="Title" style="width:100%;background:transparent;border:none;color:var(--ps-text,#e0e0e0);font-size:.875rem;font-weight:600;outline:none;margin-bottom:.25rem" />
+          <textarea data-lp-desc rows="2" placeholder="Description" style="width:100%;background:transparent;border:none;color:var(--ps-text-muted,#aaa);font-size:.8rem;outline:none;resize:none">${escapeHtml(card.description || '')}</textarea>
+          <div style="font-size:.7rem;color:var(--ps-text-faint,#666);margin-top:.25rem">${escapeHtml((() => { try { return new URL(card.url).hostname; } catch { return card.url; } })())}</div>
+        </div>
+      </div>`;
+    // Wire editable fields back to the card object
+    container.querySelector('[data-lp-title]').addEventListener('input', (e) => { card.title = e.target.value; });
+    container.querySelector('[data-lp-desc]').addEventListener('input', (e) => { card.description = e.target.value; });
+    container.querySelector('[data-lp-remove]').addEventListener('click', () => { card.removed = true; container.innerHTML = ''; });
+  }
+
+  function setupLinkPreview(inputEl, previewContainer) {
+    let currentCard = null;
+    let lastCheckedUrl = null;
+    let fetchTimer = null;
+
+    inputEl.addEventListener('input', () => {
+      const url = extractFirstUrl(inputEl.value);
+      if (!url || url === lastCheckedUrl) {
+        if (!url && currentCard) { currentCard = null; lastCheckedUrl = null; previewContainer.innerHTML = ''; }
+        return;
+      }
+      clearTimeout(fetchTimer);
+      fetchTimer = setTimeout(async () => {
+        lastCheckedUrl = url;
+        previewContainer.innerHTML = '<div style="padding:.5rem;text-align:center;font-size:.75rem;color:var(--ps-text-faint,#888)">Loading link preview...</div>';
+        try {
+          const res = await fetch(`${hubUrl}/api/bluesky/og-meta?url=${encodeURIComponent(url)}`, { headers: { Authorization: `Bearer ${token}` } });
+          const og = await res.json();
+          currentCard = { url, title: og.title || '', description: og.description || '', image: og.image || '', thumb: null, removed: false };
+          // Upload thumbnail in background
+          if (og.image) {
+            fetch(`${hubUrl}/api/bluesky/upload-blob`, {
+              method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ imageUrl: og.image }),
+            }).then(r => r.json()).then(d => { if (d.blob && currentCard) currentCard.thumb = d.blob; }).catch(() => {});
+          }
+          renderLinkPreview(previewContainer, currentCard);
+        } catch {
+          previewContainer.innerHTML = '';
+          currentCard = null;
+        }
+      }, 600);
+    });
+
+    return () => currentCard; // getter for the current card
   }
 
   // ============================================================
@@ -870,6 +930,7 @@ const sl = labels.social;
           <div class="flex gap-3">
             <div class="flex-1">
               <textarea id="thread-reply-input" rows="3" placeholder="Write a reply..." style="width:100%;background:var(--ps-input-bg,#1a1a2e);border:1px solid var(--ps-input-border,#333);border-radius:.5rem;padding:.75rem;color:var(--ps-text,#e0e0e0);font-size:.875rem;resize:vertical;outline:none" maxlength="300"></textarea>
+              <div id="thread-reply-link-preview"></div>
               <div class="flex items-center justify-between mt-2">
                 <span id="thread-reply-count" style="font-size:.75rem;color:var(--ps-text-faint,#888)">0/300</span>
                 <button id="thread-reply-send" style="background:var(--ps-accent,#3b82f6);color:#fff;border:none;border-radius:.375rem;padding:.375rem 1rem;font-size:.875rem;cursor:pointer;opacity:.5" disabled>Reply</button>
@@ -889,7 +950,12 @@ const sl = labels.social;
       const replyBtn = document.getElementById('thread-reply-send');
       const replyCount = document.getElementById('thread-reply-count');
       const replyLabel = document.getElementById('thread-reply-label');
+      const replyPreviewContainer = document.getElementById('thread-reply-link-preview');
+      let getReplyCard = () => null;
       if (replyInput && replyBtn) {
+        if (replyPreviewContainer) {
+          getReplyCard = setupLinkPreview(replyInput, replyPreviewContainer);
+        }
         replyInput.addEventListener('input', () => {
           const len = replyInput.value.length;
           replyCount.textContent = `${len}/300`;
@@ -902,9 +968,10 @@ const sl = labels.social;
           replyBtn.disabled = true;
           replyBtn.textContent = 'Sending...';
           try {
-            await createBskyRecord(text, { uri: replyTarget.uri, cid: replyTarget.cid, root: { uri: rootUri, cid: rootCid } });
+            await createBskyRecord(text, { uri: replyTarget.uri, cid: replyTarget.cid, root: { uri: rootUri, cid: rootCid } }, getReplyCard());
             replyInput.value = '';
             replyCount.textContent = '0/300';
+            if (replyPreviewContainer) replyPreviewContainer.innerHTML = '';
             replyBtn.textContent = 'Reply';
             // Reload thread to show the new reply
             openThread(uri);
@@ -1884,7 +1951,10 @@ const sl = labels.social;
   const composeInput = document.getElementById('compose-input');
   const composeSend = document.getElementById('compose-send');
   const composeCount = document.getElementById('compose-count');
+  const composeLinkPreview = document.getElementById('compose-link-preview');
+  let getComposeCard = () => null;
   if (composeInput && composeSend) {
+    getComposeCard = setupLinkPreview(composeInput, composeLinkPreview);
     composeInput.addEventListener('input', () => {
       const len = composeInput.value.length;
       composeCount.textContent = `${len}/300`;
@@ -1897,13 +1967,13 @@ const sl = labels.social;
       composeSend.disabled = true;
       composeSend.textContent = 'Posting...';
       try {
-        await createBskyRecord(text);
+        await createBskyRecord(text, null, getComposeCard());
         composeInput.value = '';
         composeCount.textContent = '0/300';
+        composeLinkPreview.innerHTML = '';
         composeSend.textContent = 'Post';
         composeSend.disabled = true;
         composeSend.style.opacity = '.5';
-        // Reload feed to show new post
         resetPagination();
         loadFeedTab();
       } catch (err) {
