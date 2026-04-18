@@ -1182,12 +1182,12 @@ const sl = labels.social;
     });
   });
 
-  document.getElementById('search-btn').addEventListener('click', () => {
+  document.getElementById('search-btn')?.addEventListener('click', () => {
     resetPagination();
     loadSearchResults();
   });
 
-  document.getElementById('search-input').addEventListener('keydown', (e) => {
+  document.getElementById('search-input')?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') { resetPagination(); loadSearchResults(); }
   });
 
