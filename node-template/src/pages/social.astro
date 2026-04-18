@@ -2162,6 +2162,9 @@ const sl = labels.social;
   // ============================================================
   let ytSharedIframe = null; // the single iframe element, reused forever
   let ytActiveContainer = null; // which .aspect-video currently hosts it
+  let ytApiReady = false; // true once YouTube player API responds
+  let ytPendingVideoId = null; // queued video to load once API is ready
+  const ytOrigin = window.location.origin;
 
   function getOrCreateYTIframe() {
     if (ytSharedIframe) return ytSharedIframe;
@@ -2171,44 +2174,52 @@ const sl = labels.social;
     ytSharedIframe.setAttribute('allowfullscreen', '');
     ytSharedIframe.className = 'w-full h-full';
     ytSharedIframe.style.cssText = 'width:100%;height:100%;border:none';
-    // Load with a blank video to establish session — first load gets the ad (if any)
-    ytSharedIframe.src = 'https://www.youtube-nocookie.com/embed/?enablejsapi=1';
 
-    // Listen for YouTube player state changes via postMessage
-    // States: -1=unstarted, 0=ended, 1=playing, 2=paused, 3=buffering, 5=cued
+    // Listen for YouTube player postMessage events
     window.addEventListener('message', (e) => {
       if (!ytSharedIframe) return;
-      try {
-        const data = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
-        if (data.event === 'onStateChange') {
-          const state = data.info;
-          if (state === 1 || state === 3) {
-            ytSharedIframe._userActivated = true;
-          } else if (state === 2 || state === 0) {
-            ytSharedIframe._userActivated = false;
-          }
-        }
-        // YouTube sends initialDelivery when ready — subscribe to events
-        if (data.event === 'initialDelivery' || data.event === 'onReady') {
-          ytSubscribeToEvents();
-        }
-      } catch {}
-    });
+      let data;
+      try { data = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; } catch { return; }
 
-    // Subscribe to YouTube iframe events after load
-    ytSharedIframe.addEventListener('load', () => {
-      setTimeout(ytSubscribeToEvents, 500);
+      // Track player state: 1=playing, 2=paused, 0=ended, 3=buffering
+      if (data.event === 'onStateChange') {
+        const state = data.info;
+        if (state === 1 || state === 3) {
+          ytSharedIframe._userActivated = true;
+        } else if (state === 2 || state === 0) {
+          ytSharedIframe._userActivated = false;
+        }
+      }
+
+      // Detect when API is ready (YouTube sends initialDelivery after listening handshake)
+      if (data.event === 'initialDelivery' || data.event === 'onReady') {
+        ytApiReady = true;
+        // If there's a pending video queued, load it now
+        if (ytPendingVideoId) {
+          const vid = ytPendingVideoId;
+          ytPendingVideoId = null;
+          ytSendCommand('loadVideoById', [vid]);
+        }
+      }
     });
 
     return ytSharedIframe;
   }
 
-  function ytSubscribeToEvents() {
+  function ytSendCommand(func, args) {
+    if (!ytSharedIframe?.contentWindow) return;
+    try {
+      ytSharedIframe.contentWindow.postMessage(JSON.stringify({ event: 'command', func, args: args || '' }), '*');
+    } catch {}
+  }
+
+  function ytHandshake() {
+    // Send the listening handshake and subscribe to state change events
     if (!ytSharedIframe?.contentWindow) return;
     try {
       ytSharedIframe.contentWindow.postMessage(JSON.stringify({ event: 'listening', id: 1 }), '*');
-      ytSharedIframe.contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'addEventListener', args: ['onStateChange'] }), '*');
     } catch {}
+    ytSendCommand('addEventListener', ['onStateChange']);
   }
 
   function playYTVideo(container, videoId) {
@@ -2232,11 +2243,21 @@ const sl = labels.social;
     container.classList.remove('yt-placeholder');
     ytActiveContainer = container;
 
-    // Swap video — set src each time. Use youtube-nocookie for privacy.
-    iframe.src = `https://www.youtube-nocookie.com/embed/${videoId}?enablejsapi=1&autoplay=1`;
-    iframe._firstLoaded = true;
-    // Re-subscribe to state events after iframe reloads
-    iframe.addEventListener('load', () => setTimeout(ytSubscribeToEvents, 500), { once: true });
+    // Load video: first time sets src to bootstrap the player; subsequent use postMessage
+    if (!iframe._firstLoaded) {
+      iframe._firstLoaded = true;
+      ytApiReady = false;
+      ytPendingVideoId = null;
+      iframe.src = `https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=1&origin=${encodeURIComponent(ytOrigin)}`;
+      // Once iframe loads, do the listening handshake
+      iframe.addEventListener('load', () => { setTimeout(ytHandshake, 300); }, { once: true });
+    } else if (ytApiReady) {
+      // API is ready — switch video via postMessage (no iframe reload, no ads)
+      ytSendCommand('loadVideoById', [videoId]);
+    } else {
+      // API not ready yet — queue it
+      ytPendingVideoId = videoId;
+    }
 
     iframe._userActivated = true;
 
@@ -2264,7 +2285,7 @@ const sl = labels.social;
 
   function pauseYTPlayer() {
     if (ytSharedIframe) {
-      try { ytSharedIframe.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*'); } catch {}
+      ytSendCommand('pauseVideo');
       ytSharedIframe._userActivated = false;
     }
   }
