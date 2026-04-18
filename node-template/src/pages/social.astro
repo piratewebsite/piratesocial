@@ -492,12 +492,12 @@ const sl = labels.social;
     // Multiple images (gallery)
     if (embed.images?.length > 1) {
       html += `<div class="grid grid-cols-2 gap-1 mt-2 rounded overflow-hidden">
-        ${embed.images.map(img => `<img src="${escapeHtml(img.fullsize || img.thumb)}" alt="${escapeHtml(img.alt || '')}" class="w-full object-cover aspect-square" loading="lazy" onerror="this.style.display='none'" />`).join('')}
+        ${embed.images.map((img, i) => `<img src="${escapeHtml(img.fullsize || img.thumb)}" alt="${escapeHtml(img.alt || '')}" class="post-img w-full object-cover aspect-square" data-full="${escapeHtml(img.fullsize || img.thumb)}" data-alt="${escapeHtml(img.alt || '')}" data-img-group="${embed._groupId || ''}" data-img-idx="${i}" loading="lazy" onerror="this.style.display='none'" />`).join('')}
       </div>`;
     }
     // Single image
     if (embed.images?.length === 1) {
-      html += `<div class="mt-2 bg-black flex justify-center rounded overflow-hidden"><img src="${escapeHtml(embed.images[0].fullsize || embed.images[0].thumb)}" alt="${escapeHtml(embed.images[0].alt || '')}" style="width:100%;max-height:28rem;object-fit:contain" loading="lazy" onerror="this.parentElement.style.display='none'" /></div>`;
+      html += `<div class="mt-2 bg-black flex justify-center rounded overflow-hidden"><img src="${escapeHtml(embed.images[0].fullsize || embed.images[0].thumb)}" alt="${escapeHtml(embed.images[0].alt || '')}" class="post-img" style="width:100%;max-height:28rem;object-fit:contain" data-full="${escapeHtml(embed.images[0].fullsize || embed.images[0].thumb)}" data-alt="${escapeHtml(embed.images[0].alt || '')}" loading="lazy" onerror="this.parentElement.style.display='none'" /></div>`;
     }
     // Video (HLS)
     if (embed.video?.playlist) {
@@ -562,7 +562,7 @@ const sl = labels.social;
               <time class="text-xs text-theme-faint shrink-0">${timeAgo(post.pubDate)}</time>
             </div>
             ${post.text ? `<p class="text-sm whitespace-pre-wrap mb-2">${formatText(post.text)}</p>` : ''}
-            ${showPrimaryImage ? `<div class="mt-2 bg-black flex justify-center rounded overflow-hidden"><img src="${escapeHtml(post.imageUrl)}" style="width:100%;max-height:28rem;object-fit:contain" loading="lazy" onerror="this.parentElement.style.display='none'" /></div>` : ''}
+            ${showPrimaryImage ? `<div class="mt-2 bg-black flex justify-center rounded overflow-hidden"><img src="${escapeHtml(post.imageUrl)}" class="post-img" style="width:100%;max-height:28rem;object-fit:contain" data-full="${escapeHtml(post.imageUrl)}" data-alt="" loading="lazy" onerror="this.parentElement.style.display='none'" /></div>` : ''}
             ${embedHtml}
             <div class="mt-3 flex items-center gap-1 text-xs text-theme-faint">
               <button class="bsky-like-btn flex items-center gap-1 px-2 py-1 rounded hover:bg-theme-surface-hover transition ${liked ? 'text-red-400' : ''}" data-uri="${escapeHtml(post.uri)}" data-cid="${escapeHtml(post.cid)}">
@@ -619,7 +619,7 @@ const sl = labels.social;
 
     return `
       <article class="rounded-lg border border-theme-card-border bg-theme-card overflow-hidden">
-        ${showPrimaryImage ? `<div class="bg-black flex justify-center"><img src="${escapeHtml(post.imageUrl)}" alt="${escapeHtml(post.title)}" style="width:100%;max-height:28rem;object-fit:contain" loading="lazy" onerror="this.parentElement.style.display='none'" /></div>` : ''}
+        ${showPrimaryImage ? `<div class="bg-black flex justify-center"><img src="${escapeHtml(post.imageUrl)}" alt="${escapeHtml(post.title)}" class="post-img" style="width:100%;max-height:28rem;object-fit:contain" data-full="${escapeHtml(post.imageUrl)}" data-alt="${escapeHtml(post.title || '')}" loading="lazy" onerror="this.parentElement.style.display='none'" /></div>` : ''}
         <div class="p-4">
           <div class="mb-3">${authorHtml}</div>
           ${post.title && !embed.external?.uri ? `<h3 class="font-semibold"><a href="${escapeHtml(post.link)}" target="_blank" class="hover:underline">${formatText(post.title)}</a></h3>` : ''}
@@ -1301,6 +1301,20 @@ const sl = labels.social;
         } catch (err) { console.error('Squad picker error:', err); }
       });
     });
+
+    // Clickable post images → lightbox
+    document.querySelectorAll('.post-img:not([data-bound])').forEach(img => {
+      img.dataset.bound = '1';
+      img.addEventListener('click', (e) => {
+        e.stopPropagation();
+        // Gather sibling images in the same gallery group
+        const article = img.closest('article');
+        const siblings = article ? [...article.querySelectorAll('.post-img')] : [img];
+        const images = siblings.map(el => ({ src: el.dataset.full || el.src, alt: el.dataset.alt || el.alt || '' }));
+        const idx = siblings.indexOf(img);
+        openLightbox(images, idx >= 0 ? idx : 0);
+      });
+    });
   }
 
   // ============================================================
@@ -1320,6 +1334,58 @@ const sl = labels.social;
   document.body.appendChild(shareOverlay);
   shareOverlay.addEventListener('click', (e) => { if (e.target === shareOverlay) shareOverlay.style.display = 'none'; });
   document.getElementById('share-close').addEventListener('click', () => shareOverlay.style.display = 'none');
+
+  // ============================================================
+  // IMAGE LIGHTBOX
+  // ============================================================
+  const lightbox = document.createElement('div');
+  lightbox.id = 'img-lightbox';
+  lightbox.innerHTML = `
+    <button class="lb-close" aria-label="Close">✕</button>
+    <button class="lb-nav lb-prev" aria-label="Previous">‹</button>
+    <img src="" alt="" />
+    <button class="lb-nav lb-next" aria-label="Next">›</button>
+    <div class="lb-counter"></div>`;
+  document.body.appendChild(lightbox);
+
+  let lbImages = [];
+  let lbIndex = 0;
+
+  function openLightbox(images, startIndex) {
+    lbImages = images;
+    lbIndex = startIndex || 0;
+    updateLightbox();
+    lightbox.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function updateLightbox() {
+    const img = lightbox.querySelector('img');
+    img.src = lbImages[lbIndex].src;
+    img.alt = lbImages[lbIndex].alt || '';
+    const counter = lightbox.querySelector('.lb-counter');
+    counter.textContent = lbImages.length > 1 ? `${lbIndex + 1} / ${lbImages.length}` : '';
+    lightbox.querySelector('.lb-prev').style.display = lbImages.length > 1 ? '' : 'none';
+    lightbox.querySelector('.lb-next').style.display = lbImages.length > 1 ? '' : 'none';
+  }
+
+  function closeLightbox() {
+    lightbox.classList.remove('active');
+    document.body.style.overflow = '';
+  }
+
+  lightbox.addEventListener('click', (e) => {
+    if (e.target === lightbox || e.target === lightbox.querySelector('img')) closeLightbox();
+  });
+  lightbox.querySelector('.lb-close').addEventListener('click', closeLightbox);
+  lightbox.querySelector('.lb-prev').addEventListener('click', (e) => { e.stopPropagation(); lbIndex = (lbIndex - 1 + lbImages.length) % lbImages.length; updateLightbox(); });
+  lightbox.querySelector('.lb-next').addEventListener('click', (e) => { e.stopPropagation(); lbIndex = (lbIndex + 1) % lbImages.length; updateLightbox(); });
+  document.addEventListener('keydown', (e) => {
+    if (!lightbox.classList.contains('active')) return;
+    if (e.key === 'Escape') closeLightbox();
+    if (e.key === 'ArrowLeft') { lbIndex = (lbIndex - 1 + lbImages.length) % lbImages.length; updateLightbox(); }
+    if (e.key === 'ArrowRight') { lbIndex = (lbIndex + 1) % lbImages.length; updateLightbox(); }
+  });
 
   function openShareModal(url, title) {
     const enc = encodeURIComponent;
@@ -1666,5 +1732,43 @@ const sl = labels.social;
   input[type="range"]::-webkit-slider-thumb {
     appearance: none; -webkit-appearance: none;
     width: 14px; height: 14px; border-radius: 50%; background: #3b82f6; cursor: pointer;
+  }
+  /* Cursor pointer for all interactive elements */
+  button, .filter-pill, .discover-pill, .search-type-pill,
+  .bsky-like-btn, .bsky-repost-btn, .bsky-reply-btn, .bsky-squad-btn,
+  .share-btn, .like-btn, .comment-btn, .follow-btn, .feed-card {
+    cursor: pointer;
+  }
+  /* Clickable post images */
+  .post-img { cursor: zoom-in; }
+  /* Image lightbox */
+  #img-lightbox {
+    display: none; position: fixed; inset: 0; z-index: 80;
+    background: rgba(0,0,0,.9); justify-content: center; align-items: center;
+    cursor: zoom-out;
+  }
+  #img-lightbox.active { display: flex; }
+  #img-lightbox img {
+    max-width: 95vw; max-height: 95vh; object-fit: contain;
+    border-radius: .25rem;
+  }
+  #img-lightbox .lb-nav {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    background: rgba(0,0,0,.5); color: #fff; border: none;
+    font-size: 2rem; padding: .25rem .75rem; border-radius: .5rem;
+    cursor: pointer; opacity: .7; transition: opacity .2s;
+  }
+  #img-lightbox .lb-nav:hover { opacity: 1; }
+  #img-lightbox .lb-prev { left: 1rem; }
+  #img-lightbox .lb-next { right: 1rem; }
+  #img-lightbox .lb-close {
+    position: absolute; top: 1rem; right: 1rem;
+    background: none; border: none; color: #fff; font-size: 1.5rem;
+    cursor: pointer; opacity: .7; transition: opacity .2s;
+  }
+  #img-lightbox .lb-close:hover { opacity: 1; }
+  #img-lightbox .lb-counter {
+    position: absolute; bottom: 1rem; left: 50%; transform: translateX(-50%);
+    color: rgba(255,255,255,.7); font-size: .8rem;
   }
 </style>
