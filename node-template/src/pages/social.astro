@@ -19,6 +19,9 @@ const sl = labels.social;
         <button id="tab-squads" class="rounded bg-theme-input-bg px-2 py-1 text-xs md:px-3 md:py-1.5 md:text-sm hover:bg-theme-surface-hover transition">
           {sl.tabSquads}
         </button>
+        <button id="tab-posts" class="rounded bg-theme-input-bg px-2 py-1 text-xs md:px-3 md:py-1.5 md:text-sm hover:bg-theme-surface-hover transition">
+          Posts
+        </button>
         <button id="tab-youtube" class="rounded bg-theme-input-bg px-2 py-1 text-xs md:px-3 md:py-1.5 md:text-sm hover:bg-theme-surface-hover transition">
           {sl.tabYouTube}
         </button>
@@ -1112,6 +1115,7 @@ const sl = labels.social;
     if (currentTab === 'timeline') { piratePage++; loadFeedTab(true); }
     else if (currentTab === 'discover' && activeFeedUri) { loadCustomFeedView(activeFeedUri, activeFeedName, true); }
     else if (currentTab === 'discover' && currentDiscoverSub === 'trending') { loadDiscoverTrending(true); }
+    else if (currentTab === 'posts') { loadPostsTab(true); }
   }
 
   // --- Tab switching ---
@@ -1144,6 +1148,7 @@ const sl = labels.social;
     if (currentTab === 'timeline') loadFeedTab();
     else if (currentTab === 'discover') loadDiscoverTab();
     else if (currentTab === 'squads') renderSquadsView();
+    else if (currentTab === 'posts') loadPostsTab();
     else if (currentTab === 'youtube') loadYouTubeTab();
     else if (currentTab === 'rss') loadRSSTab();
   }
@@ -1967,9 +1972,25 @@ const sl = labels.social;
       if (!socialSettings.miniPlayerEnabled) return;
       const container = entry.target;
       if (!entry.isIntersecting) {
-        // Scrolled out of view — activate mini player only if user was watching
+        // Scrolled out of view
         const content = container.querySelector('video, iframe');
         if (!content) return;
+
+        // If mini-player is disabled, pause/stop videos when scrolled away
+        if (!socialSettings.miniPlayerEnabled) {
+          if (content.tagName === 'VIDEO' && !content.paused) content.pause();
+          if (content.tagName === 'IFRAME' && content._userActivated) {
+            const oldSrc = content.src;
+            content.src = '';
+            content._savedSrc = oldSrc;
+            content._userActivated = false;
+            addIframeOverlay(container, content);
+            setTimeout(() => { if (content._savedSrc) { content.src = content._savedSrc; delete content._savedSrc; } }, 100);
+          }
+          return;
+        }
+
+        // Mini-player enabled — activate if user was watching
         if (content.tagName === 'VIDEO' && content.paused) return;
         if (content.tagName === 'IFRAME' && !content._userActivated) return;
         if (miniPlayerSource === container) return; // already active
@@ -2595,36 +2616,309 @@ const sl = labels.social;
     }
   }
 
-  async function loadRSSTab() {
-    feedContainer.innerHTML = `
-      <div class="space-y-6">
-        <div class="rounded-lg border border-theme-card-border bg-theme-card p-4">
-          <h2 class="text-lg font-semibold mb-3">RSS Feed Management</h2>
-          <p class="text-sm text-theme-faint mb-4">Use the filter pills above to manage which RSS feeds appear in your Timeline. Select from:</p>
-          <div class="grid grid-cols-2 gap-3 text-sm">
-            <div>
-              <p class="font-medium text-theme-text mb-1">Content Types</p>
-              <ul class="text-theme-faint space-y-1 text-xs">
-                <li>• Videos</li>
-                <li>• Images</li>
-                <li>• Links</li>
-                <li>• Text Only</li>
-              </ul>
-            </div>
-            <div>
-              <p class="font-medium text-theme-text mb-1">Feed Sources</p>
-              <ul class="text-theme-faint space-y-1 text-xs">
-                <li>• Pirate RSS feeds</li>
-                <li>• No Reposts</li>
-                <li>• All posts</li>
-              </ul>
-            </div>
-          </div>
-          <p class="text-xs text-theme-faint mt-4">Your active filters above determine what shows in the Timeline tab.</p>
-        </div>
-      </div>`;
+  // ============================================================
+  // POSTS TAB — User's own Bluesky profile
+  // ============================================================
+  let postsTabCursor = null;
+
+  async function loadPostsTab(append = false) {
     hasMore = false;
     scrollSentinel.classList.add('hidden');
+
+    if (!append) {
+      feedContainer.innerHTML = `<div class="text-center py-8 text-theme-faint">${L.loading || 'Loading...'}</div>`;
+    }
+
+    try {
+      const session = await ensureBskySession();
+      if (!session?.handle) {
+        feedContainer.innerHTML = `<div class="text-center py-8 text-theme-faint">Connect your Bluesky account in Settings to view your profile</div>`;
+        return;
+      }
+
+      const profile = await fetchBskyProfile(session.handle);
+      const feedData = await fetchBskyAuthorFeed(session.handle, append ? postsTabCursor : null);
+      postsTabCursor = feedData.cursor || null;
+      hasMore = !!postsTabCursor;
+      const posts = (feedData.feed || []).map(item => normalizeBskyPost(item));
+
+      if (append) {
+        feedContainer.insertAdjacentHTML('beforeend', posts.map(p => renderPostCard(p)).join(''));
+      } else {
+        const profileHtml = `
+          <div class="rounded-lg border border-theme-card-border bg-theme-card overflow-hidden mb-6">
+            ${profile.banner ? `<div class="w-full h-32 md:h-48"><img src="${escapeHtml(profile.banner)}" class="w-full h-full object-cover" /></div>` : '<div class="w-full h-24 bg-theme-surface"></div>'}
+            <div class="px-4 pb-4">
+              <div class="flex items-end gap-4 -mt-10 mb-3">
+                ${profile.avatar ? `<img src="${escapeHtml(profile.avatar)}" class="h-20 w-20 rounded-full border-4 border-theme-card" />` : '<div class="h-20 w-20 rounded-full bg-theme-surface-hover border-4 border-theme-card"></div>'}
+                <div class="flex-1 min-w-0 pt-12">
+                  <h2 class="font-bold text-lg">${escapeHtml(profile.displayName || profile.handle)}</h2>
+                  <p class="text-sm text-theme-faint">@${escapeHtml(profile.handle)}</p>
+                </div>
+              </div>
+              ${profile.description ? `<p class="text-sm text-theme-muted mb-3 whitespace-pre-wrap">${formatText(profile.description)}</p>` : ''}
+              <div class="flex gap-6 text-sm">
+                <span><strong>${profile.followersCount || 0}</strong> <span class="text-theme-faint">followers</span></span>
+                <span><strong>${profile.followsCount || 0}</strong> <span class="text-theme-faint">following</span></span>
+                <span><strong>${profile.postsCount || 0}</strong> <span class="text-theme-faint">posts</span></span>
+              </div>
+            </div>
+          </div>`;
+        const postsHtml = posts.map(p => renderPostCard(p)).join('');
+        feedContainer.innerHTML = profileHtml + `<div class="space-y-6">${postsHtml || '<div class="text-center py-8 text-theme-faint">No posts yet</div>'}</div>`;
+      }
+      attachAllListeners();
+      initHlsVideos();
+    } catch (err) {
+      if (!append) feedContainer.innerHTML = `<div class="text-center py-8 text-red-400">Failed to load profile: ${escapeHtml(err.message)}</div>`;
+    } finally {
+      isLoading = false;
+      scrollSentinel.classList.toggle('hidden', !hasMore);
+    }
+  }
+
+  // ============================================================
+  // RSS TAB — Full feed management
+  // ============================================================
+  let rssCurrentView = 'feeds';
+  let rssCurrentFeedId = null;
+  let rssCurrentPage = 1;
+
+  async function loadRSSTab() {
+    hasMore = false;
+    scrollSentinel.classList.add('hidden');
+
+    if (!token) {
+      feedContainer.innerHTML = '<div class="text-center py-8 text-theme-faint">Sign in to manage your RSS subscriptions</div>';
+      return;
+    }
+
+    feedContainer.innerHTML = `
+      <div class="space-y-4">
+        <div class="rounded-lg border border-theme-card-border bg-theme-card p-4">
+          <h2 class="text-lg font-semibold mb-3">${FL.heading || 'External RSS Feeds'}</h2>
+          <form id="rss-add-form" class="flex gap-2 mb-3">
+            <input type="text" id="rss-url-input" placeholder="https://example.com/feed.xml or @handle.bsky.social" required
+              class="flex-1 rounded bg-theme-input-bg border border-theme-input-border px-2 py-1.5 text-sm focus:outline-none focus:border-theme-primary" />
+            <button type="submit" id="rss-add-btn" class="rounded bg-theme-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-theme-primary-hover transition whitespace-nowrap">
+              ${FL.addFeed || 'Add Feed'}
+            </button>
+          </form>
+          <div id="rss-add-error" class="hidden text-red-400 text-sm mb-2"></div>
+          <div class="flex gap-2">
+            <button id="rss-view-feeds" class="rounded bg-theme-surface-hover px-2 py-1 text-xs md:px-3 md:py-1.5 md:text-sm transition">
+              ${FL.tabMyFeeds || 'My Feeds'}
+            </button>
+            <button id="rss-view-posts" class="rounded bg-theme-input-bg px-2 py-1 text-xs md:px-3 md:py-1.5 md:text-sm hover:bg-theme-surface-hover transition">
+              ${FL.tabAllPosts || 'All Posts'}
+            </button>
+          </div>
+        </div>
+        <div id="rss-feeds-list" class="space-y-3"></div>
+        <div id="rss-posts-list" class="hidden space-y-4"></div>
+        <div id="rss-feed-detail" class="hidden">
+          <button id="rss-back-to-feeds" class="text-sm text-theme-muted hover:text-theme-text mb-4 flex items-center gap-1 transition">${FL.backToFeeds || '← Back to feeds'}</button>
+          <div id="rss-feed-detail-header" class="mb-6"></div>
+          <div id="rss-feed-detail-posts" class="space-y-4"></div>
+        </div>
+        <div id="rss-loading" class="text-center py-8 text-theme-faint hidden">${L.loading || 'Loading...'}</div>
+        <div id="rss-empty" class="text-center py-8 text-theme-faint hidden">${FL.noFeeds || 'No feeds yet. Add one above!'}</div>
+        <div id="rss-load-more" class="mt-8 text-center hidden">
+          <button id="rss-load-more-btn" class="rounded bg-theme-input-bg px-6 py-2 text-sm hover:bg-theme-surface-hover transition">${FL.loadMore || 'Load More'}</button>
+        </div>
+      </div>`;
+
+    // Wire up RSS tab events
+    document.getElementById('rss-view-feeds').addEventListener('click', () => rssSwitch('feeds'));
+    document.getElementById('rss-view-posts').addEventListener('click', () => rssSwitch('posts'));
+    document.getElementById('rss-back-to-feeds').addEventListener('click', () => rssSwitch('feeds'));
+    document.getElementById('rss-load-more-btn').addEventListener('click', () => {
+      rssCurrentPage++;
+      if (rssCurrentView === 'posts') rssLoadAllPosts(true);
+      if (rssCurrentView === 'detail') rssLoadFeedDetail(rssCurrentFeedId, true);
+    });
+
+    document.getElementById('rss-add-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const input = document.getElementById('rss-url-input');
+      const errorEl = document.getElementById('rss-add-error');
+      const btn = document.getElementById('rss-add-btn');
+      let feedUrl = input.value.trim();
+      // Resolve Bluesky handles to RSS
+      const stripped = feedUrl.replace(/^@/, '');
+      if (/^[\w.-]+\.\w{2,}$/.test(stripped) && !stripped.includes('/')) feedUrl = `https://bsky.app/profile/${stripped}/rss`;
+
+      errorEl.classList.add('hidden');
+      btn.disabled = true;
+      btn.textContent = FL.adding || 'Adding...';
+      try {
+        const res = await fetch(`${hubUrl}/api/external-feeds`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ feedUrl }),
+        });
+        const data = await res.json();
+        if (!res.ok) { errorEl.textContent = data.error || 'Failed to add feed'; errorEl.classList.remove('hidden'); return; }
+        input.value = '';
+        rssLoadFeeds();
+      } catch { errorEl.textContent = 'Network error'; errorEl.classList.remove('hidden'); }
+      finally { btn.disabled = false; btn.textContent = FL.addFeed || 'Add Feed'; }
+    });
+
+    rssCurrentView = 'feeds';
+    rssCurrentPage = 1;
+    rssLoadFeeds();
+  }
+
+  function rssSwitch(view) {
+    rssCurrentView = view;
+    rssCurrentPage = 1;
+    document.getElementById('rss-feeds-list').classList.toggle('hidden', view !== 'feeds');
+    document.getElementById('rss-posts-list').classList.toggle('hidden', view !== 'posts');
+    document.getElementById('rss-feed-detail').classList.toggle('hidden', view !== 'detail');
+    document.getElementById('rss-load-more').classList.add('hidden');
+    document.getElementById('rss-view-feeds').classList.toggle('bg-theme-surface-hover', view === 'feeds');
+    document.getElementById('rss-view-feeds').classList.toggle('bg-theme-input-bg', view !== 'feeds');
+    document.getElementById('rss-view-posts').classList.toggle('bg-theme-surface-hover', view === 'posts');
+    document.getElementById('rss-view-posts').classList.toggle('bg-theme-input-bg', view !== 'posts');
+    if (view === 'feeds') rssLoadFeeds();
+    if (view === 'posts') rssLoadAllPosts();
+  }
+
+  async function rssLoadFeeds() {
+    const container = document.getElementById('rss-feeds-list');
+    const loading = document.getElementById('rss-loading');
+    const empty = document.getElementById('rss-empty');
+    loading.classList.remove('hidden');
+    empty.classList.add('hidden');
+    container.innerHTML = '';
+    try {
+      const res = await fetch(`${hubUrl}/api/external-feeds`, { headers: { Authorization: `Bearer ${token}` } });
+      const data = await res.json();
+      const feeds = data.feeds || [];
+      loading.classList.add('hidden');
+      if (!feeds.length) { empty.classList.remove('hidden'); return; }
+      container.innerHTML = feeds.map(feed => `
+        <div class="rounded-lg border border-theme-card-border bg-theme-card p-4">
+          <div class="flex items-start gap-3">
+            ${feed.iconUrl
+              ? `<img src="${escapeHtml(feed.iconUrl)}" class="h-8 w-8 rounded mt-0.5" onerror="this.style.display='none'" />`
+              : `<div class="h-8 w-8 rounded bg-theme-surface-hover flex items-center justify-center text-theme-muted text-xs mt-0.5">RSS</div>`}
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2">
+                <h3 class="font-medium text-sm truncate">${escapeHtml(feed.title || feed.feedUrl)}</h3>
+                ${feed.active
+                  ? '<span class="text-xs px-1.5 py-0.5 rounded-full bg-green-900 text-green-300">Active</span>'
+                  : '<span class="text-xs px-1.5 py-0.5 rounded-full bg-theme-surface-hover text-theme-muted">Paused</span>'}
+              </div>
+              ${feed.siteUrl ? `<a href="${escapeHtml(feed.siteUrl)}" target="_blank" class="text-xs text-theme-faint hover:text-theme-text truncate block">${escapeHtml(feed.siteUrl)}</a>` : ''}
+              <div class="text-xs text-theme-faint mt-1">
+                ${feed._count?.posts || 0} posts
+                ${feed.lastFetched ? ` · Updated ${timeAgo(feed.lastFetched)}` : ''}
+                ${feed.errorCount > 0 ? ` · <span class="text-yellow-400">${feed.errorCount} errors</span>` : ''}
+              </div>
+              <div class="flex items-center gap-2 mt-2">
+                <label class="text-xs text-theme-faint">Max posts:</label>
+                <select class="rss-max-posts rounded bg-theme-surface border border-theme-border px-2 py-0.5 text-xs" data-feed-id="${feed.id}">
+                  ${[5, 10, 20, 50, 100].map(n => `<option value="${n}" ${(feed.maxPosts || 20) === n ? 'selected' : ''}>${n}</option>`).join('')}
+                </select>
+              </div>
+            </div>
+            <div class="flex gap-1.5 shrink-0">
+              <button class="rss-view-btn rounded bg-theme-surface-hover px-2.5 py-1 text-xs hover:bg-theme-primary transition" data-feed-id="${feed.id}" title="View posts">View</button>
+              <button class="rss-refresh-btn rounded bg-theme-surface-hover px-2.5 py-1 text-xs hover:bg-theme-primary transition" data-feed-id="${feed.id}" title="Refresh">↻</button>
+              <button class="rss-toggle-btn rounded px-2.5 py-1 text-xs transition ${feed.active ? 'bg-yellow-800 hover:bg-yellow-700' : 'bg-green-800 hover:bg-green-700'}" data-feed-id="${feed.id}" data-active="${feed.active}" title="${feed.active ? 'Pause' : 'Resume'}">${feed.active ? '⏸' : '▶'}</button>
+              <button class="rss-delete-btn rounded bg-red-900 px-2.5 py-1 text-xs hover:bg-red-800 transition" data-feed-id="${feed.id}" title="Remove">✕</button>
+            </div>
+          </div>
+        </div>
+      `).join('');
+      rssAttachFeedListeners();
+    } catch {
+      loading.classList.add('hidden');
+      container.innerHTML = '<div class="text-center py-8 text-red-400">Failed to load feeds</div>';
+    }
+  }
+
+  function rssAttachFeedListeners() {
+    document.querySelectorAll('.rss-view-btn').forEach(btn => {
+      btn.addEventListener('click', () => { rssCurrentFeedId = btn.dataset.feedId; rssCurrentPage = 1; rssSwitch('detail'); rssLoadFeedDetail(rssCurrentFeedId); });
+    });
+    document.querySelectorAll('.rss-refresh-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        btn.textContent = '...'; btn.disabled = true;
+        try {
+          const res = await fetch(`${hubUrl}/api/external-feeds/${btn.dataset.feedId}/refresh`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+          const data = await res.json();
+          btn.textContent = `+${data.newPosts}`;
+          setTimeout(() => { btn.textContent = '↻'; btn.disabled = false; rssLoadFeeds(); }, 1500);
+        } catch { btn.textContent = '!'; setTimeout(() => { btn.textContent = '↻'; btn.disabled = false; }, 1500); }
+      });
+    });
+    document.querySelectorAll('.rss-toggle-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const active = btn.dataset.active === 'true';
+        await fetch(`${hubUrl}/api/external-feeds/${btn.dataset.feedId}`, { method: 'PATCH', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ active: !active }) });
+        rssLoadFeeds();
+      });
+    });
+    document.querySelectorAll('.rss-delete-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('Remove this feed and all its posts?')) return;
+        await fetch(`${hubUrl}/api/external-feeds/${btn.dataset.feedId}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+        rssLoadFeeds();
+      });
+    });
+    document.querySelectorAll('.rss-max-posts').forEach(sel => {
+      sel.addEventListener('change', async () => {
+        await fetch(`${hubUrl}/api/external-feeds/${sel.dataset.feedId}`, { method: 'PATCH', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ maxPosts: parseInt(sel.value, 10) }) });
+        rssLoadFeeds();
+      });
+    });
+  }
+
+  async function rssLoadAllPosts(append) {
+    const container = document.getElementById('rss-posts-list');
+    const loading = document.getElementById('rss-loading');
+    if (!append) { loading.classList.remove('hidden'); container.innerHTML = ''; }
+    try {
+      const res = await fetch(`${hubUrl}/api/timeline?source=external&page=${rssCurrentPage}`, { headers: { Authorization: `Bearer ${token}` } });
+      const data = await res.json();
+      loading.classList.add('hidden');
+      const html = (data.posts || []).map(p => renderPostCard(normalizePiratePost(p))).join('');
+      if (append) container.insertAdjacentHTML('beforeend', html);
+      else container.innerHTML = html || `<div class="text-center py-8 text-theme-faint">${FL.noFeeds || 'No posts'}</div>`;
+      document.getElementById('rss-load-more').classList.toggle('hidden', !data.hasMore);
+      attachAllListeners();
+    } catch { loading.classList.add('hidden'); container.innerHTML = '<div class="text-center py-8 text-red-400">Failed to load posts</div>'; }
+  }
+
+  async function rssLoadFeedDetail(feedId, append) {
+    const header = document.getElementById('rss-feed-detail-header');
+    const container = document.getElementById('rss-feed-detail-posts');
+    const loading = document.getElementById('rss-loading');
+    if (!append) { loading.classList.remove('hidden'); container.innerHTML = ''; }
+    try {
+      const res = await fetch(`${hubUrl}/api/external-feeds/${feedId}/posts?page=${rssCurrentPage}`, { headers: { Authorization: `Bearer ${token}` } });
+      const data = await res.json();
+      loading.classList.add('hidden');
+      if (!append && data.feed) {
+        header.innerHTML = `
+          <div class="flex items-center gap-3">
+            ${data.feed.iconUrl ? `<img src="${escapeHtml(data.feed.iconUrl)}" class="h-10 w-10 rounded" onerror="this.style.display='none'" />` : ''}
+            <div>
+              <h2 class="text-lg font-semibold">${escapeHtml(data.feed.title || data.feed.feedUrl)}</h2>
+              ${data.feed.siteUrl ? `<a href="${escapeHtml(data.feed.siteUrl)}" target="_blank" class="text-sm text-theme-muted hover:text-theme-text">${escapeHtml(data.feed.siteUrl)}</a>` : ''}
+            </div>
+            <span class="text-sm text-theme-faint ml-auto">${data.total} posts</span>
+          </div>`;
+      }
+      const html = (data.posts || []).map(p => renderPostCard(normalizePiratePost(p))).join('');
+      if (append) container.insertAdjacentHTML('beforeend', html);
+      else container.innerHTML = html || `<div class="text-center py-8 text-theme-faint">No posts</div>`;
+      document.getElementById('rss-load-more').classList.toggle('hidden', !data.hasMore);
+      attachAllListeners();
+    } catch { loading.classList.add('hidden'); container.innerHTML = '<div class="text-center py-8 text-red-400">Failed to load posts</div>'; }
   }
 
   // ============================================================
