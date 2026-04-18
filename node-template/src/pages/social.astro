@@ -2197,17 +2197,13 @@ const sl = labels.social;
     ytActiveContainer = container;
 
     // Swap video ID without reloading iframe — preserves session, no new ads
-    const currentSrc = iframe.src || '';
-    const currentIdMatch = currentSrc.match(/\/embed\/([\w-]*)/);
-    const currentId = currentIdMatch ? currentIdMatch[1] : '';
-
-    if (currentId === videoId) {
-      // Same video, just replay
-      try { iframe.contentWindow.postMessage('{"event":"command","func":"seekTo","args":[0,true]}', '*'); } catch {}
-      try { iframe.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*'); } catch {}
-    } else {
-      // Different video — change src but keep same iframe element (session preserved)
+    if (!iframe._firstLoaded) {
+      // First video ever — must set src to initialize the player
       iframe.src = `https://www.youtube-nocookie.com/embed/${videoId}?enablejsapi=1&autoplay=1`;
+      iframe._firstLoaded = true;
+    } else {
+      // Subsequent videos — use postMessage to avoid iframe reload and ads
+      try { iframe.contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'loadVideoById', args: [videoId] }), '*'); } catch {}
     }
 
     iframe._userActivated = true;
