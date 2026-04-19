@@ -55,7 +55,7 @@ const bgCss = bgUrl ? `body::before{content:'';position:fixed;inset:0;z-index:-1
 
 // Social features toggle
 const enableSocial = settings.enableSocial !== false;
-const socialPaths = ['/social', '/settings'];
+const socialPaths = ['/social', '/settings', '/admin'];
 const visibleNavItems = (labels.navItems || []).filter((item: any) => {
   if (item.visible === false) return false;
   if (!enableSocial && socialPaths.some(p => item.url?.startsWith(p))) return false;
@@ -137,10 +137,8 @@ const allNavItems = [...visibleNavItems, ...autoNavPages];
               <a href={item.url.startsWith('/') ? `${base}${item.url}` : item.url} class="text-theme-muted hover:text-theme-text transition">{item.label}</a>
             );
           })}
-          {enableSocial && labels.showSignIn !== false && (
-            <button id="auth-btn" class="rounded bg-theme-surface-hover px-3 py-1.5 text-xs hover:bg-theme-card-hover transition">
-              {labels.nav.signIn}
-            </button>
+          {enableSocial && (
+            <a href={`${base}/admin`} class="text-theme-muted hover:text-theme-text transition" data-auth-only hidden>Admin</a>
           )}
         </div>
       </nav>
@@ -206,17 +204,10 @@ const allNavItems = [...visibleNavItems, ...autoNavPages];
           window.history.replaceState({}, '', window.location.pathname);
         }
 
-        // Update auth button & show auth-only nav links
-        const btn = document.getElementById('auth-btn');
+        // Show auth-only nav links when logged in
         const savedToken = localStorage.getItem('ps_token');
         if (savedToken) {
           document.querySelectorAll('[data-auth-only]').forEach(el => el.removeAttribute('hidden'));
-          if (btn) {
-            btn.textContent = 'My Profile';
-            btn.addEventListener('click', () => window.location.href = '/social');
-          }
-        } else if (btn) {
-          btn.addEventListener('click', () => window.location.href = `${hubUrl}/api/auth/github`);
         }
       }
 
