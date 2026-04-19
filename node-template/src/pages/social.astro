@@ -343,7 +343,8 @@ const sl = labels.social;
   async function fetchCustomFeed(feedUri, cursor) {
     const params = { feed: feedUri, limit: '25' };
     if (cursor) params.cursor = cursor;
-    return bskyGet('app.bsky.feed.getFeed', params, true);
+    // Use public API — getFeed works without auth and avoids session issues
+    return bskyGet('app.bsky.feed.getFeed', params, false);
   }
 
   async function fetchTrendingTopics() {
