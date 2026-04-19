@@ -891,7 +891,7 @@ const sl = labels.social;
         html += `<div class="mt-2 rounded overflow-hidden bg-black aspect-video yt-placeholder relative" data-yt-id="${ytId}" style="cursor:pointer;position:relative">
           ${ytHeartBtn(ytId, embed.external.title || '', '')}
           <img src="https://i.ytimg.com/vi/${ytId}/hqdefault.jpg" class="w-full h-full object-cover" alt="" loading="lazy" onerror="this.style.display='none'" />
-          <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">
+          <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none">
             <svg width="68" height="48" viewBox="0 0 68 48"><path d="M66.5 7.7s-.7-4.7-2.8-6.8C60.7-2 57.2-2 55.6-2.2 46.5-3 34-3 34-3s-12.5 0-21.6.8C10.8-2 7.3-2 4.3.9 2.2 3 1.5 7.7 1.5 7.7S.8 13.2.8 18.7v5.1c0 5.5.7 11 .7 11s.7 4.7 2.8 6.8c3 2.9 6.9 2.8 8.6 3.1 6.3.6 26.1.8 26.1.8s12.5 0 21.6-.8c1.6-.2 5.1-.2 8.1-3.1 2.1-2.1 2.8-6.8 2.8-6.8s.7-5.5.7-11v-5.1c0-5.5-.7-11-.7-11z" fill="red"/><path d="M27 33V13l18 10z" fill="#fff"/></svg>
           </div>
         </div>`;
@@ -983,7 +983,7 @@ const sl = labels.social;
           <div class="aspect-video bg-black yt-placeholder relative" data-yt-id="${escapeHtml(post.videoId)}" style="cursor:pointer;position:relative">
             ${ytHeartBtn(post.videoId, post.title, post.thumbnail)}
             <img src="${escapeHtml(post.thumbnail)}" class="w-full h-full object-cover" alt="" loading="lazy" onerror="this.style.display='none'" />
-            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">
+            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none">
               <svg width="68" height="48" viewBox="0 0 68 48"><path d="M66.5 7.7s-.7-4.7-2.8-6.8C60.7-2 57.2-2 55.6-2.2 46.5-3 34-3 34-3s-12.5 0-21.6.8C10.8-2 7.3-2 4.3.9 2.2 3 1.5 7.7 1.5 7.7S.8 13.2.8 18.7v5.1c0 5.5.7 11 .7 11s.7 4.7 2.8 6.8c3 2.9 6.9 2.8 8.6 3.1 6.3.6 26.1.8 26.1.8s12.5 0 21.6-.8c1.6-.2 5.1-.2 8.1-3.1 2.1-2.1 2.8-6.8 2.8-6.8s.7-5.5.7-11v-5.1c0-5.5-.7-11-.7-11z" fill="red"/><path d="M27 33V13l18 10z" fill="#fff"/></svg>
             </div>
           </div>
@@ -3382,6 +3382,25 @@ const sl = labels.social;
   async function loadYouTubeTab() {
     feedContainer.innerHTML = `
       <div class="space-y-4">
+        <!-- Large Player -->
+        <div class="rounded-lg border border-theme-card-border bg-theme-card overflow-hidden">
+          <div id="yt-top-player" class="yt-placeholder aspect-video bg-black flex items-center justify-center cursor-pointer relative" data-yt-id="" style="position:relative">
+            <div class="text-theme-faint text-sm flex flex-col items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="opacity-30"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              <span>Select a video to play</span>
+            </div>
+          </div>
+          <div id="yt-now-playing" class="hidden p-3 border-t border-theme-card-border flex items-center justify-between">
+            <div class="min-w-0 flex-1">
+              <h3 id="yt-now-title" class="font-semibold text-sm truncate"></h3>
+              <p id="yt-now-channel" class="text-xs text-theme-faint truncate"></p>
+            </div>
+            <button id="yt-now-heart" class="yt-heart-btn p-1.5 rounded-full hover:bg-theme-surface-hover transition text-theme-muted" data-yt-id="" data-yt-title="" data-yt-thumb="">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            </button>
+          </div>
+        </div>
+
         <!-- Watchlist -->
         <div class="rounded-lg border border-theme-card-border bg-theme-card overflow-hidden">
           <button id="yt-watchlist-toggle" class="w-full flex items-center justify-between p-4 hover:bg-theme-card-hover transition text-left">
@@ -3452,32 +3471,83 @@ const sl = labels.social;
         document.querySelectorAll('.view-ch-videos-btn').forEach(btn => btn.textContent = 'Show Videos');
       }
     });
+
+    // Now-playing heart button
+    const nowHeart = document.getElementById('yt-now-heart');
+    nowHeart.addEventListener('click', () => {
+      toggleWatchlist(nowHeart.dataset.ytId, nowHeart.dataset.ytTitle, nowHeart.dataset.ytThumb);
+      updateNowPlayingHeart(nowHeart.dataset.ytId);
+    });
+  }
+
+  function playInTopPlayer(videoId, title, channelName, thumbnail) {
+    const player = document.getElementById('yt-top-player');
+    if (!player) return;
+    player.dataset.ytId = videoId;
+    playYTVideo(player, videoId);
+
+    // Update now-playing info
+    const nowPlaying = document.getElementById('yt-now-playing');
+    const nowTitle = document.getElementById('yt-now-title');
+    const nowChannel = document.getElementById('yt-now-channel');
+    if (nowPlaying) {
+      nowPlaying.classList.remove('hidden');
+      nowTitle.textContent = title || '';
+      nowChannel.textContent = channelName || '';
+    }
+    // Update heart state
+    const nowHeart = document.getElementById('yt-now-heart');
+    if (nowHeart) {
+      nowHeart.dataset.ytId = videoId;
+      nowHeart.dataset.ytTitle = title || '';
+      nowHeart.dataset.ytThumb = thumbnail || `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+      updateNowPlayingHeart(videoId);
+    }
+    // Scroll player into view
+    player.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function updateNowPlayingHeart(videoId) {
+    const nowHeart = document.getElementById('yt-now-heart');
+    if (!nowHeart) return;
+    const inList = isInWatchlist(videoId);
+    nowHeart.querySelector('svg').setAttribute('fill', inList ? 'currentColor' : 'none');
+    nowHeart.classList.toggle('text-red-500', inList);
+    nowHeart.classList.toggle('text-theme-muted', !inList);
+  }
+
+  function bindYTTabThumbnails(container, channelName) {
+    container.querySelectorAll('.yt-tab-thumb:not([data-tab-bound])').forEach(el => {
+      el.dataset.tabBound = '1';
+      el.addEventListener('click', () => {
+        playInTopPlayer(el.dataset.ytId, el.dataset.ytTitle || '', channelName || '', el.dataset.ytThumb || '');
+      });
+    });
   }
 
   function renderWatchlistItems() {
     const content = document.getElementById('yt-watchlist-content');
     const countEl = document.getElementById('yt-watchlist-count');
     if (countEl) countEl.textContent = `(${youtubeWatchlist.length})`;
+    if (!content) return;
     if (!youtubeWatchlist.length) {
       content.innerHTML = '<div class="text-center py-3 text-theme-faint text-sm">No videos saved yet. Click the heart on any video to add it here.</div>';
       return;
     }
     content.innerHTML = `<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">${youtubeWatchlist.map(v => `
-      <div class="group relative overflow-hidden rounded border border-theme-input-border hover:border-theme-primary transition">
-        <div class="yt-placeholder cursor-pointer" data-yt-id="${escapeHtml(v.videoId)}">
-          <img src="${escapeHtml(v.thumbnail)}" alt="" class="w-full aspect-video object-cover group-hover:opacity-75 transition" loading="lazy" />
-          <div class="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition flex items-center justify-center pointer-events-none">
-            <div class="text-white text-2xl opacity-0 group-hover:opacity-100 transition">▶</div>
-          </div>
-          <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-black/0 p-2 pointer-events-none">
-            <p class="text-white text-xs font-medium line-clamp-2">${escapeHtml(v.title)}</p>
-          </div>
+      <div class="group relative overflow-hidden rounded border border-theme-input-border hover:border-theme-primary transition cursor-pointer yt-tab-thumb" data-yt-id="${escapeHtml(v.videoId)}" data-yt-title="${escapeHtml(v.title)}" data-yt-thumb="${escapeHtml(v.thumbnail)}">
+        <img src="${escapeHtml(v.thumbnail)}" alt="" class="w-full aspect-video object-cover group-hover:opacity-75 transition" loading="lazy" />
+        <div class="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition flex items-center justify-center pointer-events-none">
+          <div class="text-white text-2xl opacity-0 group-hover:opacity-100 transition">▶</div>
+        </div>
+        <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-black/0 p-2 pointer-events-none">
+          <p class="text-white text-xs font-medium line-clamp-2">${escapeHtml(v.title)}</p>
         </div>
         <button class="wl-remove-btn absolute top-1.5 right-1.5 z-10 p-1 rounded-full bg-black/50 text-red-400 hover:text-red-300 hover:bg-black/70 transition" data-yt-id="${escapeHtml(v.videoId)}" title="Remove from watchlist">
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>`).join('')}</div>`;
-    initYTPlaceholders();
+    bindYTTabThumbnails(content, 'Watchlist');
     content.querySelectorAll('.wl-remove-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -3592,19 +3662,18 @@ const sl = labels.social;
           if (res.ok) {
             const { videos } = await res.json();
             container.innerHTML = videos.map(v => `
-              <div class="yt-placeholder group relative overflow-hidden rounded border border-theme-input-border hover:border-theme-primary transition cursor-pointer" data-yt-id="${v.videoId}">
+              <div class="yt-tab-thumb group relative overflow-hidden rounded border border-theme-input-border hover:border-theme-primary transition cursor-pointer" data-yt-id="${v.videoId}" data-yt-title="${escapeHtml(v.title)}" data-yt-thumb="${escapeHtml(v.thumbnail)}">
                 ${ytHeartBtn(v.videoId, v.title, v.thumbnail)}
                 <img src="${v.thumbnail}" alt="${v.title.slice(0, 50)}" class="w-full aspect-video object-cover group-hover:opacity-75 transition" />
-                <div class="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition flex items-center justify-center">
+                <div class="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition flex items-center justify-center pointer-events-none">
                   <div class="text-white text-2xl opacity-0 group-hover:opacity-100 transition">▶</div>
                 </div>
-                <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-black/0 p-2">
+                <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-black/0 p-2 pointer-events-none">
                   <p class="text-white text-xs font-medium line-clamp-2">${v.title}</p>
                 </div>
               </div>`).join('');
             btn.textContent = `Hide Videos (${videos.length})`;
-            // Bind click handlers to use the shared inline player
-            initYTPlaceholders();
+            bindYTTabThumbnails(container, ch.name);
             initYTHeartBtns();
           }
         } catch (err) {
