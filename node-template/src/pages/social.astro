@@ -774,10 +774,14 @@ const sl = labels.social;
         <video controls preload="none" poster="${escapeHtml(embed.video.thumb || '')}" class="w-full h-full" data-hls="${escapeHtml(embed.video.playlist)}"></video>
       </div>`;
     }
-    // External link / YouTube
+    // External link / YouTube / Tenor GIF
     if (embed.external?.uri) {
       const ytId = getYouTubeId(embed.external.uri);
-      if (ytId) {
+      const isTenor = /^https?:\/\/(media\.)?tenor\.com\//i.test(embed.external.uri) || /^https?:\/\/(media\.)?tenor\.com\//i.test(embed.external.thumb || '');
+      if (isTenor) {
+        const gifUrl = embed.external.thumb || embed.external.uri;
+        html += `<div class="mt-2 rounded overflow-hidden bg-black flex justify-center"><img src="${escapeHtml(gifUrl)}" alt="${escapeHtml(embed.external.title || 'GIF')}" style="width:100%;max-height:28rem;object-fit:contain" loading="lazy" onerror="this.parentElement.style.display='none'" /></div>`;
+      } else if (ytId) {
         html += `<div class="mt-2 rounded overflow-hidden bg-black aspect-video yt-placeholder" data-yt-id="${ytId}" style="cursor:pointer;position:relative">
           <img src="https://i.ytimg.com/vi/${ytId}/hqdefault.jpg" class="w-full h-full object-cover" alt="" loading="lazy" onerror="this.style.display='none'" />
           <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">
