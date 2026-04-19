@@ -100,7 +100,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
   </div>
 </BaseLayout>
 
-<script is:inline define:vars={{ hubUrl: siteConfig.hubUrl, BL: labels.bluesky }}>
+<script is:inline define:vars={{ hubUrl: siteConfig.hubUrl, BL: labels.bluesky }} data-astro-rerun>
   const token = localStorage.getItem('ps_token');
 
   // Social display settings
@@ -162,6 +162,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
       renderStatus(data);
     } catch (err) {
       console.error('Failed to load Bluesky status:', err);
+      renderStatus({ connected: false });
     }
   }
 
