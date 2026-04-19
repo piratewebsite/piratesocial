@@ -12,7 +12,7 @@ const sl = labels.social;
         <select id="tab-feeds" class="rounded bg-theme-input-bg px-2 py-1 text-xs md:px-3 md:py-1.5 md:text-sm hover:bg-theme-surface-hover transition cursor-pointer" style="appearance:none;-webkit-appearance:none;background-image:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23999%22 stroke-width=%222%22><polyline points=%226 9 12 15 18 9%22/></svg>');background-repeat:no-repeat;background-position:right 6px center;padding-right:20px">
           <option value="" disabled selected>Feeds</option>
         </select>
-        <button id="tab-timeline" class="rounded bg-theme-input-bg px-2 py-1 text-xs md:px-3 md:py-1.5 md:text-sm hover:bg-theme-surface-hover transition active-tab">
+        <button id="tab-timeline" class="rounded bg-theme-input-bg px-2 py-1 text-xs md:px-3 md:py-1.5 md:text-sm hover:bg-theme-surface-hover transition active-tab" aria-current="true">
           {sl.tabTimeline}
         </button>
         <button id="tab-discover" class="rounded bg-theme-input-bg px-2 py-1 text-xs md:px-3 md:py-1.5 md:text-sm hover:bg-theme-surface-hover transition">
@@ -35,7 +35,7 @@ const sl = labels.social;
 
     <!-- Filter pills (shown for Feed tab) -->
     <div id="feed-filters" class="flex gap-1.5 flex-wrap mb-4">
-      <button class="filter-pill active-pill rounded-full bg-theme-input-bg px-3 py-1 text-xs hover:bg-theme-surface-hover transition" data-filter="all">All</button>
+      <button class="filter-pill active-pill rounded-full bg-theme-input-bg px-3 py-1 text-xs hover:bg-theme-surface-hover transition" data-filter="all" aria-current="true">All</button>
       <button class="filter-pill rounded-full bg-theme-input-bg px-3 py-1 text-xs hover:bg-theme-surface-hover transition" data-filter="no-reposts">No Reposts</button>
       <button class="filter-pill rounded-full bg-theme-input-bg px-3 py-1 text-xs hover:bg-theme-surface-hover transition" data-filter="images">Images</button>
       <button class="filter-pill rounded-full bg-theme-input-bg px-3 py-1 text-xs hover:bg-theme-surface-hover transition" data-filter="videos">Videos</button>
@@ -47,7 +47,7 @@ const sl = labels.social;
 
     <!-- Discover sub-tabs (shown for Discover tab) -->
     <div id="discover-pills" class="hidden flex gap-1.5 flex-wrap mb-4">
-      <button class="discover-pill active-pill rounded-full bg-theme-input-bg px-3 py-1 text-xs hover:bg-theme-surface-hover transition" data-sub="trending">Trending</button>
+      <button class="discover-pill active-pill rounded-full bg-theme-input-bg px-3 py-1 text-xs hover:bg-theme-surface-hover transition" data-sub="trending" aria-current="true">Trending</button>
       <button class="discover-pill rounded-full bg-theme-input-bg px-3 py-1 text-xs hover:bg-theme-surface-hover transition" data-sub="people">People</button>
       <button class="discover-pill rounded-full bg-theme-input-bg px-3 py-1 text-xs hover:bg-theme-surface-hover transition" data-sub="feeds">Custom Feeds</button>
     </div>
@@ -1199,7 +1199,9 @@ const sl = labels.social;
   document.querySelectorAll('[id^="tab-"]:not(#tab-feeds)').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelector('.active-tab')?.classList.remove('active-tab', 'bg-theme-surface-hover');
+      document.querySelector('[id^="tab-"][aria-current]')?.removeAttribute('aria-current');
       btn.classList.add('active-tab', 'bg-theme-surface-hover');
+      btn.setAttribute('aria-current', 'true');
       document.getElementById('tab-feeds').value = '';
       currentTab = btn.id.replace('tab-', '');
       resetPagination();
@@ -1228,6 +1230,7 @@ const sl = labels.social;
     const feed = subscribedFeeds.find(f => f.uri === uri);
     if (!uri || !feed) return;
     document.querySelector('.active-tab')?.classList.remove('active-tab', 'bg-theme-surface-hover');
+    document.querySelector('[id^="tab-"][aria-current]')?.removeAttribute('aria-current');
     currentTab = 'feeds';
     resetPagination();
     updateUI();
@@ -1268,7 +1271,9 @@ const sl = labels.social;
   document.querySelectorAll('.filter-pill').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelector('.filter-pill.active-pill')?.classList.remove('active-pill', 'bg-theme-surface-hover');
+      document.querySelector('.filter-pill[aria-current]')?.removeAttribute('aria-current');
       btn.classList.add('active-pill', 'bg-theme-surface-hover');
+      btn.setAttribute('aria-current', 'true');
       currentFilter = btn.dataset.filter;
       resetPagination();
       loadFeedTab();
@@ -1279,7 +1284,9 @@ const sl = labels.social;
   document.querySelectorAll('.discover-pill').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelector('.discover-pill.active-pill')?.classList.remove('active-pill', 'bg-theme-surface-hover');
+      document.querySelector('.discover-pill[aria-current]')?.removeAttribute('aria-current');
       btn.classList.add('active-pill', 'bg-theme-surface-hover');
+      btn.setAttribute('aria-current', 'true');
       currentDiscoverSub = btn.dataset.sub;
       const searchInput = document.getElementById('discover-search-input');
       if (searchInput) searchInput.value = '';
@@ -1302,7 +1309,9 @@ const sl = labels.social;
   document.querySelectorAll('.search-type-pill').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelector('.search-type-pill.active-pill')?.classList.remove('active-pill', 'bg-theme-surface-hover');
+      document.querySelector('.search-type-pill[aria-current]')?.removeAttribute('aria-current');
       btn.classList.add('active-pill', 'bg-theme-surface-hover');
+      btn.setAttribute('aria-current', 'true');
       currentSearchType = btn.dataset.type;
       resetPagination();
       const q = document.getElementById('search-input').value.trim();
@@ -1688,7 +1697,9 @@ const sl = labels.social;
           if (currentTab === 'feeds') {
             // Go back to timeline
             document.querySelector('.active-tab')?.classList.remove('active-tab', 'bg-theme-surface-hover');
+            document.querySelector('[id^="tab-"][aria-current]')?.removeAttribute('aria-current');
             document.getElementById('tab-timeline').classList.add('active-tab', 'bg-theme-surface-hover');
+            document.getElementById('tab-timeline').setAttribute('aria-current', 'true');
             feedsDropdown.value = '';
             currentTab = 'timeline';
             updateUI();
@@ -3469,6 +3480,10 @@ const sl = labels.social;
 <style is:global>
   .active-tab, .active-pill {
     background-color: var(--ps-surface-hover);
+    color: var(--ps-text);
+    font-weight: 500;
+    cursor: default;
+    pointer-events: none;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
   .animate-spin { animation: spin .6s linear infinite; }

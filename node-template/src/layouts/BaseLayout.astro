@@ -24,6 +24,7 @@ const pageTitle = title ? `${title} | ${defaultTitle}` : defaultTitle;
 const pageDescription = description || pwa.ogDescription || siteConfig.description;
 const ogImage = image || pwa.ogImage || siteConfig.avatar;
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const currentPath = Astro.url.pathname.replace(/\/$/, '') || '/';
 
 // Extract Google Font family names from CSS font-family strings
 function extractGoogleFont(cssValue: string): string | null {
@@ -131,17 +132,27 @@ const socialNavItems = allNavItems.filter((item: any) => socialPaths.some(p => i
           }
         </a>
         <div class="flex items-center gap-3 text-xs md:gap-6 md:text-sm">
-          {regularNavItems.map((item: any) => (
-            <a href={item.url.startsWith('/') ? `${base}${item.url}` : item.url} class="text-theme-muted hover:text-theme-text transition">{item.label}</a>
-          ))}
+          {regularNavItems.map((item: any) => {
+            const href = item.url.startsWith('/') ? `${base}${item.url}` : item.url;
+            const isActive = currentPath === (item.url.startsWith('/') ? `${base}${item.url}`.replace(/\/$/, '') : '');
+            return isActive
+              ? <span class="text-theme-text font-medium cursor-default" aria-current="page">{item.label}</span>
+              : <a href={href} class="text-theme-muted hover:text-theme-text transition">{item.label}</a>;
+          })}
           {enableSocial && (
             <span class="text-theme-border select-none" data-auth-only hidden>|</span>
           )}
-          {socialNavItems.map((item: any) => (
-            <a href={item.url.startsWith('/') ? `${base}${item.url}` : item.url} class="text-theme-muted hover:text-theme-text transition" data-auth-only hidden>{item.label}</a>
-          ))}
+          {socialNavItems.map((item: any) => {
+            const href = item.url.startsWith('/') ? `${base}${item.url}` : item.url;
+            const isActive = currentPath === (item.url.startsWith('/') ? `${base}${item.url}`.replace(/\/$/, '') : '');
+            return isActive
+              ? <span class="text-theme-text font-medium cursor-default" aria-current="page" data-auth-only hidden>{item.label}</span>
+              : <a href={href} class="text-theme-muted hover:text-theme-text transition" data-auth-only hidden>{item.label}</a>;
+          })}
           {enableSocial && (
-            <a href={`${base}/admin`} class="text-theme-muted hover:text-theme-text transition" data-auth-only hidden>Admin</a>
+            currentPath === `${base}/admin`
+              ? <span class="text-theme-text font-medium cursor-default" aria-current="page" data-auth-only hidden>Admin</span>
+              : <a href={`${base}/admin`} class="text-theme-muted hover:text-theme-text transition" data-auth-only hidden>Admin</a>
           )}
         </div>
       </nav>
