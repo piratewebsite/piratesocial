@@ -141,6 +141,24 @@ collections:
                   - { label: "Large (80vh)", value: "large" }
                   - { label: "Full Screen", value: "full" }
                 default: "medium"
+              - label: "Links / Buttons"
+                name: links
+                widget: list
+                required: false
+                hint: "Add buttons or links to the hero banner"
+                fields:
+                  - { label: "Label", name: label, widget: string }
+                  - { label: "URL", name: url, widget: string }
+                  - label: "Style"
+                    name: style
+                    widget: select
+                    options:
+                      - { label: "Primary Button", value: "primary" }
+                      - { label: "Secondary Button", value: "secondary" }
+                      - { label: "Outline Button", value: "outline" }
+                      - { label: "Text Link", value: "text" }
+                    default: "primary"
+                  - { label: "Open in New Tab", name: openInNewTab, widget: boolean, default: false }
 
           - label: "Profile Card"
             name: profile
@@ -186,7 +204,6 @@ collections:
                 default: "docked"
                 hint: "Floating player persists across pages and can be minimized"
               - { label: "Audio Only", name: audioOnly, widget: boolean, default: false, hint: "Hide video, play audio only" }
-              - { label: "Show YouTube Controls", name: useNativeControls, widget: boolean, default: false, hint: "Show native YouTube controls instead of custom player controls. Note: YouTube may show ads with native controls." }
               - { label: "Start Time (seconds)", name: startTime, widget: number, required: false, value_type: int, min: 0, hint: "Start playback at this time (in seconds). Leave blank to start from beginning." }
               - { label: "End Time (seconds)", name: endTime, widget: number, required: false, value_type: int, min: 0, hint: "Stop playback at this time (in seconds). Leave blank to play to end." }
               - label: "Additional Tracks"
@@ -286,6 +303,44 @@ collections:
                 fields:
                   - { label: "Question", name: question, widget: string }
                   - { label: "Answer", name: answer, widget: markdown }
+
+          - label: "Call to Action"
+            name: cta
+            widget: object
+            fields:
+              - { label: "Heading", name: heading, widget: string, required: false }
+              - { label: "Description", name: description, widget: text, required: false }
+              - label: "Alignment"
+                name: align
+                widget: select
+                options:
+                  - { label: "Left", value: "left" }
+                  - { label: "Center", value: "center" }
+                  - { label: "Right", value: "right" }
+                default: "center"
+              - label: "Layout"
+                name: layout
+                widget: select
+                options:
+                  - { label: "Narrow (centered)", value: "narrow" }
+                  - { label: "Full Width", value: "full" }
+                default: "narrow"
+              - label: "Links / Buttons"
+                name: links
+                widget: list
+                fields:
+                  - { label: "Label", name: label, widget: string }
+                  - { label: "URL", name: url, widget: string }
+                  - label: "Style"
+                    name: style
+                    widget: select
+                    options:
+                      - { label: "Primary Button", value: "primary" }
+                      - { label: "Secondary Button", value: "secondary" }
+                      - { label: "Outline Button", value: "outline" }
+                      - { label: "Text Link", value: "text" }
+                    default: "primary"
+                  - { label: "Open in New Tab", name: openInNewTab, widget: boolean, default: false }
 
   - name: site-settings
     label: Site Settings

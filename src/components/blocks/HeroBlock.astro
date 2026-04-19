@@ -1,7 +1,8 @@
 ---
 import { withBase } from '../../lib/config';
+import CtaLinks from './CtaLinks.astro';
 
-const { heading, subheading, image, overlay = true, height = 'medium' } = Astro.props;
+const { heading, subheading, image, overlay = true, height = 'medium', links = [] } = Astro.props;
 
 const heightClass = {
   small: 'min-h-[40vh]',
@@ -28,6 +29,11 @@ const heightClass = {
     )}
     {subheading && (
       <p class={`mt-4 text-lg md:text-xl max-w-2xl ${image ? 'text-white/90' : 'text-theme-muted'}`}>{subheading}</p>
+    )}
+    {links.length > 0 && (
+      <div class="mt-6">
+        <CtaLinks links={links} align="center" onDark={!!image} />
+      </div>
     )}
   </div>
 </section>
