@@ -8,11 +8,19 @@ function getYouTubeId(url) {
   return m ? m[1] : null;
 }
 
-// Build YouTube embed URL — minimal params to match social.astro's ad-free approach
-// Only enablejsapi + autoplay + origin. All track switching done via loadVideoById postMessage.
-function buildEmbedUrl(videoId) {
-  const origin = typeof window !== 'undefined' ? encodeURIComponent(window.location.origin) : '';
-  return `https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=1&origin=${origin}`;
+// Build youtube-nocookie embed URL (NO iframe_api, NO YT.Player)
+function buildEmbedUrl(videoId, opts = {}) {
+  const params = new URLSearchParams({
+    autoplay: '1',
+    rel: '0',
+    modestbranding: '1',
+    playsinline: '1',
+    enablejsapi: '1',
+    ...(opts.start ? { start: String(opts.start) } : {}),
+    ...(opts.end ? { end: String(opts.end) } : {}),
+    ...(opts.mute ? { mute: '1' } : {}),
+  });
+  return `https://www.youtube-nocookie.com/embed/${videoId}?${params.toString()}`;
 }
 
 // Default labels
@@ -74,21 +82,16 @@ export default function YouTubePlayer({ url, heading, caption, audioOnly, displa
 }
 
 function InteractivePlayer({ playlist, audioOnly, isFloating, heading, caption, layout, L, useNativeControls }) {
-  // Persist floating player state across Astro page navigations
-  // On mobile/iPad, transition:persist re-hydrates the component with fresh state,
-  // so we save/restore from window.__ytFloatingState
-  const savedState = (isFloating && typeof window !== 'undefined') ? window.__ytFloatingState : null;
-
-  const [currentIndex, setCurrentIndex] = useState(savedState?.currentIndex ?? 0);
-  const [isPlaying, setIsPlaying] = useState(savedState?.isPlaying ?? false);
-  const [started, setStarted] = useState(savedState?.started ?? false);
-  const [volume, setVolume] = useState(savedState?.volume ?? 80);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [started, setStarted] = useState(false);
+  const [volume, setVolume] = useState(80);
   const [showPlaylist, setShowPlaylist] = useState(false);
-  const [minimized, setMinimized] = useState(savedState?.minimized ?? false);
+  const [minimized, setMinimized] = useState(false);
   const [closed, setClosed] = useState(false);
-  const [position, setPosition] = useState(savedState?.position ?? { side: 'bottom' });
-  const [progress, setProgress] = useState(savedState?.progress ?? 0);
-  const [duration, setDuration] = useState(savedState?.duration ?? 0);
+  const [position, setPosition] = useState({ side: 'bottom' });
+  const [progress, setProgress] = useState(0);
+  const [duration, setDuration] = useState(0);
   const [dragOffset, setDragOffset] = useState(null);
   const [dragPos, setDragPos] = useState(null);
 
@@ -100,55 +103,11 @@ function InteractivePlayer({ playlist, audioOnly, isFloating, heading, caption, 
   const handleNextRef = useRef(null);
   const lastAdvanceTimeRef = useRef(0);
   const currentRef = useRef(null);
-  const hasUserGesturedRef = useRef(savedState?.started ?? false);
+  const hasUserGesturedRef = useRef(false);
   const isTouchDeviceRef = useRef(typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0));
-  const restoredFromState = useRef(!!savedState);
-  const ytApiReady = useRef(false);
-  const ytPendingVideoId = useRef(null);
-  const iframeFirstLoaded = useRef(false);
 
   const hasPlaylist = playlist.length > 1;
   const current = playlist[currentIndex] || playlist[0];
-
-  // Save floating player state to window for persistence across navigations
-  useEffect(() => {
-    if (!isFloating) return;
-    window.__ytFloatingState = {
-      currentIndex, isPlaying, started, volume, minimized, position, progress, duration,
-    };
-  }, [isFloating, currentIndex, isPlaying, started, volume, minimized, position, progress, duration]);
-
-  // On mount: set iframe src imperatively (ONCE only, never via JSX attribute)
-  // For floating restored state, skip src and just re-establish postMessage channel
-  useEffect(() => {
-    if (!iframeRef.current) return;
-    const iframe = iframeRef.current;
-
-    // If iframe already has a youtube src, it was loaded before (either from a previous
-    // mount or transition:persist kept it alive). NEVER reload it — that causes ads.
-    // Check the actual DOM src, not a ref (refs reset on re-hydration).
-    const alreadyLoaded = iframe.src && iframe.src.includes('youtube.com/embed');
-
-    if (alreadyLoaded) {
-      // Re-establish postMessage channel with the surviving iframe
-      iframeFirstLoaded.current = true;
-      ytApiReady.current = true;
-      setTimeout(() => {
-        const win = iframe.contentWindow;
-        if (!win) return;
-        win.postMessage(JSON.stringify({ event: 'listening', id: 1 }), '*');
-        setTimeout(() => {
-          const w = iframe.contentWindow;
-          if (!w) return;
-          w.postMessage(JSON.stringify({ event: 'command', func: 'addEventListener', args: ['onStateChange'] }), '*');
-        }, 300);
-      }, 300);
-    } else {
-      // First ever mount — set iframe src imperatively
-      iframeFirstLoaded.current = true;
-      iframe.src = embedUrl;
-    }
-  }, []);
   currentRef.current = current;
 
   // ── postMessage command helper — sends commands to youtube-nocookie iframe ──
@@ -222,15 +181,9 @@ function InteractivePlayer({ playlist, audioOnly, isFloating, heading, caption, 
         }
       }
 
-      // onReady / initialDelivery — mark API as ready, flush any pending loadVideoById
-      if (data.event === 'onReady' || data.event === 'initialDelivery') {
-        ytApiReady.current = true;
+      // onReady event — start polling once the player is ready
+      if (data.event === 'onReady') {
         setStarted(true);
-        if (ytPendingVideoId.current) {
-          const vid = ytPendingVideoId.current;
-          ytPendingVideoId.current = null;
-          sendCommand('loadVideoById', [vid]);
-        }
       }
     };
 
@@ -244,12 +197,8 @@ function InteractivePlayer({ playlist, audioOnly, isFloating, heading, caption, 
     const win = iframeRef.current.contentWindow;
     if (!win) return;
 
-    // Reset API readiness — this iframe just loaded fresh
-    ytApiReady.current = false;
-    iframeFirstLoaded.current = true;
-
-    // Send 'listening' to establish postMessage channel (same as social.astro's ytHandshake)
-    win.postMessage(JSON.stringify({ event: 'listening', id: 1 }), '*');
+    // Send 'listening' to establish postMessage channel
+    win.postMessage(JSON.stringify({ event: 'listening' }), '*');
 
     // Subscribe to player events explicitly
     setTimeout(() => {
@@ -258,6 +207,7 @@ function InteractivePlayer({ playlist, audioOnly, isFloating, heading, caption, 
       if (!w) return;
       // Subscribe to state changes
       w.postMessage(JSON.stringify({ event: 'command', func: 'addEventListener', args: ['onStateChange'] }), '*');
+      w.postMessage(JSON.stringify({ event: 'command', func: 'addEventListener', args: ['onReady'] }), '*');
     }, 300);
 
     // Poll for current time updates to drive the scrubber
@@ -297,7 +247,7 @@ function InteractivePlayer({ playlist, audioOnly, isFloating, heading, caption, 
     sendCommand('setVolume', [volume]);
   }, [volume, sendCommand]);
 
-  // ── Track change — swap video via postMessage with plain string ID (never reload iframe) ──
+  // ── Track change — swap video via postMessage, never reload iframe ──
   const prevIndexRef = useRef(-1);
   useEffect(() => {
     if (prevIndexRef.current === -1) {
@@ -308,12 +258,7 @@ function InteractivePlayer({ playlist, audioOnly, isFloating, heading, caption, 
     prevIndexRef.current = currentIndex;
     const t = playlist[currentIndex];
     if (!t) return;
-    // Use plain string videoId — same as social.astro. Object format causes iframe reload + ads.
-    if (ytApiReady.current) {
-      sendCommand('loadVideoById', [t.id]);
-    } else {
-      ytPendingVideoId.current = t.id;
-    }
+    sendCommand('loadVideoById', [{ videoId: t.id, startSeconds: t.startTime || 0, endSeconds: t.endTime || undefined }]);
   }, [currentIndex, playlist, sendCommand]);
 
   // ── Controls ──
@@ -428,10 +373,14 @@ function InteractivePlayer({ playlist, audioOnly, isFloating, heading, caption, 
     return { aspectRatio: '16/9', background: '#000', width: '100%' };
   };
 
-  // Build the initial embed URL — only used for first mount (not on re-hydration)
+  // Build the initial embed URL — only used for first track on mount
   // Subsequent tracks swap via postMessage loadVideoById to preserve iframe session (no new ads)
   const initialTrack = playlist[0];
-  const embedUrl = buildEmbedUrl(initialTrack.id);
+  const embedUrl = buildEmbedUrl(initialTrack.id, {
+    start: initialTrack.startTime,
+    end: initialTrack.endTime,
+    mute: isTouchDeviceRef.current && !hasUserGesturedRef.current,
+  });
 
   // ═══════════════════════════════════════════
   // ── DOCKED PLAYER ──
@@ -442,10 +391,11 @@ function InteractivePlayer({ playlist, audioOnly, isFloating, heading, caption, 
       <section class={`mb-12 ${wrapperClass}`}>
         {heading && <h2 class="mb-4 text-xl font-semibold">{heading}</h2>}
 
-        {/* Single persistent iframe — src set imperatively on mount, tracks swap via postMessage */}
+        {/* Single persistent iframe — tracks swap via postMessage, no reload */}
         <div class="rounded-lg overflow-hidden mb-3" style="aspect-ratio:16/9;background:#000">
           <iframe
             ref={iframeRef}
+            src={embedUrl}
             onLoad={onIframeLoad}
             style={{ width: '100%', height: '100%', border: 'none' }}
             allow="autoplay; encrypted-media"
@@ -574,6 +524,7 @@ function InteractivePlayer({ playlist, audioOnly, isFloating, heading, caption, 
           }>
             <iframe
               ref={iframeRef}
+              src={embedUrl}
               onLoad={onIframeLoad}
               style={{ width: '100%', height: '100%', border: 'none' }}
               allow="autoplay; encrypted-media"
