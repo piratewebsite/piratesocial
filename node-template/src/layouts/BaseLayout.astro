@@ -69,6 +69,8 @@ const autoNavPages = Object.values(pageFiles)
   .filter((p: any) => p.showInNav && p.slug && p.title)
   .map((p: any) => ({ label: p.title, url: `/p/${p.slug}`, visible: true }));
 const allNavItems = [...visibleNavItems, ...autoNavPages];
+const regularNavItems = allNavItems.filter((item: any) => !socialPaths.some(p => item.url?.startsWith(p)));
+const socialNavItems = allNavItems.filter((item: any) => socialPaths.some(p => item.url?.startsWith(p)));
 ---
 
 <!doctype html>
@@ -129,14 +131,15 @@ const allNavItems = [...visibleNavItems, ...autoNavPages];
           }
         </a>
         <div class="flex items-center gap-3 text-xs md:gap-6 md:text-sm">
-          {allNavItems.map((item: any) => {
-            const isAuthOnly = socialPaths.some(p => item.url?.startsWith(p));
-            return isAuthOnly ? (
-              <a href={item.url.startsWith('/') ? `${base}${item.url}` : item.url} class="text-theme-muted hover:text-theme-text transition" data-auth-only hidden>{item.label}</a>
-            ) : (
-              <a href={item.url.startsWith('/') ? `${base}${item.url}` : item.url} class="text-theme-muted hover:text-theme-text transition">{item.label}</a>
-            );
-          })}
+          {regularNavItems.map((item: any) => (
+            <a href={item.url.startsWith('/') ? `${base}${item.url}` : item.url} class="text-theme-muted hover:text-theme-text transition">{item.label}</a>
+          ))}
+          {enableSocial && (
+            <span class="text-theme-border select-none" data-auth-only hidden>|</span>
+          )}
+          {socialNavItems.map((item: any) => (
+            <a href={item.url.startsWith('/') ? `${base}${item.url}` : item.url} class="text-theme-muted hover:text-theme-text transition" data-auth-only hidden>{item.label}</a>
+          ))}
           {enableSocial && (
             <a href={`${base}/admin`} class="text-theme-muted hover:text-theme-text transition" data-auth-only hidden>Admin</a>
           )}

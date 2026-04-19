@@ -165,6 +165,12 @@ const sl = labels.social;
   }
 
   // ============================================================
+  // LOADING SPINNER
+  // ============================================================
+  const SPINNER = `<div class="flex justify-center py-8"><div class="loader-spinner h-6 w-6 border-2 border-theme-border border-t-theme-muted rounded-full animate-spin"></div></div>`;
+  const SPINNER_SM = `<div class="loader-spinner inline-block h-4 w-4 border-2 border-theme-border border-t-theme-muted rounded-full animate-spin align-middle"></div>`;
+
+  // ============================================================
   // SVG ICONS (Feather-style stroke icons + Bluesky butterfly)
   // ============================================================
   const ICON = {
@@ -1012,7 +1018,7 @@ const sl = labels.social;
   document.getElementById('slide-close').addEventListener('click', closeSlidePanel);
 
   async function openProfile(handle) {
-    openSlidePanel(`@${handle}`, `<div class="text-center py-8 text-theme-faint">${L.loading || 'Loading...'}</div>`);
+    openSlidePanel(`@${handle}`, ${SPINNER});
     try {
       const profile = await fetchBskyProfile(handle);
       const feedData = await fetchBskyAuthorFeed(handle);
@@ -1041,7 +1047,7 @@ const sl = labels.social;
   }
 
   async function openThread(uri) {
-    openSlidePanel('Thread', `<div class="text-center py-8 text-theme-faint">${L.loading || 'Loading...'}</div>`);
+    openSlidePanel('Thread', ${SPINNER});
     try {
       const data = await fetchBskyThread(uri);
       const thread = data.thread;
@@ -1323,7 +1329,7 @@ const sl = labels.social;
   async function loadFeedTab(append = false) {
     if (isLoading) return;
     isLoading = true;
-    if (!append) { feedContainer.innerHTML = `<div class="text-center py-8 text-theme-faint">${L.loading || 'Loading...'}</div>`; }
+    if (!append) { feedContainer.innerHTML = ${SPINNER}; }
     scrollSentinel.classList.toggle('hidden', !append);
 
     try {
@@ -1489,7 +1495,7 @@ const sl = labels.social;
   async function loadDiscoverTrending(append = false) {
     if (isLoading) return;
     isLoading = true;
-    if (!append) feedContainer.innerHTML = `<div class="text-center py-8 text-theme-faint">${L.loading || 'Loading...'}</div>`;
+    if (!append) feedContainer.innerHTML = ${SPINNER};
     scrollSentinel.classList.toggle('hidden', !append);
 
     try {
@@ -1543,7 +1549,7 @@ const sl = labels.social;
         btn.addEventListener('click', async () => {
           const topic = btn.dataset.topic;
           if (!topic) return;
-          feedContainer.innerHTML = `<div class="text-center py-8 text-theme-faint">${L.loading || 'Loading...'}</div>`;
+          feedContainer.innerHTML = ${SPINNER};
           try {
             const data = await searchBskyPosts(topic);
             const posts = (data.posts || []).map(p => normalizeBskyPost({ post: p }));
@@ -1574,7 +1580,7 @@ const sl = labels.social;
     isLoading = true;
     const query = document.getElementById('discover-search-input')?.value.trim() || '';
     if (!append) {
-      feedContainer.innerHTML = `<div class="text-center py-8 text-theme-faint">${L.loading || 'Loading...'}</div>`;
+      feedContainer.innerHTML = ${SPINNER};
     }
 
     try {
@@ -1618,7 +1624,7 @@ const sl = labels.social;
     isLoading = true;
     const query = document.getElementById('discover-search-input')?.value.trim() || '';
     if (!append) {
-      feedContainer.innerHTML = `<div class="text-center py-8 text-theme-faint">${L.loading || 'Loading...'}</div>`;
+      feedContainer.innerHTML = ${SPINNER};
     }
 
     try {
@@ -1651,7 +1657,7 @@ const sl = labels.social;
     isLoading = true;
     if (!append) {
       bskyCursor = null;
-      feedContainer.innerHTML = `<div class="text-center py-8 text-theme-faint">${L.loading || 'Loading...'}</div>`;
+      feedContainer.innerHTML = ${SPINNER};
     }
 
     try {
@@ -1721,7 +1727,7 @@ const sl = labels.social;
     if (!query) return;
     if (isLoading) return;
     isLoading = true;
-    if (!append) feedContainer.innerHTML = `<div class="text-center py-8 text-theme-faint">${L.loading || 'Loading...'}</div>`;
+    if (!append) feedContainer.innerHTML = ${SPINNER};
 
     try {
       if (currentSearchType === 'posts') {
@@ -3145,7 +3151,7 @@ const sl = labels.social;
     scrollSentinel.classList.add('hidden');
 
     if (!append) {
-      feedContainer.innerHTML = `<div class="text-center py-8 text-theme-faint">${L.loading || 'Loading...'}</div>`;
+      feedContainer.innerHTML = ${SPINNER};
     }
 
     try {
