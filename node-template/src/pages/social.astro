@@ -1053,6 +1053,9 @@ const sl = labels.social;
               <button class="bsky-like-btn flex items-center gap-1 px-2 py-1 rounded hover:bg-theme-surface-hover transition ${liked ? 'text-red-400' : ''}" data-uri="${escapeHtml(post.uri)}" data-cid="${escapeHtml(post.cid)}">
                 ${liked ? ICON.heartFill : ICON.heart} <span class="like-count">${post.likeCount}</span>
               </button>
+              <button class="bsky-squad-btn flex items-center gap-1 px-2 py-1 rounded hover:bg-theme-surface-hover transition" data-handle="${escapeHtml(post.author.handle)}" title="Add to Squad">
+                ${ICON.squad}
+              </button>
               <div class="ml-auto flex items-center gap-3">
                 <button class="bsky-bookmark-btn flex items-center gap-1 px-2 py-1 rounded hover:bg-theme-surface-hover transition ${myBookmarks[post.uri] ? 'text-blue-400' : ''}" data-uri="${escapeHtml(post.uri)}" data-cid="${escapeHtml(post.cid)}" data-text="${escapeHtml(post.text || '')}">
                   ${myBookmarks[post.uri] ? ICON.bookmarkFill : ICON.bookmark}
@@ -2724,6 +2727,11 @@ const sl = labels.social;
         const state = data.info;
         if (state === 1 || state === 3) {
           ytSharedIframe._userActivated = true;
+          // Auto-unmute after playback starts (muted autoplay bypasses pre-roll ads)
+          if (state === 1 && !ytSharedIframe._unmuted) {
+            ytSharedIframe._unmuted = true;
+            setTimeout(() => { ytSendCommand('unMute'); ytSendCommand('setVolume', [100]); }, 1500);
+          }
         } else if (state === 2 || state === 0) {
           ytSharedIframe._userActivated = false;
         }
@@ -2857,13 +2865,17 @@ const sl = labels.social;
     // Load video: first time sets src; subsequent use postMessage (no reload, no ads)
     if (!iframe._firstLoaded) {
       iframe._firstLoaded = true;
+      iframe._unmuted = false;
       ytApiReady = false;
       window.__ytApiReady = false;
       ytPendingVideoId = null;
       window.__ytPendingVideoId = null;
-      iframe.src = `https://www.youtube-nocookie.com/embed/${videoId}?enablejsapi=1&autoplay=1&rel=0&modestbranding=1&origin=${encodeURIComponent(ytOrigin)}`;
+      iframe.src = `https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=1&mute=1&rel=0&modestbranding=1&origin=${encodeURIComponent(ytOrigin)}`;
       iframe.addEventListener('load', () => { setTimeout(ytHandshake, 300); }, { once: true });
     } else if (ytApiReady) {
+      // Mute before loading next video to bypass pre-roll ads, then auto-unmute on play
+      iframe._unmuted = false;
+      ytSendCommand('mute');
       ytSendCommand('loadVideoById', [videoId]);
     } else {
       ytPendingVideoId = videoId;
