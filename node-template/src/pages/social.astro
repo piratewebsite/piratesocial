@@ -8,26 +8,26 @@ const sl = labels.social;
 <BaseLayout title="Social">
   <div class="mx-auto max-w-3xl">
     <div class="sticky top-[41px] md:top-[57px] z-30 -mx-4 px-3 py-2 md:px-4 md:py-4 mb-4 md:mb-8 flex items-center justify-center bg-theme-bg/95 backdrop-blur supports-[backdrop-filter]:bg-theme-bg/80 border-b border-theme-border">
-      <div class="flex gap-1 md:gap-2 flex-wrap justify-center">
+      <div class="flex gap-1 md:gap-2 flex-wrap justify-center" role="tablist" aria-label="Social sections">
         <select id="tab-feeds" class="rounded bg-theme-input-bg px-2 py-1 text-xs md:px-3 md:py-1.5 md:text-sm hover:bg-theme-surface-hover transition cursor-pointer" style="appearance:none;-webkit-appearance:none;background-image:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23999%22 stroke-width=%222%22><polyline points=%226 9 12 15 18 9%22/></svg>');background-repeat:no-repeat;background-position:right 6px center;padding-right:20px">
           <option value="" disabled selected>Feeds</option>
         </select>
-        <button id="tab-timeline" class="rounded bg-theme-input-bg px-2 py-1 text-xs md:px-3 md:py-1.5 md:text-sm hover:bg-theme-surface-hover transition active-tab" aria-current="true">
+        <button id="tab-timeline" role="tab" aria-selected="true" class="rounded bg-theme-input-bg px-2 py-1 text-xs md:px-3 md:py-1.5 md:text-sm hover:bg-theme-surface-hover transition active-tab" aria-current="true" tabindex="-1">
           {sl.tabTimeline}
         </button>
-        <button id="tab-discover" class="rounded bg-theme-input-bg px-2 py-1 text-xs md:px-3 md:py-1.5 md:text-sm hover:bg-theme-surface-hover transition">
+        <button id="tab-discover" role="tab" aria-selected="false" class="rounded bg-theme-input-bg px-2 py-1 text-xs md:px-3 md:py-1.5 md:text-sm hover:bg-theme-surface-hover transition">
           {sl.tabDiscover}
         </button>
-        <button id="tab-squads" class="rounded bg-theme-input-bg px-2 py-1 text-xs md:px-3 md:py-1.5 md:text-sm hover:bg-theme-surface-hover transition">
+        <button id="tab-squads" role="tab" aria-selected="false" class="rounded bg-theme-input-bg px-2 py-1 text-xs md:px-3 md:py-1.5 md:text-sm hover:bg-theme-surface-hover transition">
           {sl.tabSquads}
         </button>
-        <button id="tab-posts" class="rounded bg-theme-input-bg px-2 py-1 text-xs md:px-3 md:py-1.5 md:text-sm hover:bg-theme-surface-hover transition">
+        <button id="tab-posts" role="tab" aria-selected="false" class="rounded bg-theme-input-bg px-2 py-1 text-xs md:px-3 md:py-1.5 md:text-sm hover:bg-theme-surface-hover transition">
           Posts
         </button>
-        <button id="tab-youtube" class="rounded bg-theme-input-bg px-2 py-1 text-xs md:px-3 md:py-1.5 md:text-sm hover:bg-theme-surface-hover transition">
+        <button id="tab-youtube" role="tab" aria-selected="false" class="rounded bg-theme-input-bg px-2 py-1 text-xs md:px-3 md:py-1.5 md:text-sm hover:bg-theme-surface-hover transition">
           {sl.tabYouTube}
         </button>
-        <button id="tab-rss" class="rounded bg-theme-input-bg px-2 py-1 text-xs md:px-3 md:py-1.5 md:text-sm hover:bg-theme-surface-hover transition">
+        <button id="tab-rss" role="tab" aria-selected="false" class="rounded bg-theme-input-bg px-2 py-1 text-xs md:px-3 md:py-1.5 md:text-sm hover:bg-theme-surface-hover transition">
           RSS
         </button>
       </div>
@@ -35,7 +35,7 @@ const sl = labels.social;
 
     <!-- Filter pills (shown for Feed tab) -->
     <div id="feed-filters" class="flex gap-1.5 flex-wrap mb-4">
-      <button class="filter-pill active-pill rounded-full bg-theme-input-bg px-3 py-1 text-xs hover:bg-theme-surface-hover transition" data-filter="all" aria-current="true">All</button>
+      <button class="filter-pill active-pill rounded-full bg-theme-input-bg px-3 py-1 text-xs hover:bg-theme-surface-hover transition" data-filter="all" aria-current="true" tabindex="-1">All</button>
       <button class="filter-pill rounded-full bg-theme-input-bg px-3 py-1 text-xs hover:bg-theme-surface-hover transition" data-filter="no-reposts">No Reposts</button>
       <button class="filter-pill rounded-full bg-theme-input-bg px-3 py-1 text-xs hover:bg-theme-surface-hover transition" data-filter="images">Images</button>
       <button class="filter-pill rounded-full bg-theme-input-bg px-3 py-1 text-xs hover:bg-theme-surface-hover transition" data-filter="videos">Videos</button>
@@ -47,7 +47,7 @@ const sl = labels.social;
 
     <!-- Discover sub-tabs (shown for Discover tab) -->
     <div id="discover-pills" class="hidden flex gap-1.5 flex-wrap mb-4">
-      <button class="discover-pill active-pill rounded-full bg-theme-input-bg px-3 py-1 text-xs hover:bg-theme-surface-hover transition" data-sub="trending" aria-current="true">Trending</button>
+      <button class="discover-pill active-pill rounded-full bg-theme-input-bg px-3 py-1 text-xs hover:bg-theme-surface-hover transition" data-sub="trending" aria-current="true" tabindex="-1">Trending</button>
       <button class="discover-pill rounded-full bg-theme-input-bg px-3 py-1 text-xs hover:bg-theme-surface-hover transition" data-sub="people">People</button>
       <button class="discover-pill rounded-full bg-theme-input-bg px-3 py-1 text-xs hover:bg-theme-surface-hover transition" data-sub="feeds">Custom Feeds</button>
     </div>
@@ -1196,12 +1196,21 @@ const sl = labels.social;
   }
 
   // --- Tab switching ---
+  function setActiveTab(activeBtn) {
+    document.querySelectorAll('[id^="tab-"]:not(#tab-feeds)').forEach(b => {
+      b.classList.remove('active-tab', 'bg-theme-surface-hover');
+      b.removeAttribute('aria-current');
+      b.setAttribute('aria-selected', 'false');
+      b.removeAttribute('tabindex');
+    });
+    activeBtn.classList.add('active-tab', 'bg-theme-surface-hover');
+    activeBtn.setAttribute('aria-current', 'true');
+    activeBtn.setAttribute('aria-selected', 'true');
+    activeBtn.setAttribute('tabindex', '-1');
+  }
   document.querySelectorAll('[id^="tab-"]:not(#tab-feeds)').forEach(btn => {
     btn.addEventListener('click', () => {
-      document.querySelector('.active-tab')?.classList.remove('active-tab', 'bg-theme-surface-hover');
-      document.querySelector('[id^="tab-"][aria-current]')?.removeAttribute('aria-current');
-      btn.classList.add('active-tab', 'bg-theme-surface-hover');
-      btn.setAttribute('aria-current', 'true');
+      setActiveTab(btn);
       document.getElementById('tab-feeds').value = '';
       currentTab = btn.id.replace('tab-', '');
       resetPagination();
@@ -1229,8 +1238,12 @@ const sl = labels.social;
     const uri = feedsDropdown.value;
     const feed = subscribedFeeds.find(f => f.uri === uri);
     if (!uri || !feed) return;
-    document.querySelector('.active-tab')?.classList.remove('active-tab', 'bg-theme-surface-hover');
-    document.querySelector('[id^="tab-"][aria-current]')?.removeAttribute('aria-current');
+    document.querySelectorAll('[id^="tab-"]:not(#tab-feeds)').forEach(b => {
+      b.classList.remove('active-tab', 'bg-theme-surface-hover');
+      b.removeAttribute('aria-current');
+      b.setAttribute('aria-selected', 'false');
+      b.removeAttribute('tabindex');
+    });
     currentTab = 'feeds';
     resetPagination();
     updateUI();
@@ -1268,12 +1281,19 @@ const sl = labels.social;
   }
 
   // --- Filter pills ---
+  function setActivePill(group, activeBtn) {
+    document.querySelectorAll(group).forEach(b => {
+      b.classList.remove('active-pill', 'bg-theme-surface-hover');
+      b.removeAttribute('aria-current');
+      b.removeAttribute('tabindex');
+    });
+    activeBtn.classList.add('active-pill', 'bg-theme-surface-hover');
+    activeBtn.setAttribute('aria-current', 'true');
+    activeBtn.setAttribute('tabindex', '-1');
+  }
   document.querySelectorAll('.filter-pill').forEach(btn => {
     btn.addEventListener('click', () => {
-      document.querySelector('.filter-pill.active-pill')?.classList.remove('active-pill', 'bg-theme-surface-hover');
-      document.querySelector('.filter-pill[aria-current]')?.removeAttribute('aria-current');
-      btn.classList.add('active-pill', 'bg-theme-surface-hover');
-      btn.setAttribute('aria-current', 'true');
+      setActivePill('.filter-pill', btn);
       currentFilter = btn.dataset.filter;
       resetPagination();
       loadFeedTab();
@@ -1283,10 +1303,7 @@ const sl = labels.social;
   // --- Discover pills ---
   document.querySelectorAll('.discover-pill').forEach(btn => {
     btn.addEventListener('click', () => {
-      document.querySelector('.discover-pill.active-pill')?.classList.remove('active-pill', 'bg-theme-surface-hover');
-      document.querySelector('.discover-pill[aria-current]')?.removeAttribute('aria-current');
-      btn.classList.add('active-pill', 'bg-theme-surface-hover');
-      btn.setAttribute('aria-current', 'true');
+      setActivePill('.discover-pill', btn);
       currentDiscoverSub = btn.dataset.sub;
       const searchInput = document.getElementById('discover-search-input');
       if (searchInput) searchInput.value = '';
@@ -1308,10 +1325,7 @@ const sl = labels.social;
   // --- Search ---
   document.querySelectorAll('.search-type-pill').forEach(btn => {
     btn.addEventListener('click', () => {
-      document.querySelector('.search-type-pill.active-pill')?.classList.remove('active-pill', 'bg-theme-surface-hover');
-      document.querySelector('.search-type-pill[aria-current]')?.removeAttribute('aria-current');
-      btn.classList.add('active-pill', 'bg-theme-surface-hover');
-      btn.setAttribute('aria-current', 'true');
+      setActivePill('.search-type-pill', btn);
       currentSearchType = btn.dataset.type;
       resetPagination();
       const q = document.getElementById('search-input').value.trim();
@@ -1696,10 +1710,7 @@ const sl = labels.social;
           resetPagination();
           if (currentTab === 'feeds') {
             // Go back to timeline
-            document.querySelector('.active-tab')?.classList.remove('active-tab', 'bg-theme-surface-hover');
-            document.querySelector('[id^="tab-"][aria-current]')?.removeAttribute('aria-current');
-            document.getElementById('tab-timeline').classList.add('active-tab', 'bg-theme-surface-hover');
-            document.getElementById('tab-timeline').setAttribute('aria-current', 'true');
+            setActiveTab(document.getElementById('tab-timeline'));
             feedsDropdown.value = '';
             currentTab = 'timeline';
             updateUI();
@@ -3483,7 +3494,9 @@ const sl = labels.social;
     color: var(--ps-text);
     font-weight: 500;
     cursor: default;
-    pointer-events: none;
+  }
+  .active-tab:hover, .active-pill:hover {
+    background-color: var(--ps-surface-hover);
   }
   @keyframes spin { to { transform: rotate(360deg); } }
   .animate-spin { animation: spin .6s linear infinite; }
