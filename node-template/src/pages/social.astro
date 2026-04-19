@@ -677,8 +677,9 @@ const sl = labels.social;
     if (filter === 'no-reposts') return !post.repostBy;
     const embed = post.embedData || {};
     if (filter === 'images') return !!embed.images?.length || !!post.imageUrl;
-    if (filter === 'videos') return !!embed.video?.playlist;
+    if (filter === 'videos') return !!embed.video?.playlist || post.type === 'youtube';
     if (filter === 'youtube') {
+      if (post.type === 'youtube') return true;
       const ytUri = embed.external?.uri;
       return ytUri && getYouTubeId(ytUri);
     }
@@ -839,6 +840,35 @@ const sl = labels.social;
                 <button class="share-btn px-2 py-1 rounded hover:bg-theme-surface-hover transition" data-url="${escapeHtml(post.link)}" data-title="${escapeHtml(post.text?.slice(0, 100) || '')}" title="Share">${ICON.share}</button>
                 <a href="${escapeHtml(post.link)}" target="_blank" rel="noopener noreferrer" class="px-2 py-1 rounded hover:bg-theme-surface-hover hover:text-theme-text transition" title="View on Bluesky">${ICON.butterfly}</a>
               </div>
+            </div>
+          </div>
+        </article>`;
+    }
+
+    // YouTube subscription post — plays inline via shared player
+    if (post.type === 'youtube') {
+      return `
+        <article class="rounded-lg border border-theme-card-border bg-theme-card overflow-hidden">
+          <div class="aspect-video bg-black yt-placeholder" data-yt-id="${escapeHtml(post.videoId)}" style="cursor:pointer;position:relative">
+            <img src="${escapeHtml(post.thumbnail)}" class="w-full h-full object-cover" alt="" loading="lazy" onerror="this.style.display='none'" />
+            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">
+              <svg width="68" height="48" viewBox="0 0 68 48"><path d="M66.5 7.7s-.7-4.7-2.8-6.8C60.7-2 57.2-2 55.6-2.2 46.5-3 34-3 34-3s-12.5 0-21.6.8C10.8-2 7.3-2 4.3.9 2.2 3 1.5 7.7 1.5 7.7S.8 13.2.8 18.7v5.1c0 5.5.7 11 .7 11s.7 4.7 2.8 6.8c3 2.9 6.9 2.8 8.6 3.1 6.3.6 26.1.8 26.1.8s12.5 0 21.6-.8c1.6-.2 5.1-.2 8.1-3.1 2.1-2.1 2.8-6.8 2.8-6.8s.7-5.5.7-11v-5.1c0-5.5-.7-11-.7-11z" fill="red"/><path d="M27 33V13l18 10z" fill="#fff"/></svg>
+            </div>
+          </div>
+          <div class="p-4">
+            <div class="flex items-center gap-2 mb-2">
+              <div class="h-8 w-8 rounded bg-red-600 flex items-center justify-center text-white text-xs font-bold">▶</div>
+              <div>
+                <span class="font-medium text-sm">${escapeHtml(post.author.displayName)}</span>
+                <span class="ml-2 text-xs px-1.5 py-0.5 rounded bg-red-600/20 text-red-400">YouTube</span>
+                <time class="block text-xs text-theme-faint">${timeAgo(post.pubDate)}</time>
+              </div>
+            </div>
+            <h3 class="font-semibold text-sm">${escapeHtml(post.title)}</h3>
+            ${post.text ? `<p class="mt-1 text-sm text-theme-muted line-clamp-2">${escapeHtml(post.text)}</p>` : ''}
+            <div class="mt-3 flex items-center gap-4 text-sm text-theme-muted">
+              <a href="${escapeHtml(post.link)}" target="_blank" rel="noopener noreferrer" class="flex items-center gap-1 hover:text-theme-text transition">${ICON.externalLink} YouTube</a>
+              <button class="share-btn flex items-center gap-1 hover:text-green-500 transition" data-url="${escapeHtml(post.link)}" data-title="${escapeHtml(post.title || '')}">${ICON.share} Share</button>
             </div>
           </div>
         </article>`;
@@ -1328,6 +1358,40 @@ const sl = labels.social;
           if (!pirateData.hasMore && !bskyCursor) hasMore = false;
         } catch (err) {
           console.error('[PS] Pirate timeline error:', err.message);
+        }
+      }
+
+      // Fetch YouTube subscription videos (channels with feedEnabled)
+      if (token && !append) {
+        try {
+          if (!youtubeChannels.length) {
+            const ytRes = await fetchTimeout(`${hubUrl}/api/youtube/channels`, { headers: { Authorization: `Bearer ${token}` } });
+            if (ytRes.ok) youtubeChannels = await ytRes.json();
+          }
+          const feedChannels = youtubeChannels.filter(ch => ch.feedEnabled);
+          const ytFetches = feedChannels.map(ch =>
+            fetchTimeout(`${hubUrl}/api/youtube/feed?channelId=${encodeURIComponent(ch.channelId)}&max=${ch.videoCount || 5}`)
+              .then(r => r.ok ? r.json() : { videos: [] })
+              .catch(() => ({ videos: [] }))
+          );
+          const ytResults = await Promise.all(ytFetches);
+          for (const { videos } of ytResults) {
+            for (const v of (videos || [])) {
+              allPosts.push({
+                type: 'youtube',
+                id: `yt-${v.videoId}`,
+                author: { handle: v.channelTitle, displayName: v.channelTitle, avatar: '', isYouTube: true },
+                text: v.description || '',
+                title: v.title,
+                pubDate: v.publishedAt,
+                videoId: v.videoId,
+                thumbnail: v.thumbnail,
+                link: `https://youtube.com/watch?v=${v.videoId}`,
+              });
+            }
+          }
+        } catch (err) {
+          console.error('[PS] YouTube feed error:', err.message);
         }
       }
 
@@ -2079,7 +2143,8 @@ const sl = labels.social;
         ytWrapper.style.top = rect.top + 'px';
         ytWrapper.style.width = rect.width + 'px';
         ytWrapper.style.height = rect.height + 'px';
-        ytWrapper.style.display = '';
+        ytWrapper.style.opacity = '1';
+        ytWrapper.style.pointerEvents = 'auto';
         ytWrapper.style.zIndex = '10000';
         ytPositionRAF = requestAnimationFrame(updateMiniPos);
       }
@@ -2205,21 +2270,27 @@ const sl = labels.social;
   // Moving iframes between DOM parents causes browser to reload them (= new ads).
   // Instead we keep the iframe in a permanent fixed-position wrapper and reposition
   // it visually over whichever container is active.
+  //
+  // IMPORTANT: Store on window.* because this script has data-astro-rerun which
+  // re-executes on every navigation, resetting all let/const variables.
+  // Without window.*, the iframe reference is lost and a new one is created (= ads).
   // ============================================================
-  let ytSharedIframe = null;
-  let ytWrapper = null; // fixed-position wrapper, always in document.body
-  let ytActiveContainer = null; // which .aspect-video is logically active
-  let ytApiReady = false;
-  let ytPendingVideoId = null;
+  let ytSharedIframe = window.__ytSharedIframe || null;
+  let ytWrapper = window.__ytWrapper || null;
+  let ytActiveContainer = window.__ytActiveContainer || null;
+  let ytApiReady = window.__ytApiReady || false;
+  let ytPendingVideoId = window.__ytPendingVideoId || null;
   const ytOrigin = window.location.origin;
-  let ytPositionRAF = null;
+  let ytPositionRAF = window.__ytPositionRAF || null;
 
   function getOrCreateYTIframe() {
     if (ytSharedIframe) return ytSharedIframe;
 
     // Create permanent wrapper — stays in body forever
+    // Starts as 1x1 invisible (NOT display:none) so YouTube autoplay works during pre-warm.
+    // display:none blocks autoplay which prevents the ad slot from being consumed.
     ytWrapper = document.createElement('div');
-    ytWrapper.style.cssText = 'position:fixed;z-index:40;pointer-events:auto;display:none;overflow:hidden;border-radius:0';
+    ytWrapper.style.cssText = 'position:fixed;z-index:-1;pointer-events:none;overflow:hidden;border-radius:0;width:1px;height:1px;opacity:0';
     document.body.appendChild(ytWrapper);
 
     ytSharedIframe = document.createElement('iframe');
@@ -2228,6 +2299,10 @@ const sl = labels.social;
     ytSharedIframe.setAttribute('allowfullscreen', '');
     ytSharedIframe.style.cssText = 'width:100%;height:100%;border:none';
     ytWrapper.appendChild(ytSharedIframe);
+
+    // Persist to window so data-astro-rerun doesn't lose them
+    window.__ytSharedIframe = ytSharedIframe;
+    window.__ytWrapper = ytWrapper;
 
     // Listen for YouTube player postMessage events
     window.addEventListener('message', (e) => {
@@ -2246,9 +2321,11 @@ const sl = labels.social;
 
       if (data.event === 'initialDelivery' || data.event === 'onReady') {
         ytApiReady = true;
+        window.__ytApiReady = true;
         if (ytPendingVideoId) {
           const vid = ytPendingVideoId;
           ytPendingVideoId = null;
+          window.__ytPendingVideoId = null;
           ytSendCommand('loadVideoById', [vid]);
         }
       }
@@ -2272,7 +2349,7 @@ const sl = labels.social;
     ytSendCommand('addEventListener', ['onStateChange']);
   }
 
-  // Position the fixed wrapper over a target element
+  // Position the fixed wrapper over a target element — also makes it fully visible
   function ytPositionOver(target) {
     if (!ytWrapper || !target) return;
     const rect = target.getBoundingClientRect();
@@ -2280,23 +2357,26 @@ const sl = labels.social;
     ytWrapper.style.top = rect.top + 'px';
     ytWrapper.style.width = rect.width + 'px';
     ytWrapper.style.height = rect.height + 'px';
-    ytWrapper.style.display = '';
+    ytWrapper.style.opacity = '1';
+    ytWrapper.style.zIndex = '40';
+    ytWrapper.style.pointerEvents = 'auto';
   }
 
   // Continuously reposition over the active container (handles scroll)
   function ytStartTracking() {
     ytStopTracking();
     function update() {
-      if (ytActiveContainer && ytWrapper && ytWrapper.style.display !== 'none' && !ytWrapper._miniPlayerMode) {
+      if (ytActiveContainer && ytWrapper && ytWrapper.style.opacity !== '0' && !ytWrapper._miniPlayerMode) {
         ytPositionOver(ytActiveContainer);
       }
       ytPositionRAF = requestAnimationFrame(update);
     }
     ytPositionRAF = requestAnimationFrame(update);
+    window.__ytPositionRAF = ytPositionRAF;
   }
 
   function ytStopTracking() {
-    if (ytPositionRAF) { cancelAnimationFrame(ytPositionRAF); ytPositionRAF = null; }
+    if (ytPositionRAF) { cancelAnimationFrame(ytPositionRAF); ytPositionRAF = null; window.__ytPositionRAF = null; }
   }
 
   function playYTVideo(container, videoId) {
@@ -2327,16 +2407,20 @@ const sl = labels.social;
     if (!iframe._firstLoaded) {
       iframe._firstLoaded = true;
       ytApiReady = false;
+      window.__ytApiReady = false;
       ytPendingVideoId = null;
+      window.__ytPendingVideoId = null;
       iframe.src = `https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=1&origin=${encodeURIComponent(ytOrigin)}`;
       iframe.addEventListener('load', () => { setTimeout(ytHandshake, 300); }, { once: true });
     } else if (ytApiReady) {
       ytSendCommand('loadVideoById', [videoId]);
     } else {
       ytPendingVideoId = videoId;
+      window.__ytPendingVideoId = videoId;
     }
 
     iframe._userActivated = true;
+    window.__ytActiveContainer = ytActiveContainer;
 
     // Observe this container for scroll-away behavior
     if (!container._miniPlayerObserved) {
@@ -2353,11 +2437,20 @@ const sl = labels.social;
       container.style.cursor = 'pointer';
       container.classList.add('yt-placeholder');
     }
-    if (ytActiveContainer === container) ytActiveContainer = null;
+    if (ytActiveContainer === container) {
+      ytActiveContainer = null;
+      window.__ytActiveContainer = null;
+    }
   }
 
   function hideYTWrapper() {
-    if (ytWrapper) { ytWrapper.style.display = 'none'; }
+    if (ytWrapper) {
+      ytWrapper.style.width = '1px';
+      ytWrapper.style.height = '1px';
+      ytWrapper.style.opacity = '0';
+      ytWrapper.style.zIndex = '-1';
+      ytWrapper.style.pointerEvents = 'none';
+    }
     ytStopTracking();
   }
 
@@ -2376,6 +2469,10 @@ const sl = labels.social;
         if (videoId) playYTVideo(container, videoId);
       });
     });
+    // No pre-warm iframe here — creating a second YouTube embed on the page
+    // interferes with the floating component's ad-free session and causes ads
+    // on both players. The first video click will set iframe.src (one ad),
+    // then all subsequent clicks use loadVideoById (no ads).
   }
 
   // ============================================================
@@ -2901,7 +2998,7 @@ const sl = labels.social;
           if (res.ok) {
             const { videos } = await res.json();
             container.innerHTML = videos.map(v => `
-              <a href="https://youtube.com/watch?v=${v.videoId}" target="_blank" class="group relative overflow-hidden rounded border border-theme-input-border hover:border-theme-primary transition cursor-pointer">
+              <div class="yt-placeholder group relative overflow-hidden rounded border border-theme-input-border hover:border-theme-primary transition cursor-pointer" data-yt-id="${v.videoId}">
                 <img src="${v.thumbnail}" alt="${v.title.slice(0, 50)}" class="w-full aspect-video object-cover group-hover:opacity-75 transition" />
                 <div class="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition flex items-center justify-center">
                   <div class="text-white text-2xl opacity-0 group-hover:opacity-100 transition">▶</div>
@@ -2909,8 +3006,10 @@ const sl = labels.social;
                 <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-black/0 p-2">
                   <p class="text-white text-xs font-medium line-clamp-2">${v.title}</p>
                 </div>
-              </a>`).join('');
+              </div>`).join('');
             btn.textContent = `Hide Videos (${videos.length})`;
+            // Bind click handlers to use the shared inline player
+            initYTPlaceholders();
           }
         } catch (err) {
           btn.textContent = 'Error loading';
