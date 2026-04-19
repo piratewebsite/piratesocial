@@ -52,6 +52,15 @@ const sl = labels.social;
       <button class="discover-pill rounded-full bg-theme-input-bg px-3 py-1 text-xs hover:bg-theme-surface-hover transition" data-sub="feeds">Custom Feeds</button>
     </div>
 
+    <!-- Discover search bar -->
+    <div id="discover-search-bar" class="hidden mb-4">
+      <div class="flex gap-2">
+        <input type="text" id="discover-search-input" placeholder="Search..."
+          class="flex-1 rounded bg-theme-input-bg border border-theme-input-border px-3 py-2 text-sm focus:outline-none focus:border-theme-primary" />
+        <button id="discover-search-btn" class="rounded bg-theme-primary px-4 py-2 text-sm font-medium hover:bg-theme-primary-hover transition">Search</button>
+      </div>
+    </div>
+
     <!-- Search bar (HIDDEN) -->
     <div id="search-bar" class="hidden mb-4"></div>
 
@@ -1170,6 +1179,8 @@ const sl = labels.social;
     else if (currentTab === 'feeds' && activeFeedUri) { loadCustomFeedView(activeFeedUri, activeFeedName, true); }
     else if (currentTab === 'discover' && activeFeedUri) { loadCustomFeedView(activeFeedUri, activeFeedName, true); }
     else if (currentTab === 'discover' && currentDiscoverSub === 'trending') { loadDiscoverTrending(true); }
+    else if (currentTab === 'discover' && currentDiscoverSub === 'people') { piratePage++; loadDiscoverPeople(true); }
+    else if (currentTab === 'discover' && currentDiscoverSub === 'feeds') { loadDiscoverFeeds(true); }
     else if (currentTab === 'posts') { loadPostsTab(true); }
   }
 
@@ -1222,6 +1233,13 @@ const sl = labels.social;
     filterBar.classList.toggle('hidden', currentTab !== 'timeline');
     discoverPills.classList.toggle('hidden', currentTab !== 'discover');
     rssManagement.classList.toggle('hidden', currentTab !== 'rss');
+    const discoverSearchBar = document.getElementById('discover-search-bar');
+    if (discoverSearchBar) {
+      const showSearch = currentTab === 'discover' && (currentDiscoverSub === 'people' || currentDiscoverSub === 'feeds');
+      discoverSearchBar.classList.toggle('hidden', !showSearch);
+      const input = document.getElementById('discover-search-input');
+      if (input) input.placeholder = currentDiscoverSub === 'people' ? 'Search people...' : 'Search feeds...';
+    }
     const composeBox = document.getElementById('compose-box');
     if (composeBox) composeBox.style.display = (currentTab === 'timeline' && bskySession?.accessJwt) ? '' : 'none';
   }
@@ -1252,9 +1270,21 @@ const sl = labels.social;
       document.querySelector('.discover-pill.active-pill')?.classList.remove('active-pill', 'bg-theme-surface-hover');
       btn.classList.add('active-pill', 'bg-theme-surface-hover');
       currentDiscoverSub = btn.dataset.sub;
+      const searchInput = document.getElementById('discover-search-input');
+      if (searchInput) searchInput.value = '';
+      updateUI();
       resetPagination();
       loadDiscoverTab();
     });
+  });
+
+  // --- Discover search ---
+  document.getElementById('discover-search-btn')?.addEventListener('click', () => {
+    resetPagination();
+    loadDiscoverTab();
+  });
+  document.getElementById('discover-search-input')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { resetPagination(); loadDiscoverTab(); }
   });
 
   // --- Search ---
@@ -1534,38 +1564,76 @@ const sl = labels.social;
     }
   }
 
-  async function loadDiscoverPeople() {
-    feedContainer.innerHTML = `<div class="text-center py-8 text-theme-faint">${L.loading || 'Loading...'}</div>`;
-    hasMore = false;
-    scrollSentinel.classList.add('hidden');
+  async function loadDiscoverPeople(append = false) {
+    if (isLoading) return;
+    isLoading = true;
+    const query = document.getElementById('discover-search-input')?.value.trim() || '';
+    if (!append) {
+      feedContainer.innerHTML = `<div class="text-center py-8 text-theme-faint">${L.loading || 'Loading...'}</div>`;
+    }
 
     try {
-      // Fetch Pirate Social directory
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
-      const res = await fetchTimeout(`${hubUrl}/api/directory?page=1`, { headers });
-      const data = await res.json();
-      const html = (data.users || []).map(u => renderPirateUserCard(u)).join('');
-      feedContainer.innerHTML = html || `<div class="text-center py-8 text-theme-faint">${L.noUsers || 'No users yet'}</div>`;
+      const qParam = query ? `&q=${encodeURIComponent(query)}` : '';
+
+      // Pirate Social directory
+      const pirateRes = await fetchTimeout(`${hubUrl}/api/directory?page=${piratePage}&limit=25${qParam}`, { headers });
+      const pirateData = await pirateRes.json();
+      const pirateHtml = (pirateData.users || []).map(u => renderPirateUserCard(u)).join('');
+
+      // Also search Bluesky users if we have a query
+      let bskyHtml = '';
+      if (query) {
+        try {
+          const bskyData = await searchBskyActors(query, append ? bskyCursor : null);
+          bskyCursor = bskyData.cursor || null;
+          bskyHtml = (bskyData.actors || []).map(a => renderBskyUserCard(a)).join('');
+        } catch {}
+      }
+
+      hasMore = !!pirateData.hasMore || !!bskyCursor;
+      const html = pirateHtml + bskyHtml;
+
+      if (append) {
+        feedContainer.insertAdjacentHTML('beforeend', html);
+      } else {
+        feedContainer.innerHTML = html || `<div class="text-center py-8 text-theme-faint">${query ? `No users found for "${escapeHtml(query)}"` : (L.noUsers || 'No users yet')}</div>`;
+      }
       attachAllListeners();
     } catch {
-      feedContainer.innerHTML = `<div class="text-center py-8 text-red-400">${L.failedToLoad || 'Failed to load'}</div>`;
-    } finally { isLoading = false; }
+      if (!append) feedContainer.innerHTML = `<div class="text-center py-8 text-red-400">${L.failedToLoad || 'Failed to load'}</div>`;
+    } finally {
+      isLoading = false;
+      scrollSentinel.classList.toggle('hidden', !hasMore);
+    }
   }
 
-  async function loadDiscoverFeeds() {
-    feedContainer.innerHTML = `<div class="text-center py-8 text-theme-faint">${L.loading || 'Loading...'}</div>`;
-    hasMore = false;
-    scrollSentinel.classList.add('hidden');
+  async function loadDiscoverFeeds(append = false) {
+    if (isLoading) return;
+    isLoading = true;
+    const query = document.getElementById('discover-search-input')?.value.trim() || '';
+    if (!append) {
+      feedContainer.innerHTML = `<div class="text-center py-8 text-theme-faint">${L.loading || 'Loading...'}</div>`;
+    }
 
     try {
-      const data = await searchBskyFeeds('');
+      const data = await searchBskyFeeds(query, append ? bskyCursor : null);
+      bskyCursor = data.cursor || null;
+      hasMore = !!bskyCursor;
       const feeds = data.feeds || [];
       const html = feeds.map(f => renderFeedCard(f)).join('');
-      feedContainer.innerHTML = html || `<div class="text-center py-8 text-theme-faint">No feeds found</div>`;
+      if (append) {
+        feedContainer.insertAdjacentHTML('beforeend', html);
+      } else {
+        feedContainer.innerHTML = html || `<div class="text-center py-8 text-theme-faint">${query ? `No feeds found for "${escapeHtml(query)}"` : 'No feeds found'}</div>`;
+      }
       attachAllListeners();
     } catch {
-      feedContainer.innerHTML = `<div class="text-center py-8 text-red-400">${L.failedToLoad || 'Failed to load'}</div>`;
-    } finally { isLoading = false; }
+      if (!append) feedContainer.innerHTML = `<div class="text-center py-8 text-red-400">${L.failedToLoad || 'Failed to load'}</div>`;
+    } finally {
+      isLoading = false;
+      scrollSentinel.classList.toggle('hidden', !hasMore);
+    }
   }
 
   let activeFeedUri = null;
