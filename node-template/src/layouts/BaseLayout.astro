@@ -145,9 +145,10 @@ const socialNavItems = allNavItems.filter((item: any) => socialPaths.some(p => i
           {socialNavItems.map((item: any) => {
             const href = item.url.startsWith('/') ? `${base}${item.url}` : item.url;
             const isActive = currentPath === (item.url.startsWith('/') ? `${base}${item.url}`.replace(/\/$/, '') : '');
+            const isSocialPage = item.url === '/social';
             return isActive
-              ? <span class="text-theme-text font-medium cursor-default" aria-current="page" data-auth-only hidden>{item.label}</span>
-              : <a href={href} class="text-theme-muted hover:text-theme-text transition" data-auth-only hidden>{item.label}</a>;
+              ? <span class="text-theme-text font-medium cursor-default inline-flex items-center gap-1" aria-current="page" data-auth-only hidden>{item.label}{isSocialPage && <button id="notif-bell" class="relative ml-0.5 p-0.5 text-theme-muted hover:text-theme-text transition" aria-label="Notifications" hidden><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg><span id="notif-badge" class="absolute -top-1 -right-1 min-w-[14px] h-[14px] rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center leading-none px-0.5" hidden></span></button>}</span>
+              : <a href={href} class="text-theme-muted hover:text-theme-text transition inline-flex items-center gap-1" data-auth-only hidden>{item.label}{isSocialPage && <button id="notif-bell" class="relative ml-0.5 p-0.5 text-theme-muted hover:text-theme-text transition" aria-label="Notifications" hidden><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg><span id="notif-badge" class="absolute -top-1 -right-1 min-w-[14px] h-[14px] rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center leading-none px-0.5" hidden></span></button>}</a>;
           })}
           {enableSocial && (
             currentPath === `${base}/admin`
@@ -222,7 +223,90 @@ const socialNavItems = allNavItems.filter((item: any) => socialPaths.some(p => i
         const savedToken = localStorage.getItem('ps_token');
         if (savedToken) {
           document.querySelectorAll('[data-auth-only]').forEach(el => el.removeAttribute('hidden'));
+
+          // Show notification bell and poll for unread count
+          const bell = document.getElementById('notif-bell');
+          const badge = document.getElementById('notif-badge');
+          if (bell) {
+            bell.removeAttribute('hidden');
+
+            // Click bell: navigate to social page with notifications tab
+            bell.addEventListener('click', (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              localStorage.setItem('ps_open_tab', 'notifications');
+              window.location.href = (window.__PS_BASE || '') + '/social';
+            });
+
+            // Poll unread count
+            async function pollUnread() {
+              try {
+                const res = await fetch(`${hubUrl}/api/notifications/bluesky/unread`, {
+                  headers: { Authorization: `Bearer ${savedToken}` },
+                });
+                if (res.ok) {
+                  const data = await res.json();
+                  const count = data.count || 0;
+                  if (count > 0) {
+                    badge.textContent = count > 99 ? '99+' : count;
+                    badge.removeAttribute('hidden');
+                  } else {
+                    badge.setAttribute('hidden', '');
+                  }
+                  // Update app badge if supported
+                  if (navigator.setAppBadge) {
+                    if (count > 0) navigator.setAppBadge(count);
+                    else navigator.clearAppBadge?.();
+                  }
+                }
+              } catch {}
+            }
+            pollUnread();
+            setInterval(pollUnread, 60000); // Poll every 60s
+
+            // Also listen for SSE updates for real-time badge
+            try {
+              const userId = JSON.parse(atob(savedToken.split('.')[1])).userId;
+              if (userId) {
+                const es = new EventSource(`${hubUrl}/api/stream?userId=${encodeURIComponent(userId)}`);
+                es.onmessage = (event) => {
+                  try {
+                    const msg = JSON.parse(event.data);
+                    if (msg.type === 'notification' || msg.type === 'nudge') {
+                      pollUnread();
+                    }
+                  } catch {}
+                };
+              }
+            } catch {}
+          }
         }
+      }
+
+      // Register service worker for push notifications
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
+        // Listen for push messages forwarded from SW
+        navigator.serviceWorker.addEventListener('message', (event) => {
+          if (event.data?.type === 'PUSH_NOTIFICATION') {
+            // Refresh badge count
+            const bell = document.getElementById('notif-bell');
+            if (bell) {
+              const savedTkn = localStorage.getItem('ps_token');
+              if (savedTkn) {
+                fetch(`${hubUrl}/api/notifications/bluesky/unread`, {
+                  headers: { Authorization: `Bearer ${savedTkn}` },
+                }).then(r => r.json()).then(d => {
+                  const badge = document.getElementById('notif-badge');
+                  if (badge && d.count > 0) {
+                    badge.textContent = d.count > 99 ? '99+' : d.count;
+                    badge.removeAttribute('hidden');
+                  }
+                }).catch(() => {});
+              }
+            }
+          }
+        });
       }
 
       // Theme toggle
