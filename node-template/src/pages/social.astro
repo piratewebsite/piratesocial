@@ -73,8 +73,18 @@ const sl = labels.social;
       <div id="compose-link-preview"></div>
       <div class="flex items-center justify-between mt-2">
         <span id="compose-count" class="text-xs text-theme-faint">0/300</span>
-        <button id="compose-send" style="background:var(--ps-accent,#3b82f6);color:#fff;border:none;border-radius:.375rem;padding:.375rem 1rem;font-size:.875rem;cursor:pointer;opacity:.5" disabled>Post</button>
+        <div class="flex items-center gap-2">
+          <div id="schedule-controls" class="flex items-center gap-1">
+            <button id="schedule-toggle" type="button" title="Schedule post" class="p-1.5 rounded hover:bg-theme-surface-hover transition text-theme-muted hover:text-theme-text" style="line-height:0">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </button>
+            <input id="schedule-datetime" type="datetime-local" class="hidden rounded bg-theme-input-bg border border-theme-input-border px-2 py-1 text-xs focus:outline-none focus:border-theme-primary" />
+            <button id="schedule-clear" type="button" class="hidden text-xs text-theme-faint hover:text-theme-text">✕</button>
+          </div>
+          <button id="compose-send" style="background:var(--ps-accent,#3b82f6);color:#fff;border:none;border-radius:.375rem;padding:.375rem 1rem;font-size:.875rem;cursor:pointer;opacity:.5" disabled>Post</button>
+        </div>
       </div>
+      <div id="scheduled-posts-list" class="mt-3 hidden border-t border-theme-border pt-3"></div>
     </div>
 
     <!-- Main content -->
@@ -2922,26 +2932,136 @@ const sl = labels.social;
     });
     composeSend.addEventListener('click', async () => {
       const text = composeInput.value.trim();
-      if (!text || !bskySession?.accessJwt) return;
-      composeSend.disabled = true;
-      composeSend.textContent = 'Posting...';
-      try {
-        await createBskyRecord(text, null, getComposeCard());
-        composeInput.value = '';
-        composeCount.textContent = '0/300';
-        composeLinkPreview.innerHTML = '';
-        composeSend.textContent = 'Post';
+      if (!text) return;
+
+      const scheduleDatetime = document.getElementById('schedule-datetime');
+      const scheduleValue = scheduleDatetime && !scheduleDatetime.classList.contains('hidden') ? scheduleDatetime.value : '';
+
+      if (scheduleValue) {
+        // Schedule via hub
+        if (!token) return;
         composeSend.disabled = true;
-        composeSend.style.opacity = '.5';
-        resetPagination();
-        loadFeedTab();
-      } catch (err) {
-        console.error('Post error:', err);
-        composeSend.textContent = 'Failed — Retry';
-        composeSend.disabled = false;
-        composeSend.style.opacity = '1';
+        composeSend.textContent = 'Scheduling...';
+        try {
+          const res = await fetch(`${hubUrl}/api/scheduled`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ text, scheduledAt: new Date(scheduleValue).toISOString() }),
+          });
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.error || 'Schedule failed');
+          }
+          composeInput.value = '';
+          composeCount.textContent = '0/300';
+          composeLinkPreview.innerHTML = '';
+          composeSend.textContent = 'Post';
+          composeSend.disabled = true;
+          composeSend.style.opacity = '.5';
+          // Clear schedule UI
+          scheduleDatetime.value = '';
+          scheduleDatetime.classList.add('hidden');
+          document.getElementById('schedule-clear').classList.add('hidden');
+          composeSend.textContent = 'Post';
+          loadScheduledPosts();
+        } catch (err) {
+          console.error('Schedule error:', err);
+          composeSend.textContent = 'Failed — Retry';
+          composeSend.disabled = false;
+          composeSend.style.opacity = '1';
+        }
+      } else {
+        // Post immediately via Bluesky
+        if (!bskySession?.accessJwt) return;
+        composeSend.disabled = true;
+        composeSend.textContent = 'Posting...';
+        try {
+          await createBskyRecord(text, null, getComposeCard());
+          composeInput.value = '';
+          composeCount.textContent = '0/300';
+          composeLinkPreview.innerHTML = '';
+          composeSend.textContent = 'Post';
+          composeSend.disabled = true;
+          composeSend.style.opacity = '.5';
+          resetPagination();
+          loadFeedTab();
+        } catch (err) {
+          console.error('Post error:', err);
+          composeSend.textContent = 'Failed — Retry';
+          composeSend.disabled = false;
+          composeSend.style.opacity = '1';
+        }
       }
     });
+
+    // Schedule toggle
+    const scheduleToggle = document.getElementById('schedule-toggle');
+    const scheduleDatetimeInput = document.getElementById('schedule-datetime');
+    const scheduleClear = document.getElementById('schedule-clear');
+    if (scheduleToggle && scheduleDatetimeInput) {
+      scheduleToggle.addEventListener('click', () => {
+        const showing = !scheduleDatetimeInput.classList.contains('hidden');
+        if (showing) {
+          scheduleDatetimeInput.classList.add('hidden');
+          scheduleClear.classList.add('hidden');
+          scheduleDatetimeInput.value = '';
+          composeSend.textContent = 'Post';
+        } else {
+          // Default to 1 hour from now
+          const d = new Date(Date.now() + 3600_000);
+          d.setMinutes(Math.ceil(d.getMinutes() / 5) * 5, 0, 0);
+          scheduleDatetimeInput.value = d.toISOString().slice(0, 16);
+          scheduleDatetimeInput.classList.remove('hidden');
+          scheduleClear.classList.remove('hidden');
+          composeSend.textContent = 'Schedule';
+        }
+      });
+      scheduleDatetimeInput.addEventListener('change', () => {
+        composeSend.textContent = scheduleDatetimeInput.value ? 'Schedule' : 'Post';
+      });
+      scheduleClear.addEventListener('click', () => {
+        scheduleDatetimeInput.value = '';
+        scheduleDatetimeInput.classList.add('hidden');
+        scheduleClear.classList.add('hidden');
+        composeSend.textContent = 'Post';
+      });
+    }
+
+    // Load and display scheduled posts
+    async function loadScheduledPosts() {
+      if (!token) return;
+      const container = document.getElementById('scheduled-posts-list');
+      if (!container) return;
+      try {
+        const res = await fetch(`${hubUrl}/api/scheduled?status=pending`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) return;
+        const posts = await res.json();
+        if (posts.length === 0) { container.classList.add('hidden'); container.innerHTML = ''; return; }
+        container.classList.remove('hidden');
+        container.innerHTML = `<div class="text-xs font-medium text-theme-muted mb-2">Scheduled (${posts.length})</div>` +
+          posts.map(p => `<div class="flex items-start justify-between gap-2 py-2 border-b border-theme-border last:border-0 text-xs">
+            <div class="flex-1 min-w-0">
+              <div class="text-theme-text truncate">${escapeHtml(p.text)}</div>
+              <div class="text-theme-faint mt-0.5">${new Date(p.scheduledAt).toLocaleString()}</div>
+            </div>
+            <button class="cancel-scheduled text-theme-faint hover:text-red-400 transition flex-shrink-0" data-id="${p.id}" title="Cancel">✕</button>
+          </div>`).join('');
+        container.querySelectorAll('.cancel-scheduled').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            if (!confirm('Cancel this scheduled post?')) return;
+            await fetch(`${hubUrl}/api/scheduled/${btn.dataset.id}`, {
+              method: 'DELETE',
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            loadScheduledPosts();
+          });
+        });
+      } catch {}
+    }
+    // Load on init
+    loadScheduledPosts();
   }
 
   // ============================================================
