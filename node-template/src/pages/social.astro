@@ -74,18 +74,24 @@ const sl = labels.social;
       <div class="flex items-center justify-between mt-2">
         <span id="compose-count" class="text-xs text-theme-faint">0/300</span>
         <div class="flex items-center gap-2">
-          <div id="schedule-controls" class="flex items-center gap-1">
-            <button id="schedule-toggle" type="button" title="Schedule post" class="p-1.5 rounded hover:bg-theme-surface-hover transition text-theme-muted hover:text-theme-text" style="line-height:0">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            </button>
+          <div id="delay-controls" class="flex items-center gap-1">
+            <select id="post-delay" class="rounded bg-theme-input-bg border border-theme-input-border px-2 py-1 text-xs focus:outline-none focus:border-theme-primary text-theme-text" style="min-width:5rem">
+              <option value="0">Post Now</option>
+              <option value="60" selected>1 min</option>
+              <option value="180">3 min</option>
+              <option value="300">5 min</option>
+              <option value="custom">Schedule...</option>
+            </select>
             <input id="schedule-datetime" type="datetime-local" class="hidden rounded bg-theme-input-bg border border-theme-input-border px-2 py-1 text-xs focus:outline-none focus:border-theme-primary" />
-            <button id="schedule-clear" type="button" class="hidden text-xs text-theme-faint hover:text-theme-text">✕</button>
           </div>
           <button id="compose-send" style="background:var(--ps-accent,#3b82f6);color:#fff;border:none;border-radius:.375rem;padding:.375rem 1rem;font-size:.875rem;cursor:pointer;opacity:.5" disabled>Post</button>
         </div>
       </div>
       <div id="scheduled-posts-list" class="mt-3 hidden border-t border-theme-border pt-3"></div>
     </div>
+
+    <!-- Pending delayed posts (typo-catch mode) -->
+    <div id="pending-posts" class="mb-4 space-y-2"></div>
 
     <!-- Main content -->
     <div id="feed-container" class="space-y-6">
@@ -2915,12 +2921,16 @@ const sl = labels.social;
   }
 
   // ============================================================
-  // POST COMPOSER
+  // POST COMPOSER (with typo-catch delay mode)
   // ============================================================
   const composeInput = document.getElementById('compose-input');
   const composeSend = document.getElementById('compose-send');
   const composeCount = document.getElementById('compose-count');
   const composeLinkPreview = document.getElementById('compose-link-preview');
+  const postDelay = document.getElementById('post-delay');
+  const scheduleDatetimeInput = document.getElementById('schedule-datetime');
+  const pendingPostsContainer = document.getElementById('pending-posts');
+  let pendingCountdowns = {};
   let getComposeCard = () => null;
   if (composeInput && composeSend) {
     getComposeCard = setupLinkPreview(composeInput, composeLinkPreview);
@@ -2930,47 +2940,29 @@ const sl = labels.social;
       composeSend.disabled = len === 0 || len > 300;
       composeSend.style.opacity = composeSend.disabled ? '.5' : '1';
     });
+
+    // Delay dropdown — show/hide custom datetime
+    if (postDelay) {
+      postDelay.addEventListener('change', () => {
+        if (postDelay.value === 'custom') {
+          const d = new Date(Date.now() + 3600_000);
+          d.setMinutes(Math.ceil(d.getMinutes() / 5) * 5, 0, 0);
+          scheduleDatetimeInput.value = d.toISOString().slice(0, 16);
+          scheduleDatetimeInput.classList.remove('hidden');
+        } else {
+          scheduleDatetimeInput.classList.add('hidden');
+          scheduleDatetimeInput.value = '';
+        }
+        composeSend.textContent = (postDelay.value === '0') ? 'Post' : 'Post';
+      });
+    }
+
     composeSend.addEventListener('click', async () => {
       const text = composeInput.value.trim();
       if (!text) return;
+      const delaySec = postDelay ? postDelay.value : '0';
 
-      const scheduleDatetime = document.getElementById('schedule-datetime');
-      const scheduleValue = scheduleDatetime && !scheduleDatetime.classList.contains('hidden') ? scheduleDatetime.value : '';
-
-      if (scheduleValue) {
-        // Schedule via hub
-        if (!token) return;
-        composeSend.disabled = true;
-        composeSend.textContent = 'Scheduling...';
-        try {
-          const res = await fetch(`${hubUrl}/api/scheduled`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-            body: JSON.stringify({ text, scheduledAt: new Date(scheduleValue).toISOString() }),
-          });
-          if (!res.ok) {
-            const err = await res.json().catch(() => ({}));
-            throw new Error(err.error || 'Schedule failed');
-          }
-          composeInput.value = '';
-          composeCount.textContent = '0/300';
-          composeLinkPreview.innerHTML = '';
-          composeSend.textContent = 'Post';
-          composeSend.disabled = true;
-          composeSend.style.opacity = '.5';
-          // Clear schedule UI
-          scheduleDatetime.value = '';
-          scheduleDatetime.classList.add('hidden');
-          document.getElementById('schedule-clear').classList.add('hidden');
-          composeSend.textContent = 'Post';
-          loadScheduledPosts();
-        } catch (err) {
-          console.error('Schedule error:', err);
-          composeSend.textContent = 'Failed — Retry';
-          composeSend.disabled = false;
-          composeSend.style.opacity = '1';
-        }
-      } else {
+      if (delaySec === '0') {
         // Post immediately via Bluesky
         if (!bskySession?.accessJwt) return;
         composeSend.disabled = true;
@@ -2991,43 +2983,184 @@ const sl = labels.social;
           composeSend.disabled = false;
           composeSend.style.opacity = '1';
         }
+      } else {
+        // Delayed / scheduled post via hub
+        if (!token) return;
+        composeSend.disabled = true;
+        composeSend.textContent = 'Scheduling...';
+        let scheduledAt;
+        if (delaySec === 'custom') {
+          if (!scheduleDatetimeInput.value) { composeSend.disabled = false; composeSend.textContent = 'Post'; return; }
+          scheduledAt = new Date(scheduleDatetimeInput.value).toISOString();
+        } else {
+          scheduledAt = new Date(Date.now() + parseInt(delaySec, 10) * 1000).toISOString();
+        }
+        try {
+          const res = await fetch(`${hubUrl}/api/scheduled`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ text, scheduledAt }),
+          });
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.error || 'Schedule failed');
+          }
+          composeInput.value = '';
+          composeCount.textContent = '0/300';
+          composeLinkPreview.innerHTML = '';
+          composeSend.textContent = 'Post';
+          composeSend.disabled = true;
+          composeSend.style.opacity = '.5';
+          scheduleDatetimeInput.classList.add('hidden');
+          scheduleDatetimeInput.value = '';
+          loadScheduledPosts();
+          renderPendingPosts();
+        } catch (err) {
+          console.error('Schedule error:', err);
+          composeSend.textContent = 'Failed — Retry';
+          composeSend.disabled = false;
+          composeSend.style.opacity = '1';
+        }
       }
     });
 
-    // Schedule toggle
-    const scheduleToggle = document.getElementById('schedule-toggle');
-    const scheduleDatetimeInput = document.getElementById('schedule-datetime');
-    const scheduleClear = document.getElementById('schedule-clear');
-    if (scheduleToggle && scheduleDatetimeInput) {
-      scheduleToggle.addEventListener('click', () => {
-        const showing = !scheduleDatetimeInput.classList.contains('hidden');
-        if (showing) {
-          scheduleDatetimeInput.classList.add('hidden');
-          scheduleClear.classList.add('hidden');
-          scheduleDatetimeInput.value = '';
-          composeSend.textContent = 'Post';
-        } else {
-          // Default to 1 hour from now
-          const d = new Date(Date.now() + 3600_000);
-          d.setMinutes(Math.ceil(d.getMinutes() / 5) * 5, 0, 0);
-          scheduleDatetimeInput.value = d.toISOString().slice(0, 16);
-          scheduleDatetimeInput.classList.remove('hidden');
-          scheduleClear.classList.remove('hidden');
-          composeSend.textContent = 'Schedule';
+    // ---- Pending posts (typo-catch countdown cards) ----
+    async function renderPendingPosts() {
+      if (!token || !pendingPostsContainer) return;
+      // Clear old countdowns
+      Object.values(pendingCountdowns).forEach(id => clearInterval(id));
+      pendingCountdowns = {};
+      try {
+        const res = await fetch(`${hubUrl}/api/scheduled?status=pending`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) return;
+        const posts = await res.json();
+        // Only show posts scheduled within the next 10 minutes as "pending" cards
+        const soon = posts.filter(p => new Date(p.scheduledAt).getTime() - Date.now() < 600_000);
+        const later = posts.filter(p => new Date(p.scheduledAt).getTime() - Date.now() >= 600_000);
+        if (soon.length === 0 && later.length === 0) {
+          pendingPostsContainer.innerHTML = '';
+          return;
         }
-      });
-      scheduleDatetimeInput.addEventListener('change', () => {
-        composeSend.textContent = scheduleDatetimeInput.value ? 'Schedule' : 'Post';
-      });
-      scheduleClear.addEventListener('click', () => {
-        scheduleDatetimeInput.value = '';
-        scheduleDatetimeInput.classList.add('hidden');
-        scheduleClear.classList.add('hidden');
-        composeSend.textContent = 'Post';
-      });
+        let html = '';
+        soon.forEach(p => {
+          html += `<div id="pending-${p.id}" class="rounded-lg border border-yellow-500/40 bg-yellow-500/5 p-3">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <span class="text-yellow-400 text-xs font-medium">⏳ Posting in <span class="pending-countdown" data-until="${p.scheduledAt}"></span></span>
+              </div>
+              <div class="flex items-center gap-1">
+                <button class="pending-edit text-xs px-2 py-0.5 rounded bg-theme-surface-hover text-theme-text hover:bg-theme-primary transition" data-id="${p.id}" data-text="${escapeHtml(p.text)}">Edit</button>
+                <button class="pending-send text-xs px-2 py-0.5 rounded bg-green-600 text-white hover:bg-green-500 transition" data-id="${p.id}">Send Now</button>
+                <button class="pending-cancel text-xs px-2 py-0.5 rounded bg-red-600/20 text-red-400 hover:bg-red-600/40 transition" data-id="${p.id}">Cancel</button>
+              </div>
+            </div>
+            <div class="text-sm text-theme-text pending-text" data-id="${p.id}">${escapeHtml(p.text)}</div>
+            <div class="pending-edit-area hidden mt-2" data-id="${p.id}">
+              <textarea class="w-full rounded bg-theme-input-bg border border-theme-input-border p-2 text-sm text-theme-text resize-vertical" rows="2" maxlength="300">${escapeHtml(p.text)}</textarea>
+              <div class="flex justify-end gap-1 mt-1">
+                <button class="pending-save text-xs px-2 py-0.5 rounded bg-theme-primary text-white hover:opacity-80 transition" data-id="${p.id}">Save</button>
+                <button class="pending-edit-cancel text-xs px-2 py-0.5 rounded bg-theme-surface-hover text-theme-text hover:opacity-80 transition" data-id="${p.id}">Cancel</button>
+              </div>
+            </div>
+          </div>`;
+        });
+        pendingPostsContainer.innerHTML = html;
+
+        // Start countdowns
+        pendingPostsContainer.querySelectorAll('.pending-countdown').forEach(el => {
+          const until = new Date(el.dataset.until).getTime();
+          const update = () => {
+            const left = Math.max(0, until - Date.now());
+            if (left <= 0) { el.textContent = 'sending...'; renderPendingPosts(); return; }
+            const s = Math.ceil(left / 1000);
+            el.textContent = s >= 60 ? `${Math.floor(s / 60)}m ${s % 60}s` : `${s}s`;
+          };
+          update();
+          const id = setInterval(update, 1000);
+          const postId = el.closest('[id^="pending-"]')?.id?.replace('pending-', '');
+          if (postId) pendingCountdowns[postId] = id;
+        });
+
+        // Edit button
+        pendingPostsContainer.querySelectorAll('.pending-edit').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const id = btn.dataset.id;
+            const textEl = pendingPostsContainer.querySelector(`.pending-text[data-id="${id}"]`);
+            const editArea = pendingPostsContainer.querySelector(`.pending-edit-area[data-id="${id}"]`);
+            if (textEl) textEl.classList.add('hidden');
+            if (editArea) editArea.classList.remove('hidden');
+            btn.classList.add('hidden');
+          });
+        });
+
+        // Save edit
+        pendingPostsContainer.querySelectorAll('.pending-save').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const id = btn.dataset.id;
+            const editArea = pendingPostsContainer.querySelector(`.pending-edit-area[data-id="${id}"]`);
+            const newText = editArea?.querySelector('textarea')?.value?.trim();
+            if (!newText) return;
+            btn.textContent = 'Saving...';
+            try {
+              await fetch(`${hubUrl}/api/scheduled/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ text: newText }),
+              });
+              renderPendingPosts();
+            } catch { btn.textContent = 'Save'; }
+          });
+        });
+
+        // Cancel edit (revert)
+        pendingPostsContainer.querySelectorAll('.pending-edit-cancel').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const id = btn.dataset.id;
+            const textEl = pendingPostsContainer.querySelector(`.pending-text[data-id="${id}"]`);
+            const editArea = pendingPostsContainer.querySelector(`.pending-edit-area[data-id="${id}"]`);
+            const editBtn = pendingPostsContainer.querySelector(`.pending-edit[data-id="${id}"]`);
+            if (textEl) textEl.classList.remove('hidden');
+            if (editArea) editArea.classList.add('hidden');
+            if (editBtn) editBtn.classList.remove('hidden');
+          });
+        });
+
+        // Send Now
+        pendingPostsContainer.querySelectorAll('.pending-send').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            btn.textContent = 'Sending...';
+            btn.disabled = true;
+            try {
+              await fetch(`${hubUrl}/api/scheduled/${btn.dataset.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ postNow: true }),
+              });
+              // Brief pause for scheduler to pick it up
+              setTimeout(() => { renderPendingPosts(); resetPagination(); loadFeedTab(); }, 2000);
+            } catch { btn.textContent = 'Send Now'; btn.disabled = false; }
+          });
+        });
+
+        // Cancel post
+        pendingPostsContainer.querySelectorAll('.pending-cancel').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            btn.textContent = '...';
+            try {
+              await fetch(`${hubUrl}/api/scheduled/${btn.dataset.id}`, {
+                method: 'DELETE',
+                headers: { Authorization: `Bearer ${token}` },
+              });
+              renderPendingPosts();
+            } catch { btn.textContent = 'Cancel'; }
+          });
+        });
+      } catch {}
     }
 
-    // Load and display scheduled posts
+    // Load and display far-future scheduled posts (in compose area)
     async function loadScheduledPosts() {
       if (!token) return;
       const container = document.getElementById('scheduled-posts-list');
@@ -3038,10 +3171,12 @@ const sl = labels.social;
         });
         if (!res.ok) return;
         const posts = await res.json();
-        if (posts.length === 0) { container.classList.add('hidden'); container.innerHTML = ''; return; }
+        // Only show posts scheduled more than 10 min out
+        const later = posts.filter(p => new Date(p.scheduledAt).getTime() - Date.now() >= 600_000);
+        if (later.length === 0) { container.classList.add('hidden'); container.innerHTML = ''; return; }
         container.classList.remove('hidden');
-        container.innerHTML = `<div class="text-xs font-medium text-theme-muted mb-2">Scheduled (${posts.length})</div>` +
-          posts.map(p => `<div class="flex items-start justify-between gap-2 py-2 border-b border-theme-border last:border-0 text-xs">
+        container.innerHTML = `<div class="text-xs font-medium text-theme-muted mb-2">Scheduled (${later.length})</div>` +
+          later.map(p => `<div class="flex items-start justify-between gap-2 py-2 border-b border-theme-border last:border-0 text-xs">
             <div class="flex-1 min-w-0">
               <div class="text-theme-text truncate">${escapeHtml(p.text)}</div>
               <div class="text-theme-faint mt-0.5">${new Date(p.scheduledAt).toLocaleString()}</div>
@@ -3056,12 +3191,14 @@ const sl = labels.social;
               headers: { Authorization: `Bearer ${token}` },
             });
             loadScheduledPosts();
+            renderPendingPosts();
           });
         });
       } catch {}
     }
     // Load on init
     loadScheduledPosts();
+    renderPendingPosts();
   }
 
   // ============================================================
