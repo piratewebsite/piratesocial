@@ -144,6 +144,7 @@ const sl = labels.social;
   let myHandle = null;
   let myDid = null;
   let myAvatar = null;
+  let myDisplayName = null;
   // Track own likes/reposts for optimistic UI
   let myLikes = {};    // uri -> likeUri
   let myReposts = {};  // uri -> repostUri
@@ -199,6 +200,7 @@ const sl = labels.social;
     butterfly: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 18 18" fill="currentColor"><path d="M1.159 1.829c.284-.16.625-.174.941-.127.466.071.905.259 1.317.482.698.381 1.305.903 1.871 1.457a20.933 20.933 0 0 1 2.233 2.65c.544.768 1.063 1.558 1.48 2.403.316-.645.698-1.254 1.096-1.851a23.74 23.74 0 0 1 1.238-1.672c.466-.573.958-1.125 1.49-1.639.477-.457.983-.889 1.551-1.229a5.09 5.09 0 0 1 1.089-.501c.339-.102.702-.166 1.054-.095.258.051.497.198.651.412.205.281.282.633.311.974.021.239.01.478-.005.717a80.443 80.443 0 0 1-.221 2.776 37.19 37.19 0 0 1-.126 1.152c-.039.27-.066.544-.156.803a3.131 3.131 0 0 1-.993 1.47c-.453.371-1.005.607-1.575.729-.692.15-1.412.144-2.11.035.732.131 1.464.332 2.114.703.429.247.827.584 1.05 1.033.187.369.223.804.122 1.203-.132.535-.454 1.003-.824 1.403a6.833 6.833 0 0 1-1.028.909c-.401.28-.853.51-1.343.573a1.883 1.883 0 0 1-1.127-.203c-.45-.234-.804-.615-1.092-1.026-.462-.666-.774-1.421-1.035-2.184-.04-.108-.07-.221-.12-.325l-.025.001c-.08.184-.133.379-.204.567-.244.682-.54 1.353-.956 1.95-.209.297-.45.574-.739.796a2.097 2.097 0 0 1-.797.39 1.97 1.97 0 0 1-.947-.017 3.313 3.313 0 0 1-1.02-.485c-.336-.23-.643-.5-.929-.788-.379-.379-.718-.816-.905-1.323a1.874 1.874 0 0 1-.085-1.068c.083-.361.29-.684.555-.939.464-.446 1.063-.719 1.67-.913a7.8 7.8 0 0 1 1.087-.256 6.658 6.658 0 0 1-1.367.067c-.802-.05-1.614-.281-2.258-.776a3.092 3.092 0 0 1-.967-1.263 2.8 2.8 0 0 1-.189-.627C.858 7.71.812 7.239.763 6.769a83.74 83.74 0 0 1-.238-2.961c-.03-.438-.031-.891.113-1.312.092-.272.265-.528.521-.67Z"/></svg>`,
     externalLink: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>`,
     squadBadge: `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>`,
+    edit: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>`,
   };
 
   // ============================================================
@@ -2609,7 +2611,7 @@ const sl = labels.social;
       myDid = session?.did || null;
       if (myHandle) {
         const profileRes = await fetchTimeout(`https://public.api.bsky.app/xrpc/app.bsky.actor.getProfile?actor=${encodeURIComponent(myHandle)}`, {}, 8000);
-        if (profileRes.ok) { const profile = await profileRes.json(); myAvatar = profile.avatar || null; }
+        if (profileRes.ok) { const profile = await profileRes.json(); myAvatar = profile.avatar || null; myDisplayName = profile.displayName || myHandle; }
       }
       document.querySelectorAll('.my-center-avatar').forEach(el => {
         if (myAvatar) el.innerHTML = `<img src="${escapeHtml(myAvatar)}" alt="You" class="w-full h-full object-cover" />`;
@@ -3027,6 +3029,13 @@ const sl = labels.social;
     // ---- Pending posts (typo-catch countdown cards) ----
     async function renderPendingPosts() {
       if (!token || !pendingPostsContainer) return;
+      // Fetch profile for avatar if we don't have it yet
+      if (!myAvatar && bskySession?.handle) {
+        try {
+          const profileRes = await fetchTimeout(`https://public.api.bsky.app/xrpc/app.bsky.actor.getProfile?actor=${encodeURIComponent(bskySession.handle)}`, {}, 8000);
+          if (profileRes.ok) { const profile = await profileRes.json(); myAvatar = profile.avatar || null; myDisplayName = profile.displayName || bskySession.handle; myHandle = bskySession.handle; }
+        } catch {}
+      }
       // Clear old countdowns
       Object.values(pendingCountdowns).forEach(id => clearInterval(id));
       pendingCountdowns = {};
@@ -3044,27 +3053,35 @@ const sl = labels.social;
           return;
         }
         let html = '';
+        const avatarHtml = myAvatar ? `<img src="${escapeHtml(myAvatar)}" class="h-10 w-10 rounded-full" />` : '<div class="h-10 w-10 rounded-full bg-theme-surface-hover"></div>';
+        const displayName = escapeHtml(myDisplayName || myHandle || 'You');
+        const handle = escapeHtml(myHandle || '');
         soon.forEach(p => {
-          html += `<div id="pending-${p.id}" class="rounded-lg border border-yellow-500/40 bg-yellow-500/5 p-3">
-            <div class="flex items-center justify-between mb-2">
-              <div class="flex items-center gap-2">
-                <span class="text-yellow-400 text-xs font-medium">⏳ Posting in <span class="pending-countdown" data-until="${p.scheduledAt}"></span></span>
+          html += `<article id="pending-${p.id}" class="rounded-lg border border-theme-card-border bg-theme-card overflow-hidden" style="border-left: 3px solid rgb(234 179 8)">
+            <div class="p-4">
+              <div class="flex items-center gap-3 mb-3">
+                ${avatarHtml}
+                <div class="min-w-0 flex-1">
+                  <span class="font-medium text-sm">${displayName}</span>
+                  <div class="text-xs text-theme-faint">@${handle}</div>
+                </div>
+                <span class="text-yellow-400 text-xs font-medium whitespace-nowrap">⏳ <span class="pending-countdown" data-until="${p.scheduledAt}"></span></span>
               </div>
-              <div class="flex items-center gap-1">
-                <button class="pending-edit text-xs px-2 py-0.5 rounded bg-theme-surface-hover text-theme-text hover:bg-theme-primary transition" data-id="${p.id}" data-text="${escapeHtml(p.text)}">Edit</button>
-                <button class="pending-send text-xs px-2 py-0.5 rounded bg-green-600 text-white hover:bg-green-500 transition" data-id="${p.id}">Send Now</button>
-                <button class="pending-cancel text-xs px-2 py-0.5 rounded bg-red-600/20 text-red-400 hover:bg-red-600/40 transition" data-id="${p.id}">Cancel</button>
+              <div class="pending-text text-sm whitespace-pre-wrap mb-2" data-id="${p.id}">${formatText(p.text)}</div>
+              <div class="pending-edit-area hidden mb-2" data-id="${p.id}">
+                <textarea class="w-full rounded bg-theme-input-bg border border-theme-input-border p-2 text-sm text-theme-text resize-vertical" rows="3" maxlength="300">${escapeHtml(p.text)}</textarea>
+                <div class="flex justify-end gap-1 mt-1">
+                  <button class="pending-save text-xs px-2 py-1 rounded bg-theme-primary text-white hover:opacity-80 transition" data-id="${p.id}">Save</button>
+                  <button class="pending-edit-cancel text-xs px-2 py-1 rounded bg-theme-surface-hover text-theme-text hover:opacity-80 transition" data-id="${p.id}">Cancel</button>
+                </div>
+              </div>
+              <div class="flex items-center gap-2 text-xs">
+                <button class="pending-edit flex items-center gap-1 px-2 py-1 rounded hover:bg-theme-surface-hover text-theme-faint hover:text-theme-text transition" data-id="${p.id}" data-text="${escapeHtml(p.text)}">${ICON.edit || '✏️'} Edit</button>
+                <button class="pending-send flex items-center gap-1 px-2 py-1 rounded bg-green-600/20 text-green-400 hover:bg-green-600/40 transition" data-id="${p.id}">▶ Send Now</button>
+                <button class="pending-cancel flex items-center gap-1 px-2 py-1 rounded hover:bg-red-600/20 text-theme-faint hover:text-red-400 transition" data-id="${p.id}">✕ Cancel</button>
               </div>
             </div>
-            <div class="text-sm text-theme-text pending-text" data-id="${p.id}">${escapeHtml(p.text)}</div>
-            <div class="pending-edit-area hidden mt-2" data-id="${p.id}">
-              <textarea class="w-full rounded bg-theme-input-bg border border-theme-input-border p-2 text-sm text-theme-text resize-vertical" rows="2" maxlength="300">${escapeHtml(p.text)}</textarea>
-              <div class="flex justify-end gap-1 mt-1">
-                <button class="pending-save text-xs px-2 py-0.5 rounded bg-theme-primary text-white hover:opacity-80 transition" data-id="${p.id}">Save</button>
-                <button class="pending-edit-cancel text-xs px-2 py-0.5 rounded bg-theme-surface-hover text-theme-text hover:opacity-80 transition" data-id="${p.id}">Cancel</button>
-              </div>
-            </div>
-          </div>`;
+          </article>`;
         });
         pendingPostsContainer.innerHTML = html;
 
