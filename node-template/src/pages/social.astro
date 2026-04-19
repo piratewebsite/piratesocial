@@ -397,7 +397,7 @@ const sl = labels.social;
   }
 
   async function fetchBskyProfile(handle) {
-    return bskyGet('app.bsky.actor.getProfile', { actor: handle });
+    return bskyGet('app.bsky.actor.getProfile', { actor: handle }, !!bskySession?.accessJwt);
   }
 
   async function searchBskyPosts(query, cursor) {
@@ -473,6 +473,22 @@ const sl = labels.social;
       repo: bskySession.did, collection: 'app.bsky.feed.repost', rkey,
     });
     delete myReposts[uri];
+  }
+
+  async function followBskyUser(did) {
+    const res = await bskyPost('com.atproto.repo.createRecord', {
+      repo: bskySession.did, collection: 'app.bsky.graph.follow',
+      record: { subject: did, createdAt: new Date().toISOString(), '$type': 'app.bsky.graph.follow' },
+    });
+    return res.uri;
+  }
+
+  async function unfollowBskyUser(followUri) {
+    if (!followUri) return;
+    const rkey = followUri.split('/').pop();
+    await bskyPost('com.atproto.repo.deleteRecord', {
+      repo: bskySession.did, collection: 'app.bsky.graph.follow', rkey,
+    });
   }
 
   // Create a new Bluesky post or reply
@@ -1147,13 +1163,43 @@ const sl = labels.social;
       const feedData = await fetchBskyAuthorFeed(handle);
       const posts = (feedData.feed || []).map(item => normalizeBskyPost(item));
 
+      const isMe = bskySession?.handle === handle || bskySession?.did === profile.did;
+      const viewer = profile.viewer || {};
+      const followingUri = viewer.following || null; // I follow them
+      const followedBy = !!viewer.followedBy; // They follow me
+      const isBlocked = !!viewer.blocking;
+      const isMuted = !!viewer.muted;
+
+      // Follow status badges
+      let followBadge = '';
+      if (followedBy) followBadge = `<span class="inline-block text-xs px-2 py-0.5 rounded-full bg-theme-surface-hover text-theme-muted">Follows you</span>`;
+
+      // Follow/unfollow button (not for self)
+      let followBtn = '';
+      if (!isMe && bskySession?.accessJwt) {
+        if (isBlocked) {
+          followBtn = `<button class="profile-follow-btn text-xs px-4 py-1.5 rounded-full border border-red-500/50 text-red-400 cursor-not-allowed" disabled>Blocked</button>`;
+        } else if (followingUri) {
+          followBtn = `<button class="profile-follow-btn text-xs px-4 py-1.5 rounded-full border border-theme-primary text-theme-primary hover:bg-red-500/10 hover:text-red-400 hover:border-red-400 transition" data-did="${escapeHtml(profile.did)}" data-follow-uri="${escapeHtml(followingUri)}" data-following="true">Following</button>`;
+        } else {
+          followBtn = `<button class="profile-follow-btn text-xs px-4 py-1.5 rounded-full bg-theme-primary text-white hover:bg-theme-primary-hover transition" data-did="${escapeHtml(profile.did)}" data-following="false">Follow</button>`;
+        }
+      }
+
+      // Muted indicator
+      let mutedBadge = isMuted ? `<span class="inline-block text-xs px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400">Muted</span>` : '';
+
       let html = `
         <div class="text-center pb-4 border-b border-theme-border">
           ${profile.banner ? `<div class="-mx-4 -mt-4 mb-4"><img src="${escapeHtml(profile.banner)}" class="w-full h-32 object-cover" /></div>` : ''}
           ${profile.avatar ? `<img src="${escapeHtml(profile.avatar)}" class="h-20 w-20 rounded-full mx-auto border-4 border-theme-bg ${profile.banner ? '-mt-14' : ''}" />` : ''}
           <h3 class="font-bold text-lg mt-2">${escapeHtml(profile.displayName || profile.handle)}</h3>
           <p class="text-sm text-theme-faint">@${escapeHtml(profile.handle)}</p>
-          ${profile.description ? `<p class="text-sm text-theme-muted mt-2 text-left">${formatText(profile.description)}</p>` : ''}
+          <div class="flex items-center justify-center gap-2 mt-2">
+            ${followBadge}${mutedBadge}
+          </div>
+          ${followBtn ? `<div class="mt-3">${followBtn}</div>` : ''}
+          ${profile.description ? `<p class="text-sm text-theme-muted mt-3 text-left">${formatText(profile.description)}</p>` : ''}
           <div class="flex justify-center gap-6 mt-3 text-sm">
             <span><strong>${profile.followersCount || 0}</strong> <span class="text-theme-faint">followers</span></span>
             <span><strong>${profile.followsCount || 0}</strong> <span class="text-theme-faint">following</span></span>
@@ -1162,6 +1208,36 @@ const sl = labels.social;
         </div>
         <div class="space-y-4 mt-4">${posts.map(p => renderPostCard(p)).join('')}</div>`;
       slideBody.innerHTML = html;
+
+      // Bind follow button
+      const followBtnEl = slideBody.querySelector('.profile-follow-btn');
+      if (followBtnEl && !followBtnEl.disabled) {
+        followBtnEl.addEventListener('click', async () => {
+          const isFollowing = followBtnEl.dataset.following === 'true';
+          followBtnEl.disabled = true;
+          followBtnEl.textContent = isFollowing ? 'Unfollowing...' : 'Following...';
+          try {
+            if (isFollowing) {
+              await unfollowBskyUser(followBtnEl.dataset.followUri);
+              followBtnEl.dataset.following = 'false';
+              followBtnEl.dataset.followUri = '';
+              followBtnEl.textContent = 'Follow';
+              followBtnEl.className = 'profile-follow-btn text-xs px-4 py-1.5 rounded-full bg-theme-primary text-white hover:bg-theme-primary-hover transition';
+            } else {
+              const uri = await followBskyUser(followBtnEl.dataset.did);
+              followBtnEl.dataset.following = 'true';
+              followBtnEl.dataset.followUri = uri;
+              followBtnEl.textContent = 'Following';
+              followBtnEl.className = 'profile-follow-btn text-xs px-4 py-1.5 rounded-full border border-theme-primary text-theme-primary hover:bg-red-500/10 hover:text-red-400 hover:border-red-400 transition';
+            }
+          } catch (err) {
+            followBtnEl.textContent = 'Error';
+            setTimeout(() => { followBtnEl.textContent = isFollowing ? 'Following' : 'Follow'; }, 2000);
+          }
+          followBtnEl.disabled = false;
+        });
+      }
+
       attachAllListeners();
       initHlsVideos();
     } catch {
