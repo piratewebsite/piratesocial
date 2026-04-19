@@ -1650,6 +1650,7 @@ const sl = labels.social;
     if (isLoading) return;
     isLoading = true;
     if (!append) {
+      bskyCursor = null;
       feedContainer.innerHTML = `<div class="text-center py-8 text-theme-faint">${L.loading || 'Loading...'}</div>`;
     }
 
