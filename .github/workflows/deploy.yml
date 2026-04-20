@@ -1,0 +1,125 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  # Rebuild weekly to pick up template updates
+  schedule:
+    - cron: '0 6 * * 1'
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout user repo
+        uses: actions/checkout@v6
+        with:
+          path: user-repo
+
+      - name: Fetch latest template
+        uses: actions/checkout@v6
+        with:
+          repository: piratewebsite/piratesocial
+          path: template-source
+          sparse-checkout: ''
+          sparse-checkout-cone-mode: false
+
+      - name: Merge template + user content
+        run: |
+          # Start with fresh template code (files now at root, not in node-template/)
+          cp -r template-source build
+          
+          # Remove .git and node_modules from build
+          rm -rf build/.git build/node_modules build/.astro build/dist
+          
+          # Overlay user content — everything lives in src/content/
+          # This includes: posts, galleries, settings, theme, pwa, home, pages
+          # labels.json is merged (not overwritten) so new template keys are preserved
+          if [ -d user-repo/src/content ]; then
+            # Save template labels before user content overlay
+            cp build/src/content/labels.json /tmp/template-labels.json 2>/dev/null || true
+            rm -rf build/src/content
+            cp -r user-repo/src/content build/src/content
+            # Merge labels: template base + user overrides (preserves new template keys)
+            if [ -f /tmp/template-labels.json ]; then
+              node -e "
+                const fs = require('fs');
+                const t = JSON.parse(fs.readFileSync('/tmp/template-labels.json','utf8'));
+                const uPath = 'build/src/content/labels.json';
+                const u = fs.existsSync(uPath) ? JSON.parse(fs.readFileSync(uPath,'utf8')) : {};
+                const merge = (a,b) => { const r={...a}; for(const k in b){ r[k] = typeof a[k]==='object'&&!Array.isArray(a[k])&&typeof b[k]==='object'&&!Array.isArray(b[k]) ? merge(a[k],b[k]) : b[k]; } return r; };
+                fs.writeFileSync(uPath, JSON.stringify(merge(t,u),null,2));
+              "
+            fi
+          fi
+          
+          # Legacy support: migrate old src/data/ files if they exist
+          if [ -f user-repo/src/data/settings.json ]; then
+            cp user-repo/src/data/settings.json build/src/content/settings.json
+          fi
+          for f in theme.json pwa.json home.json; do
+            if [ -f "user-repo/src/data/$f" ]; then
+              cp "user-repo/src/data/$f" "build/src/content/$f"
+            fi
+          done
+          # Merge labels.json: template is base, user overrides on top (preserves new template keys)
+          if [ -f "user-repo/src/data/labels.json" ]; then
+            node -e "
+              const t = JSON.parse(require('fs').readFileSync('build/src/content/labels.json','utf8'));
+              const u = JSON.parse(require('fs').readFileSync('user-repo/src/data/labels.json','utf8'));
+              const merge = (a,b) => { const r={...a}; for(const k in b){ r[k] = typeof a[k]==='object'&&!Array.isArray(a[k])&&typeof b[k]==='object'&&!Array.isArray(b[k]) ? merge(a[k],b[k]) : b[k]; } return r; };
+              require('fs').writeFileSync('build/src/content/labels.json', JSON.stringify(merge(t,u),null,2));
+            "
+          fi
+          if [ -d user-repo/src/data/pages ]; then
+            mkdir -p build/src/content/pages
+            cp -r user-repo/src/data/pages/. build/src/content/pages/
+          fi
+          
+          # User images (site-wide assets like icons, logos)
+          if [ -d user-repo/public/images ]; then
+            cp -r user-repo/public/images/. build/public/images/
+          fi
+          
+          # User config files
+          if [ -f user-repo/src/content/settings.json ]; then
+            cp user-repo/src/content/settings.json build/src/content/settings.json
+          fi
+          if [ -f user-repo/public/config.yml ]; then
+            cp user-repo/public/config.yml build/public/config.yml
+          fi
+          if [ -f user-repo/public/admin/config.yml ]; then
+            cp user-repo/public/admin/config.yml build/public/admin/config.yml
+          fi
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install --frozen-lockfile
+        working-directory: build
+
+      - name: Build site
+        run: npm run build
+        working-directory: build
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/dist
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
