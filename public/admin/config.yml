@@ -2,7 +2,7 @@ backend:
   name: github
   repo: your-username/your-repo
   branch: main
-  base_url: https://piratesocial-hub.fly.dev
+  base_url: https://piratesocial.app
   auth_endpoint: /api/decap/auth
 
 site_url: https://example.com
