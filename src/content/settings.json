@@ -1,10 +1,10 @@
 {
-  "github": "twilightscapes",
-  "camera": "Canon 5D 3",
+  "github": "your-username",
+  "camera": "",
   "bio": "I take photos of things.",
   "showDates": true,
   "mastodon": "",
-  "author": "Todd",
+  "author": "Photographer",
   "logo": {
     "type": "text",
     "image": "",
@@ -12,8 +12,8 @@
   },
   "enableSocial": true,
   "instagram": "",
-  "location": "Western US",
+  "location": "",
   "title": "My Photo Site",
-  "avatar": "/images/e45f09f3-d86d-4cca-bed3-d65cb81b1cc3_1_105_c.jpg",
+  "avatar": "",
   "description": "A photography site on the Pirate Social network"
 }

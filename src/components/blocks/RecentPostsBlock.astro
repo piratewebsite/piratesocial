@@ -4,7 +4,7 @@ import { withBase, cleanSlug } from '../../lib/config';
 import settings from '../../content/settings.json';
 import labels from '../../content/labels.json';
 
-const { heading = 'Recent Photos', count = 6, columns = '3' } = Astro.props;
+const { heading = 'Recent', count = 6, columns = '3' } = Astro.props;
 
 const showDates = settings.showDates !== false;
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');

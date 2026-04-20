@@ -5,7 +5,7 @@
     "next": "Next",
     "play": "Play",
     "pause": "Pause",
-    "audioPlayer": "♫ Todd's Player",
+    "audioPlayer": "♫ Audio Player",
     "previous": "Previous",
     "youtubeVideo": "YouTube video",
     "changePosition": "Change position",
@@ -140,7 +140,7 @@
     }
   ],
   "home": {
-    "recentPhotos": "Recent Photos",
+    "recentPhotos": "Recent",
     "viewAllPosts": "View all posts →"
   },
   "showSignIn": true

@@ -1,12 +1,12 @@
 backend:
   name: github
-  repo: twilightscapes/twilightscapes.github.io
+  repo: your-username/your-repo
   branch: main
   base_url: https://piratesocial-hub.fly.dev
   auth_endpoint: /api/decap/auth
 
-site_url: https://twilightscapes.github.io
-display_url: https://twilightscapes.github.io
+site_url: https://example.com
+display_url: https://example.com
 
 logo_url: /images/logoImage.svg
 
@@ -179,7 +179,7 @@ collections:
             name: recentPosts
             widget: object
             fields:
-              - { label: "Heading", name: heading, widget: string, default: "Recent Photos" }
+              - { label: "Heading", name: heading, widget: string, default: "Recent" }
               - { label: "Post Count", name: count, widget: number, default: 6, value_type: int, min: 1, max: 24 }
               - label: "Columns"
                 name: columns
@@ -659,7 +659,7 @@ collections:
             widget: object
             collapsed: true
             fields:
-              - { label: "Recent Photos Heading", name: recentPhotos, widget: string, default: "Recent Photos" }
+              - { label: "Recent Heading", name: recentPhotos, widget: string, default: "Recent" }
               - { label: "View All Posts Link", name: viewAllPosts, widget: string, default: "View all posts →" }
           - label: Social Page
             name: social

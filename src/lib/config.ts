@@ -19,7 +19,7 @@ export const siteConfig = {
   description: settings.description || 'A photography site on the Pirate Social network',
   author: settings.author || 'Photographer',
   bio: settings.bio || 'I take photos of things.',
-  avatar: withBase(settings.avatar || '/images/avatar.jpg'),
+  avatar: withBase(settings.avatar || ''),
   location: settings.location || '',
   camera: settings.camera || '',
   siteUrl: import.meta.env.SITE || (settings.github ? `https://${settings.github}.github.io` : ''),

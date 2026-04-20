@@ -1,0 +1,17 @@
+{
+  "title": "Home",
+  "slug": "home",
+  "showInNav": false,
+  "blocks": [
+    {
+      "type": "profile",
+      "layout": "card"
+    },
+    {
+      "type": "recentPosts",
+      "heading": "Recent",
+      "count": 6,
+      "columns": "3"
+    }
+  ]
+}
