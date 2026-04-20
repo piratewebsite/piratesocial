@@ -6,8 +6,8 @@
   "mastodon": "",
   "author": "Todd",
   "logo": {
-    "type": "image",
-    "image": "/images/logoImage.svg",
+    "type": "text",
+    "image": "",
     "text": ""
   },
   "enableSocial": true,
