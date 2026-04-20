@@ -86,6 +86,18 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
           <button id="reset-miniplayer-pos" class="text-xs text-theme-faint hover:text-theme-text transition">Reset mini-player position</button>
         </div>
       </div>
+
+      <!-- Site URL Settings -->
+      <div class="rounded-lg border border-theme-card-border bg-theme-card p-6">
+        <h2 class="text-lg font-semibold mb-4">Site URL</h2>
+        <p class="text-xs text-theme-muted mb-3">Your site's custom domain. This controls where you're redirected after login and how other pirates find your site.</p>
+        <div class="flex gap-2">
+          <input type="url" id="site-url-input" placeholder="https://yourdomain.com"
+            class="flex-1 rounded bg-theme-input-bg border border-theme-input-border px-3 py-2 text-sm focus:outline-none focus:border-theme-primary" />
+          <button id="site-url-save" class="rounded bg-theme-primary px-3 py-2 text-sm font-medium text-white hover:bg-theme-primary-hover transition">Save</button>
+        </div>
+        <div id="site-url-msg" class="hidden text-sm mt-2"></div>
+      </div>
     </div>
   </div>
 </BaseLayout>
@@ -140,7 +152,52 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
     document.getElementById('settings-content').classList.remove('hidden');
     loadStatus();
     initSocialSettings();
+    loadSiteUrl();
   }
+
+  // Site URL management
+  async function loadSiteUrl() {
+    try {
+      const res = await fetch(`${hubUrl}/api/auth/me`, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) {
+        const data = await res.json();
+        document.getElementById('site-url-input').value = data.siteUrl || '';
+      }
+    } catch {}
+  }
+
+  document.getElementById('site-url-save')?.addEventListener('click', async () => {
+    const input = document.getElementById('site-url-input');
+    const msg = document.getElementById('site-url-msg');
+    const url = input.value.trim();
+    if (!url || !url.startsWith('https://')) {
+      msg.textContent = 'URL must start with https://';
+      msg.className = 'text-red-400 text-sm mt-2';
+      msg.classList.remove('hidden');
+      return;
+    }
+    try {
+      const feedUrl = url.replace(/\/$/, '') + '/feed.xml';
+      const res = await fetch(`${hubUrl}/api/users/me`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ siteUrl: url.replace(/\/$/, ''), feedUrl }),
+      });
+      if (res.ok) {
+        msg.textContent = 'Site URL updated! Login will now redirect here.';
+        msg.className = 'text-green-400 text-sm mt-2';
+      } else {
+        msg.textContent = 'Failed to update';
+        msg.className = 'text-red-400 text-sm mt-2';
+      }
+      msg.classList.remove('hidden');
+      setTimeout(() => msg.classList.add('hidden'), 4000);
+    } catch {
+      msg.textContent = 'Network error';
+      msg.className = 'text-red-400 text-sm mt-2';
+      msg.classList.remove('hidden');
+    }
+  });
 
   async function loadStatus() {
     try {
