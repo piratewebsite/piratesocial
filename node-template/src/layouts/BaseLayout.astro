@@ -126,10 +126,7 @@ const socialNavItems = allNavItems.filter((item: any) => socialPaths.some(p => i
     <header class="sticky top-0 z-40 border-b border-theme-border bg-theme-header/95 backdrop-blur supports-[backdrop-filter]:bg-theme-header/80">
       <nav class="mx-auto flex max-w-6xl items-center justify-between px-3 py-2 md:px-4 md:py-4">
         <a href={`${base}/`} class="flex items-center">
-          {settings.logo?.type === 'text' && settings.logo?.text
-            ? <span class="text-lg md:text-xl font-bold font-heading text-theme-text">{settings.logo.text}</span>
-            : <img src={`${base}${settings.logo?.image || '/images/logoImage.svg'}`} alt={siteConfig.title} class="h-10" />
-          }
+          <span class="text-lg md:text-xl font-bold font-heading text-theme-text">{siteConfig.title}</span>
         </a>
         <div class="flex items-center gap-3 text-xs md:gap-6 md:text-sm">
           {regularNavItems.map((item: any) => {
@@ -146,14 +143,45 @@ const socialNavItems = allNavItems.filter((item: any) => socialPaths.some(p => i
             const href = item.url.startsWith('/') ? `${base}${item.url}` : item.url;
             const isActive = currentPath === (item.url.startsWith('/') ? `${base}${item.url}`.replace(/\/$/, '') : '');
             const isSocialPage = item.url === '/social';
-            return isActive
-              ? <span class="text-theme-text font-medium cursor-default inline-flex items-center gap-1" aria-current="page" data-auth-only hidden>{item.label}{isSocialPage && <button id="notif-bell" class="relative ml-0.5 p-0.5 text-theme-muted hover:text-theme-text transition" aria-label="Notifications" hidden><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg><span id="notif-badge" class="absolute -top-1 -right-1 min-w-[14px] h-[14px] rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center leading-none px-0.5" hidden></span></button>}</span>
-              : <a href={href} class="text-theme-muted hover:text-theme-text transition inline-flex items-center gap-1" data-auth-only hidden>{item.label}{isSocialPage && <button id="notif-bell" class="relative ml-0.5 p-0.5 text-theme-muted hover:text-theme-text transition" aria-label="Notifications" hidden><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg><span id="notif-badge" class="absolute -top-1 -right-1 min-w-[14px] h-[14px] rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center leading-none px-0.5" hidden></span></button>}</a>;
+            const isSettingsPage = item.url === '/settings';
+            const activeClass = isActive ? 'text-theme-text' : 'text-theme-muted hover:text-theme-text';
+            const Tag = isActive ? 'span' : 'a';
+            if (isSocialPage) {
+              return isActive
+                ? <span class={`${activeClass} inline-flex items-center gap-1 cursor-default`} aria-current="page" data-auth-only hidden>
+                    <img src={`${base}${settings.logo?.image || '/images/logoImage.svg'}`} alt="Social" class="h-8 w-8" />
+                    <button id="notif-bell" class="relative p-0.5 text-theme-muted hover:text-theme-text transition" aria-label="Notifications" hidden>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                      <span id="notif-badge" class="absolute -top-1 -right-1 min-w-[14px] h-[14px] rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center leading-none px-0.5" hidden></span>
+                    </button>
+                  </span>
+                : <a href={href} class={`${activeClass} transition inline-flex items-center gap-1`} data-auth-only hidden>
+                    <img src={`${base}${settings.logo?.image || '/images/logoImage.svg'}`} alt="Social" class="h-8 w-8" />
+                    <button id="notif-bell" class="relative p-0.5 text-theme-muted hover:text-theme-text transition" aria-label="Notifications" hidden>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                      <span id="notif-badge" class="absolute -top-1 -right-1 min-w-[14px] h-[14px] rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center leading-none px-0.5" hidden></span>
+                    </button>
+                  </a>;
+            }
+            if (isSettingsPage) {
+              return isActive
+                ? <span class={`${activeClass} cursor-default`} aria-current="page" data-auth-only hidden title="Settings">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="inline-block"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+                  </span>
+                : <a href={href} class={`${activeClass} transition`} data-auth-only hidden title="Settings">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="inline-block"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+                  </a>;
+            }
+            return null;
           })}
           {enableSocial && (
             currentPath === `${base}/admin`
-              ? <span class="text-theme-text font-medium cursor-default" aria-current="page" data-auth-only hidden>Admin</span>
-              : <a href={`${base}/admin`} class="text-theme-muted hover:text-theme-text transition" data-auth-only hidden>Admin</a>
+              ? <span class="text-theme-text cursor-default" aria-current="page" data-auth-only hidden title="Admin">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="inline-block"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/></svg>
+                </span>
+              : <a href={`${base}/admin`} class="text-theme-muted hover:text-theme-text transition" data-auth-only hidden title="Admin">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="inline-block"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/></svg>
+                </a>
           )}
         </div>
       </nav>
