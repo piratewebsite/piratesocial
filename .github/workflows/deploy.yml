@@ -137,3 +137,12 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+      - name: Register installation
+        if: success()
+        continue-on-error: true
+        run: |
+          SITE_URL="${{ steps.site-config.outputs.site_url }}${{ steps.site-config.outputs.base_path }}"
+          curl -s -X POST https://piratesocial.app/api/setup/register-install \
+            -H "Content-Type: application/json" \
+            -d "{\"repo\":\"${{ github.repository }}\",\"siteUrl\":\"${SITE_URL}\"}"
