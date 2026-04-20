@@ -4481,6 +4481,9 @@ const sl = labels.social;
       reply: 'replied to your post',
       quote: 'quoted your post',
       starterpack_joined: 'joined your starter pack',
+      'subscribed-post': 'posted',
+      'like-via-repost': 'liked your repost',
+      'repost-via-repost': 'reposted your repost',
     };
 
     const icon = reasonIcons[n.reason] || reasonIcons.mention;
@@ -4489,13 +4492,31 @@ const sl = labels.social;
     const recordText = n.record?.text ? `<p class="text-sm text-theme-text whitespace-pre-wrap mt-1">${formatText(n.record.text)}</p>` : '';
     const unreadDot = n.isRead ? '' : '<span class="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0"></span>';
 
-    // Render embeds from the notification (images, video, external, quotes)
+    // Render embeds from the notification's own post
     let notifEmbedHtml = '';
     if (n.embed) {
       const embedData = extractEmbedData(n.embed);
       if (Object.keys(embedData).length) {
         notifEmbedHtml = renderEmbeds(embedData);
       }
+    }
+
+    // For likes/reposts: show the subject post (the post that was liked/reposted)
+    let subjectHtml = '';
+    if (n.subjectPost) {
+      const sp = n.subjectPost;
+      const spText = sp.text ? `<p class="text-sm text-theme-text whitespace-pre-wrap mt-1">${formatText(sp.text)}</p>` : '';
+      let spEmbedHtml = '';
+      if (sp.embed) {
+        const spEmbedData = extractEmbedData(sp.embed);
+        if (Object.keys(spEmbedData).length) {
+          spEmbedHtml = renderEmbeds(spEmbedData);
+        }
+      }
+      subjectHtml = `<div class="mt-2 rounded border border-theme-input-border p-3 bg-theme-surface/50">
+        ${spText}
+        ${spEmbedHtml}
+      </div>`;
     }
 
     // Build link to the post or profile
@@ -4527,6 +4548,7 @@ const sl = labels.social;
         </div>
         ${recordText}
         ${notifEmbedHtml}
+        ${subjectHtml}
       </div>
     </div>`;
   }
