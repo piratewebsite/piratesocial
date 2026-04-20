@@ -183,6 +183,9 @@ const socialNavItems = allNavItems.filter((item: any) => socialPaths.some(p => i
                   <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="inline-block"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/></svg>
                 </a>
           )}
+          <button id="logout-btn" class="text-theme-muted hover:text-red-400 transition" data-auth-only hidden title="Sign out" aria-label="Sign out">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="inline-block"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          </button>
         </div>
       </nav>
     </header>
@@ -252,6 +255,13 @@ const socialNavItems = allNavItems.filter((item: any) => socialPaths.some(p => i
         const savedToken = localStorage.getItem('ps_token');
         if (savedToken) {
           document.querySelectorAll('[data-auth-only]').forEach(el => el.removeAttribute('hidden'));
+
+          // Logout handler
+          document.getElementById('logout-btn')?.addEventListener('click', () => {
+            localStorage.removeItem('ps_token');
+            localStorage.removeItem('ps_bsky_session');
+            window.location.href = psBase + '/';
+          });
 
           // Show notification bell and poll for unread count
           const bell = document.getElementById('notif-bell');
