@@ -1683,7 +1683,7 @@ const sl = labels.social;
   });
 
   document.getElementById('social-login')?.addEventListener('click', () => {
-    window.location.href = `${hubUrl}/api/auth/github`;
+    window.location.href = `${hubUrl}/api/auth/github?site=${encodeURIComponent(window.location.origin + (import.meta.env.BASE_URL || '/'))}`;
   });
 
   // ============================================================
@@ -1869,7 +1869,7 @@ const sl = labels.social;
       } else {
         if (!filtered.length && !session?.accessJwt && !token) {
           feedContainer.innerHTML = `<div class="text-center text-theme-faint py-12"><p>${L.signInPrompt || 'Sign in to see your feed'}</p><button id="social-login" class="mt-4 rounded bg-theme-primary text-white px-4 py-2 text-sm font-medium hover:bg-theme-primary-hover transition">${L.signInButton || 'Sign in with GitHub'}</button></div>`;
-          document.getElementById('social-login')?.addEventListener('click', () => { window.location.href = `${hubUrl}/api/auth/github`; });
+          document.getElementById('social-login')?.addEventListener('click', () => { window.location.href = `${hubUrl}/api/auth/github?site=${encodeURIComponent(window.location.origin + (import.meta.env.BASE_URL || '/'))}`; });
         } else if (!filtered.length) {
           if (hasBlueskyError) {
             feedContainer.innerHTML = `<div class="text-center py-8"><div class="text-theme-faint mb-3">⚠️ Unable to load Bluesky feed</div><p class="text-sm text-theme-muted mb-4">Try connecting Bluesky in Settings or refreshing the page</p><button id="refresh-feed" class="rounded bg-theme-primary px-4 py-2 text-sm font-medium hover:bg-theme-primary-hover transition">↻ Retry</button></div>`;
@@ -4782,7 +4782,7 @@ const sl = labels.social;
   } else {
     // Not logged in - show sign-in prompt, hide tabs/filters
     feedContainer.innerHTML = `<div class="text-center text-theme-faint py-12"><p>${L.signInPrompt || 'Sign in to see your feed'}</p><button id="social-login" class="mt-4 rounded bg-theme-primary text-white px-4 py-2 text-sm font-medium hover:bg-theme-primary-hover transition">${L.signInButton || 'Sign in with GitHub'}</button></div>`;
-    document.getElementById('social-login')?.addEventListener('click', () => { window.location.href = `${hubUrl}/api/auth/github`; });
+    document.getElementById('social-login')?.addEventListener('click', () => { window.location.href = `${hubUrl}/api/auth/github?site=${encodeURIComponent(window.location.origin + (import.meta.env.BASE_URL || '/'))}`; });
     filterBar?.classList.add('hidden');
     discoverPills?.classList.add('hidden');
     rssManagement?.classList.add('hidden');
