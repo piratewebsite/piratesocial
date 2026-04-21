@@ -4202,6 +4202,8 @@ const sl = labels.social;
 
     if (!append) {
       feedContainer.innerHTML = SPINNER;
+      // Reset in-memory session so we re-read from localStorage/hub (catches account switches)
+      bskySession = null;
     }
 
     try {

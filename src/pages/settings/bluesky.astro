@@ -224,6 +224,8 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
         errorEl.classList.remove('hidden');
         return;
       }
+      // Clear cached session so social page re-fetches for new account
+      localStorage.removeItem(authStorageKey('ps_bsky_session'));
       loadStatus();
     } catch (err) {
       errorEl.textContent = 'Network error';
@@ -247,6 +249,8 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
     });
+    // Clear cached session so social page re-fetches (or shows logged-out state)
+    localStorage.removeItem(authStorageKey('ps_bsky_session'));
     loadStatus();
   });
 </script>
