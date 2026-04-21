@@ -144,7 +144,7 @@ const sl = labels.social;
   // ============================================================
   // STATE
   // ============================================================
-  const token = localStorage.getItem('ps_token');
+  let token = localStorage.getItem('ps_token');
   const feedContainer = document.getElementById('feed-container');
   const scrollSentinel = document.getElementById('scroll-sentinel');
   const filterBar = document.getElementById('feed-filters');
@@ -1614,6 +1614,45 @@ const sl = labels.social;
     else if (currentTab === 'youtube') loadYouTubeTab();
     else if (currentTab === 'rss') loadRSSTab();
     else if (currentTab === 'notifications') loadNotificationsTab();
+  }
+
+  function showLoggedOutSocialState() {
+    token = null;
+    localStorage.removeItem('ps_token');
+    localStorage.removeItem('ps_open_tab');
+
+    feedContainer.innerHTML = `<div class="text-center text-theme-faint py-12"><p>${L.signInPrompt || 'Sign in to see your feed'}</p><button id="social-login" class="mt-4 rounded bg-theme-primary text-white px-4 py-2 text-sm font-medium hover:bg-theme-primary-hover transition">${L.signInButton || 'Sign in with GitHub'}</button></div>`;
+    document.getElementById('social-login')?.addEventListener('click', () => {
+      window.location.href = `${hubUrl}/api/auth/github?site=${encodeURIComponent(window.location.origin + (psBase || '/'))}`;
+    });
+
+    filterBar?.classList.add('hidden');
+    discoverPills?.classList.add('hidden');
+    rssManagement?.classList.add('hidden');
+    document.querySelector('.sticky.top-\\[41px\\]')?.querySelectorAll('button[id^="tab-"]').forEach(b => b.style.display = 'none');
+  }
+
+  async function ensureHubAuth() {
+    if (!token) return false;
+    try {
+      const res = await fetchTimeout(`${hubUrl}/api/auth/me`, { headers: { Authorization: `Bearer ${token}` } }, 10000);
+      if (res.ok) return true;
+      if (res.status !== 401 && res.status !== 403) {
+        // Don't log users out on transient backend errors.
+        return true;
+      }
+    } catch (err) {
+      console.warn('[PS] Auth check failed:', err?.message || err);
+      // Network/CORS hiccups shouldn't force logout loops.
+      return true;
+    }
+
+    // Definite auth failure: clear stale token to avoid dead half-logged-in UI.
+    token = null;
+    localStorage.removeItem('ps_token');
+    localStorage.removeItem('ps_bsky_session');
+    bskySession = null;
+    return false;
   }
 
   // --- Filter pills ---
@@ -4757,37 +4796,33 @@ const sl = labels.social;
   loadBskySession();
   loadBookmarks();
 
-  if (token) {
-    // Start init in background, don't wait for it
-    initSquadsProfile().catch(err => console.warn('[PS] Squads init error:', err.message));
+  (async () => {
+    if (await ensureHubAuth()) {
+      // Start init in background, don't wait for it
+      initSquadsProfile().catch(err => console.warn('[PS] Squads init error:', err.message));
 
-    // Check if we should open a specific tab (e.g. from bell icon click)
-    const openTab = localStorage.getItem('ps_open_tab');
-    if (openTab) {
-      localStorage.removeItem('ps_open_tab');
-      if (openTab === 'notifications') {
-        currentTab = 'notifications';
-        // Deactivate all tab buttons since notifications isn't a tab button
-        document.querySelectorAll('[id^="tab-"]:not(#tab-feeds)').forEach(b => {
-          b.classList.remove('active-tab', 'bg-theme-surface-hover');
-          b.removeAttribute('aria-current');
-          b.setAttribute('aria-selected', 'false');
-          b.removeAttribute('tabindex');
-        });
+      // Check if we should open a specific tab (e.g. from bell icon click)
+      const openTab = localStorage.getItem('ps_open_tab');
+      if (openTab) {
+        localStorage.removeItem('ps_open_tab');
+        if (openTab === 'notifications') {
+          currentTab = 'notifications';
+          // Deactivate all tab buttons since notifications isn't a tab button
+          document.querySelectorAll('[id^="tab-"]:not(#tab-feeds)').forEach(b => {
+            b.classList.remove('active-tab', 'bg-theme-surface-hover');
+            b.removeAttribute('aria-current');
+            b.setAttribute('aria-selected', 'false');
+            b.removeAttribute('tabindex');
+          });
+        }
       }
-    }
 
-    updateUI();
-    loadCurrentTab();
-  } else {
-    // Not logged in - show sign-in prompt, hide tabs/filters
-    feedContainer.innerHTML = `<div class="text-center text-theme-faint py-12"><p>${L.signInPrompt || 'Sign in to see your feed'}</p><button id="social-login" class="mt-4 rounded bg-theme-primary text-white px-4 py-2 text-sm font-medium hover:bg-theme-primary-hover transition">${L.signInButton || 'Sign in with GitHub'}</button></div>`;
-    document.getElementById('social-login')?.addEventListener('click', () => { window.location.href = `${hubUrl}/api/auth/github?site=${encodeURIComponent(window.location.origin + (psBase || '/'))}`; });
-    filterBar?.classList.add('hidden');
-    discoverPills?.classList.add('hidden');
-    rssManagement?.classList.add('hidden');
-    document.querySelector('.sticky.top-\\[41px\\]')?.querySelectorAll('button[id^="tab-"]').forEach(b => b.style.display = 'none');
-  }
+      updateUI();
+      loadCurrentTab();
+    } else {
+      showLoggedOutSocialState();
+    }
+  })();
 </script>
 
 <style is:global>
