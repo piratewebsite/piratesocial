@@ -53,7 +53,7 @@ const { postSlug } = Astro.props;
   const postStates = {};
 
   function getToken() {
-    return localStorage.getItem('ps_token');
+    return localStorage.getItem(`ps_token:${window.__PS_BASE || '/'}`);
   }
 
   // Resolve slug to postId + bluesky data via hub

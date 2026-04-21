@@ -101,7 +101,8 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 </BaseLayout>
 
 <script is:inline define:vars={{ hubUrl: siteConfig.hubUrl, BL: labels.bluesky }} data-astro-rerun>
-  const token = localStorage.getItem('ps_token');
+  const authStorageKey = (key) => `${key}:${window.__PS_BASE || '/'}`;
+  const token = localStorage.getItem(authStorageKey('ps_token'));
 
   // Social display settings
   const defaultSocialSettings = { squadHighlight: true, squadBorderColor: '#eab308', miniPlayerEnabled: true, miniPlayerX: null, miniPlayerY: null };

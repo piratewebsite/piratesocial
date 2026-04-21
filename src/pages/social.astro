@@ -141,10 +141,11 @@ const sl = labels.social;
 
 <script is:inline src="https://cdn.jsdelivr.net/npm/hls.js@latest/dist/hls.min.js"></script>
 <script is:inline define:vars={{ hubUrl: siteConfig.hubUrl, L: labels.social, FL: labels.feeds, psBase: base }} data-astro-rerun>
+  const authStorageKey = (key) => `${key}:${psBase || '/'}`;
   // ============================================================
   // STATE
   // ============================================================
-  let token = localStorage.getItem('ps_token');
+  let token = localStorage.getItem(authStorageKey('ps_token'));
   const feedContainer = document.getElementById('feed-container');
   const scrollSentinel = document.getElementById('scroll-sentinel');
   const filterBar = document.getElementById('feed-filters');
@@ -278,7 +279,7 @@ const sl = labels.social;
   // ============================================================
   function loadBskySession() {
     try {
-      const stored = localStorage.getItem('ps_bsky_session');
+      const stored = localStorage.getItem(authStorageKey('ps_bsky_session'));
       if (stored) bskySession = JSON.parse(stored);
     } catch { bskySession = null; }
     return bskySession;
@@ -286,7 +287,7 @@ const sl = labels.social;
 
   function saveBskySession(s) {
     bskySession = s;
-    localStorage.setItem('ps_bsky_session', JSON.stringify(s));
+    localStorage.setItem(authStorageKey('ps_bsky_session'), JSON.stringify(s));
   }
 
   async function ensureBskySession() {
@@ -320,7 +321,7 @@ const sl = labels.social;
         saveBskySession(bskySession);
         return bskySession;
       }
-      localStorage.removeItem('ps_bsky_session');
+      localStorage.removeItem(authStorageKey('ps_bsky_session'));
       bskySession = null;
       return ensureBskySession();
     } catch { return null; }
@@ -1618,8 +1619,8 @@ const sl = labels.social;
 
   function showLoggedOutSocialState() {
     token = null;
-    localStorage.removeItem('ps_token');
-    localStorage.removeItem('ps_open_tab');
+    localStorage.removeItem(authStorageKey('ps_token'));
+    localStorage.removeItem(authStorageKey('ps_open_tab'));
 
     feedContainer.innerHTML = `<div class="text-center text-theme-faint py-12"><p>${L.signInPrompt || 'Sign in to see your feed'}</p><button id="social-login" class="mt-4 rounded bg-theme-primary text-white px-4 py-2 text-sm font-medium hover:bg-theme-primary-hover transition">${L.signInButton || 'Sign in with GitHub'}</button></div>`;
     document.getElementById('social-login')?.addEventListener('click', () => {
@@ -1649,8 +1650,8 @@ const sl = labels.social;
 
     // Definite auth failure: clear stale token to avoid dead half-logged-in UI.
     token = null;
-    localStorage.removeItem('ps_token');
-    localStorage.removeItem('ps_bsky_session');
+    localStorage.removeItem(authStorageKey('ps_token'));
+    localStorage.removeItem(authStorageKey('ps_bsky_session'));
     bskySession = null;
     return false;
   }
@@ -4802,9 +4803,9 @@ const sl = labels.social;
       initSquadsProfile().catch(err => console.warn('[PS] Squads init error:', err.message));
 
       // Check if we should open a specific tab (e.g. from bell icon click)
-      const openTab = localStorage.getItem('ps_open_tab');
+      const openTab = localStorage.getItem(authStorageKey('ps_open_tab'));
       if (openTab) {
-        localStorage.removeItem('ps_open_tab');
+        localStorage.removeItem(authStorageKey('ps_open_tab'));
         if (openTab === 'notifications') {
           currentTab = 'notifications';
           // Deactivate all tab buttons since notifications isn't a tab button

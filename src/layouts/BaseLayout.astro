@@ -243,23 +243,24 @@ const socialNavItems = allNavItems.filter((item: any) => socialPaths.some(p => i
     <script is:inline define:vars={{ hubUrl: siteConfig.hubUrl, socialEnabled: enableSocial, psBase: base }} data-astro-rerun>
       // Handle auth token from OAuth redirect
       window.__PS_BASE = psBase;
+      window.__psStorageKey = (key) => `${key}:${window.__PS_BASE || '/'}`;
       if (socialEnabled) {
         const params = new URLSearchParams(window.location.search);
         const token = params.get('token');
         if (token) {
-          localStorage.setItem('ps_token', token);
+          localStorage.setItem(window.__psStorageKey('ps_token'), token);
           window.history.replaceState({}, '', window.location.pathname);
         }
 
         // Show auth-only nav links when logged in
-        const savedToken = localStorage.getItem('ps_token');
+        const savedToken = localStorage.getItem(window.__psStorageKey('ps_token'));
         if (savedToken) {
           document.querySelectorAll('[data-auth-only]').forEach(el => el.removeAttribute('hidden'));
 
           // Logout handler
           document.getElementById('logout-btn')?.addEventListener('click', () => {
-            localStorage.removeItem('ps_token');
-            localStorage.removeItem('ps_bsky_session');
+            localStorage.removeItem(window.__psStorageKey('ps_token'));
+            localStorage.removeItem(window.__psStorageKey('ps_bsky_session'));
             window.location.href = psBase + '/';
           });
 
@@ -273,7 +274,7 @@ const socialNavItems = allNavItems.filter((item: any) => socialPaths.some(p => i
             bell.addEventListener('click', (e) => {
               e.preventDefault();
               e.stopPropagation();
-              localStorage.setItem('ps_open_tab', 'notifications');
+              localStorage.setItem(window.__psStorageKey('ps_open_tab'), 'notifications');
               window.location.href = (window.__PS_BASE || '') + '/social';
             });
 
@@ -331,7 +332,7 @@ const socialNavItems = allNavItems.filter((item: any) => socialPaths.some(p => i
             // Refresh badge count
             const bell = document.getElementById('notif-bell');
             if (bell) {
-              const savedTkn = localStorage.getItem('ps_token');
+              const savedTkn = localStorage.getItem(window.__psStorageKey('ps_token'));
               if (savedTkn) {
                 fetch(`${hubUrl}/api/notifications/bluesky/unread`, {
                   headers: { Authorization: `Bearer ${savedTkn}` },
