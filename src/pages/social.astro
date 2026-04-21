@@ -4572,18 +4572,20 @@ const sl = labels.social;
       clickAttr = `data-notif-uri="${escapeHtml(n.uri)}"`;
     }
 
-    // Action tray for notifications that have a post
+    // Action tray for notifications that point to a post.
+    // Keep non-post events (follow/starterpack) card-only.
     let actionTray = '';
+    const nonPostReasons = new Set(['follow', 'starterpack_joined']);
     const isOwnPost = n.reason === 'reply' || n.reason === 'mention' || n.reason === 'quote';
-    const hasSubject = n.subjectPost && n.subjectPost.uri;
-    if (isOwnPost || hasSubject) {
-      const postUri = isOwnPost ? n.uri : n.subjectPost.uri;
-      const postCid = isOwnPost ? n.cid : (n.subjectPost.cid || '');
-      const counts = isOwnPost ? n : n.subjectPost;
-      const liked = isOwnPost ? n.viewer?.like : n.subjectPost.viewer?.like;
-      const reposted = isOwnPost ? n.viewer?.repost : n.subjectPost.viewer?.repost;
-      const postText = isOwnPost ? (n.record?.text || '') : (n.subjectPost.text || '');
-      const postHandle = isOwnPost ? a.handle : (n.subjectPost.author?.handle || '');
+    const postUri = n.subjectPost?.uri || n.reasonSubject || n.uri || '';
+    const hasPostUri = !!postUri && !nonPostReasons.has(n.reason);
+    if (hasPostUri) {
+      const postCid = n.subjectPost?.cid || n.cid || '';
+      const counts = n.subjectPost || n;
+      const liked = !!(n.subjectPost?.viewer?.like || n.viewer?.like || myLikes[postUri]);
+      const reposted = !!(n.subjectPost?.viewer?.repost || n.viewer?.repost || myReposts[postUri]);
+      const postText = n.subjectPost?.text || n.record?.text || '';
+      const postHandle = n.subjectPost?.author?.handle || a.handle || '';
       const bskyLink = `https://bsky.app/profile/${postHandle}/post/${postUri.split('/').pop()}`;
 
       actionTray = `<div class="mt-2 pt-2 border-t border-theme-card-border flex items-center gap-3 text-xs text-theme-faint">
@@ -4597,6 +4599,9 @@ const sl = labels.social;
           ${liked ? ICON.heartFill : ICON.heart} <span class="like-count">${counts.likeCount || 0}</span>
         </button>
         <div class="ml-auto flex items-center gap-3">
+          <button class="bsky-bookmark-btn flex items-center gap-1 px-2 py-1 rounded hover:bg-theme-surface-hover transition ${myBookmarks[postUri] ? 'text-blue-400' : ''}" data-uri="${escapeHtml(postUri)}" data-cid="${escapeHtml(postCid)}" data-text="${escapeHtml(postText)}" title="Save">
+            ${myBookmarks[postUri] ? ICON.bookmarkFill : ICON.bookmark}
+          </button>
           <button class="share-btn px-2 py-1 rounded hover:bg-theme-surface-hover transition" data-url="${escapeHtml(bskyLink)}" data-title="${escapeHtml(postText.slice(0, 100))}" title="Share">${ICON.share}</button>
           <a href="${escapeHtml(bskyLink)}" target="_blank" rel="noopener noreferrer" class="px-2 py-1 rounded hover:bg-theme-surface-hover hover:text-theme-text transition" title="View on Bluesky">${ICON.butterfly}</a>
         </div>
