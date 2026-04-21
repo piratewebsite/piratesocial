@@ -683,9 +683,7 @@ collections:
               - { label: "Page Heading", name: heading, widget: string, default: "Social Feed" }
               - { label: "Squads Tab", name: tabSquads, widget: string, default: "Squads" }
               - { label: "Timeline Tab", name: tabTimeline, widget: string, default: "Timeline" }
-              - { label: "Bluesky Tab", name: tabBluesky, widget: string, default: "Bluesky" }
               - { label: "Discover Tab", name: tabDiscover, widget: string, default: "Discover" }
-              - { label: "People Tab", name: tabPeople, widget: string, default: "People" }
               - { label: "Sign In Prompt", name: signInPrompt, widget: string, default: "Sign in to see your timeline" }
               - { label: "Sign In Button", name: signInButton, widget: string, default: "Sign in with GitHub" }
               - { label: "Loading Text", name: loading, widget: string, default: "Loading..." }
