@@ -1,6 +1,7 @@
 ---
 import ProfileBlock from './blocks/ProfileBlock.astro';
 import RecentPostsBlock from './blocks/RecentPostsBlock.astro';
+import GalleriesListBlock from './blocks/GalleriesListBlock.astro';
 import HeroBlock from './blocks/HeroBlock.astro';
 import YouTubeBlock from './blocks/YouTubeBlock.astro';
 import GalleryBlock from './blocks/GalleryBlock.astro';
@@ -26,6 +27,7 @@ const hasLightbox = blocks.some((b: any) => b.type === 'gallery' || (b.type === 
     {block.type === 'image' && <ImageBlock {...block} />}
     {block.type === 'location' && <LocationBlock {...block} />}
     {block.type === 'faq' && <FaqBlock {...block} />}
+    {block.type === 'galleriesList' && <GalleriesListBlock {...block} />}
     {block.type === 'cta' && <CtaBlock {...block} />}
   </>
 ))}

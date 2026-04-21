@@ -344,6 +344,20 @@ collections:
                     default: "primary"
                   - { label: "Open in New Tab", name: openInNewTab, widget: boolean, default: false }
 
+          - label: "Galleries List"
+            name: galleriesList
+            widget: object
+            fields:
+              - { label: "Heading", name: heading, widget: string, required: false, hint: "Optional section heading above the gallery grid" }
+              - label: "Columns"
+                name: columns
+                widget: select
+                options:
+                  - { label: "2 Columns", value: "2" }
+                  - { label: "3 Columns", value: "3" }
+                  - { label: "4 Columns", value: "4" }
+                default: "3"
+
   - name: site-settings
     label: Site Settings
     files:
