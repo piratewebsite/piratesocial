@@ -1821,8 +1821,11 @@ const sl = labels.social;
     if (e.key === 'Enter') { resetPagination(); loadSearchResults(); }
   });
 
-  document.getElementById('social-login')?.addEventListener('click', () => {
-    window.location.href = `${hubUrl}/api/auth/github?site=${encodeURIComponent(window.location.origin + (psBase || '/'))}`;
+  // Delegated handler for sign-in button (dynamically injected into feed-container)
+  feedContainer.addEventListener('click', (e) => {
+    if (e.target?.id === 'social-login') {
+      window.location.href = `${hubUrl}/api/auth/github?site=${encodeURIComponent(window.location.origin + (psBase || '/'))}`;
+    }
   });
 
   // ============================================================
@@ -2003,18 +2006,27 @@ const sl = labels.social;
       hasMore = !!bskyCursor || hasMore;
 
       const html = filtered.map(p => renderPostCard(p)).join('');
+      // Build sign-in banner for guests (shown regardless of post count)
+      const guestBanner = !token ? `<div class="rounded-lg border border-theme-border bg-theme-surface p-4 text-center mb-4"><p class="text-sm text-theme-muted mb-3">${L.signInPrompt || 'Sign in to see your personalized feed'}</p><button id="social-login" class="rounded bg-theme-primary text-white px-4 py-2 text-sm font-medium hover:bg-theme-primary-hover transition">${L.signInButton || 'Sign in with GitHub'}</button></div>` : '';
+
       if (append) {
         feedContainer.insertAdjacentHTML('beforeend', html);
       } else {
-        if (!filtered.length && !session?.accessJwt && !token) {
+        if (!token && !filtered.length) {
+          // Guest with no posts: show full-page sign-in prompt
           feedContainer.innerHTML = `<div class="text-center text-theme-faint py-12"><p>${L.signInPrompt || 'Sign in to see your feed'}</p><button id="social-login" class="mt-4 rounded bg-theme-primary text-white px-4 py-2 text-sm font-medium hover:bg-theme-primary-hover transition">${L.signInButton || 'Sign in with GitHub'}</button></div>`;
-          document.getElementById('social-login')?.addEventListener('click', () => { window.location.href = `${hubUrl}/api/auth/github?site=${encodeURIComponent(window.location.origin + (psBase || '/'))}`; });
+        } else if (!token && filtered.length) {
+          // Guest with public posts: show banner then posts
+          feedContainer.innerHTML = guestBanner + html;
         } else if (!filtered.length) {
           if (hasBlueskyError) {
             feedContainer.innerHTML = `<div class="text-center py-8"><div class="text-theme-faint mb-3">⚠️ Unable to load Bluesky feed</div><p class="text-sm text-theme-muted mb-4">Try connecting Bluesky in Settings or refreshing the page</p><button id="refresh-feed" class="rounded bg-theme-primary px-4 py-2 text-sm font-medium hover:bg-theme-primary-hover transition">↻ Retry</button></div>`;
             document.getElementById('refresh-feed')?.addEventListener('click', loadFeedTab);
+          } else if (session?.accessJwt) {
+            feedContainer.innerHTML = `<div class="text-center py-8 text-theme-faint">${L.noPosts || 'No posts yet'}</div>`;
           } else {
-            feedContainer.innerHTML = `<div class="text-center py-8 text-theme-faint">${session?.accessJwt ? (L.noPosts || 'No posts yet') : (L.connectBluesky || 'Connect Bluesky in Settings to see your feed')}</div>`;
+            // Logged in but no Bluesky: guide them to Settings
+            feedContainer.innerHTML = `<div class="rounded-lg border border-theme-border bg-theme-surface p-6 text-center"><p class="text-sm text-theme-muted mb-3">${L.connectBluesky || 'Connect your Bluesky account in Settings to see your feed'}</p><a href="${psBase}settings/bluesky" class="rounded bg-theme-primary text-white px-4 py-2 text-sm font-medium hover:bg-theme-primary-hover transition">Open Settings</a></div>`;
           }
         } else {
           feedContainer.innerHTML = html;
