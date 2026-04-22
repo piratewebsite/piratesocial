@@ -8,7 +8,7 @@ import { cleanSlug } from '../../lib/config';
 
 const showDates = settings.showDates !== false;
 export async function getStaticPaths() {
-  const galleries = await getCollection('galleries');
+  const galleries = (await getCollection('galleries')).filter((g) => !g.data?.draft);
   return galleries.map(g => ({ params: { slug: cleanSlug(g.id) }, props: { gallery: g } }));
 }
 

@@ -8,6 +8,7 @@ export async function GET(context) {
     .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
 
   const galleries = (await getCollection('galleries'))
+    .filter((g) => !g.data?.draft)
     .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
 
   // Build items from both posts and galleries

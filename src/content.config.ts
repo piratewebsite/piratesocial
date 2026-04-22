@@ -45,6 +45,7 @@ const galleries = defineCollection({
       title: z.string(),
       description: z.string().optional(),
       pubDate: z.coerce.date(),
+      draft: z.boolean().default(false),
       coverImage: image().optional(),
       photos: z.array(
         z.object({
@@ -66,6 +67,7 @@ const slideshows = defineCollection({
   schema: z.object({
       title: z.string(),
       description: z.string().optional(),
+  draft: z.boolean().default(false),
       transition: z.enum(['fade', 'slide', 'zoom', 'kenburns']).default('fade'),
       interval: z.number().default(5),
       autoplay: z.boolean().default(true),
