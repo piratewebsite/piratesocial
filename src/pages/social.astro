@@ -290,6 +290,49 @@ const sl = labels.social;
     localStorage.setItem(authStorageKey('ps_bsky_session'), JSON.stringify(s));
   }
 
+  function clearCachedAuthState() {
+    token = null;
+    bskySession = null;
+    myHandle = null;
+    myDid = null;
+    myAvatar = null;
+    myDisplayName = null;
+    myLikes = {};
+    myReposts = {};
+    localStorage.removeItem(authStorageKey('ps_token'));
+    localStorage.removeItem(authStorageKey('ps_bsky_session'));
+    localStorage.removeItem(authStorageKey('ps_open_tab'));
+  }
+
+  function syncAnonymousTabVisibility() {
+    const isLoggedIn = !!token;
+    const tabVisibility = {
+      timeline: isLoggedIn,
+      discover: true,
+      squads: isLoggedIn,
+      posts: isLoggedIn,
+      youtube: true,
+      rss: true,
+    };
+
+    Object.entries(tabVisibility).forEach(([tabName, isVisible]) => {
+      const tabBtn = document.getElementById(`tab-${tabName}`);
+      if (!tabBtn) return;
+      tabBtn.style.display = isVisible ? '' : 'none';
+    });
+
+    document.querySelectorAll('.discover-pill').forEach((btn) => {
+      const isVisible = isLoggedIn || btn.dataset.sub === 'trending';
+      btn.classList.toggle('hidden', !isVisible);
+    });
+
+    const feedsSelect = document.getElementById('tab-feeds');
+    if (feedsSelect) {
+      feedsSelect.style.display = isLoggedIn && subscribedFeeds.length ? '' : 'none';
+      if (!isLoggedIn) feedsSelect.value = '';
+    }
+  }
+
   async function ensureBskySession() {
     if (bskySession?.accessJwt) return bskySession;
     loadBskySession();
@@ -1587,12 +1630,13 @@ const sl = labels.social;
   }
 
   function updateUI() {
+    syncAnonymousTabVisibility();
     filterBar.classList.toggle('hidden', currentTab !== 'timeline');
     discoverPills.classList.toggle('hidden', currentTab !== 'discover');
     rssManagement.classList.toggle('hidden', currentTab !== 'rss');
     const discoverSearchBar = document.getElementById('discover-search-bar');
     if (discoverSearchBar) {
-      const showSearch = currentTab === 'discover' && (currentDiscoverSub === 'people' || currentDiscoverSub === 'feeds');
+      const showSearch = !!token && currentTab === 'discover' && (currentDiscoverSub === 'people' || currentDiscoverSub === 'feeds');
       discoverSearchBar.classList.toggle('hidden', !showSearch);
       const input = document.getElementById('discover-search-input');
       if (input) input.placeholder = currentDiscoverSub === 'people' ? 'Search people...' : 'Search feeds...';
@@ -1618,23 +1662,23 @@ const sl = labels.social;
   }
 
   function showLoggedOutSocialState() {
-    token = null;
-    localStorage.removeItem(authStorageKey('ps_token'));
-    localStorage.removeItem(authStorageKey('ps_open_tab'));
-
-    feedContainer.innerHTML = `<div class="text-center text-theme-faint py-12"><p>${L.signInPrompt || 'Sign in to see your feed'}</p><button id="social-login" class="mt-4 rounded bg-theme-primary text-white px-4 py-2 text-sm font-medium hover:bg-theme-primary-hover transition">${L.signInButton || 'Sign in with GitHub'}</button></div>`;
-    document.getElementById('social-login')?.addEventListener('click', () => {
-      window.location.href = `${hubUrl}/api/auth/github?site=${encodeURIComponent(window.location.origin + (psBase || '/'))}`;
-    });
-
-    filterBar?.classList.add('hidden');
-    discoverPills?.classList.add('hidden');
-    rssManagement?.classList.add('hidden');
-    document.querySelector('.sticky.top-\\[41px\\]')?.querySelectorAll('button[id^="tab-"]').forEach(b => b.style.display = 'none');
+    clearCachedAuthState();
+    activeFeedUri = null;
+    activeFeedName = null;
+    currentDiscoverSub = 'trending';
+    if (!['discover', 'youtube', 'rss'].includes(currentTab)) currentTab = 'discover';
+    syncAnonymousTabVisibility();
+    const activeBtn = document.getElementById(`tab-${currentTab}`) || document.getElementById('tab-discover');
+    if (activeBtn) setActiveTab(activeBtn);
+    updateUI();
+    loadCurrentTab();
   }
 
   async function ensureHubAuth() {
-    if (!token) return false;
+    if (!token) {
+      clearCachedAuthState();
+      return false;
+    }
     try {
       const res = await fetchTimeout(`${hubUrl}/api/auth/me`, { headers: { Authorization: `Bearer ${token}` } }, 10000);
       if (res.ok) return true;
@@ -1649,10 +1693,7 @@ const sl = labels.social;
     }
 
     // Definite auth failure: clear stale token to avoid dead half-logged-in UI.
-    token = null;
-    localStorage.removeItem(authStorageKey('ps_token'));
-    localStorage.removeItem(authStorageKey('ps_bsky_session'));
-    bskySession = null;
+    clearCachedAuthState();
     return false;
   }
 
@@ -1949,11 +1990,12 @@ const sl = labels.social;
 
     try {
       const session = await ensureBskySession();
+      const allowBlueskyDiscover = !!token && !!session?.accessJwt;
       let allPosts = [];
 
       // Trending topics banner
       let trendingHtml = '';
-      if (!append) {
+      if (!append && allowBlueskyDiscover) {
         try {
           const trending = await fetchTrendingTopics();
           if (trending.topics?.length || trending.suggested?.length) {
@@ -1966,7 +2008,7 @@ const sl = labels.social;
       }
 
       // Bluesky discover feed
-      if (session?.accessJwt) {
+      if (allowBlueskyDiscover) {
         try {
           const data = await fetchBskyDiscover(bskyCursor);
           bskyCursor = data.cursor || null;
@@ -1996,6 +2038,7 @@ const sl = labels.social;
       // Attach trending topic click handlers — search posts for that topic
       document.querySelectorAll('.trending-topic').forEach(btn => {
         btn.addEventListener('click', async () => {
+          if (!allowBlueskyDiscover) return;
           const topic = btn.dataset.topic;
           if (!topic) return;
           feedContainer.innerHTML = SPINNER;
