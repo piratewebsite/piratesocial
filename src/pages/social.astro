@@ -75,10 +75,25 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
     <!-- Post composer (shown when logged in to Bluesky) -->
     <div id="compose-box" style="display:none" class="mb-6 rounded-lg border border-theme-card-border bg-theme-card p-4">
       <textarea id="compose-input" rows="3" placeholder="What's on your mind?" style="width:100%;background:var(--ps-input-bg,#1a1a2e);border:1px solid var(--ps-input-border,#333);border-radius:.5rem;padding:.75rem;color:var(--ps-text,#e0e0e0);font-size:.875rem;resize:vertical;outline:none" maxlength="300"></textarea>
+      <!-- Attached media thumbnails -->
+      <div id="compose-images" class="hidden flex gap-2 flex-wrap mt-2"></div>
       <div id="compose-link-preview"></div>
-      <div class="flex items-center justify-between mt-2">
-        <span id="compose-count" class="text-xs text-theme-faint">0/300</span>
+      <!-- Compose toolbar -->
+      <div class="flex items-center justify-between mt-2 pt-2 border-t border-theme-border">
+        <div class="flex items-center gap-0.5">
+          <button id="compose-media-btn" type="button" title="Add photo/video" class="p-1.5 rounded text-theme-muted hover:text-theme-text hover:bg-theme-surface-hover transition">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          </button>
+          <input id="compose-media-input" type="file" accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/quicktime" multiple hidden>
+          <button id="compose-emoji-btn" type="button" title="Emoji" class="p-1.5 rounded text-theme-muted hover:text-theme-text hover:bg-theme-surface-hover transition">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 13s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+          </button>
+          <button id="compose-tags-btn" type="button" title="Tag groups" class="p-1.5 rounded text-theme-muted hover:text-theme-text hover:bg-theme-surface-hover transition">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+          </button>
+        </div>
         <div class="flex items-center gap-2">
+          <span id="compose-count" class="text-xs text-theme-faint">0/300</span>
           <div id="delay-controls" class="flex items-center gap-1">
             <select id="post-delay" class="rounded bg-theme-input-bg border border-theme-input-border px-2 py-1 text-xs focus:outline-none focus:border-theme-primary text-theme-text" style="min-width:5rem">
               <option value="0">Post Now</option>
@@ -92,6 +107,8 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
           <button id="compose-send" style="background:var(--ps-accent,#3b82f6);color:#fff;border:none;border-radius:.375rem;padding:.375rem 1rem;font-size:.875rem;cursor:pointer;opacity:.5" disabled>Post</button>
         </div>
       </div>
+      <!-- Emoji picker panel -->
+      <div id="compose-emoji-panel" class="hidden mt-2 rounded-lg border border-theme-border bg-theme-surface p-2" style="max-height:12rem;overflow-y:auto"></div>
       <div id="scheduled-posts-list" class="mt-3 hidden border-t border-theme-border pt-3"></div>
     </div>
 
@@ -138,6 +155,26 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
         <button id="slide-close" class="text-theme-muted hover:text-theme-text text-xl">✕</button>
       </div>
       <div id="slide-body" class="p-4 space-y-4"></div>
+    </div>
+  </div>
+
+  <!-- Tag Groups Modal -->
+  <div id="tag-groups-modal" class="fixed inset-0 z-[60] hidden items-center justify-center">
+    <div id="tag-groups-backdrop" class="absolute inset-0 bg-black/60"></div>
+    <div class="relative z-10 w-full max-w-sm mx-4 rounded-xl border border-theme-border bg-theme-surface shadow-2xl overflow-hidden">
+      <div class="flex items-center justify-between px-4 py-3 border-b border-theme-border">
+        <h3 class="font-semibold text-sm text-theme-text">Tag Groups</h3>
+        <button id="tag-groups-close" class="text-theme-faint hover:text-theme-text text-lg leading-none">✕</button>
+      </div>
+      <div id="tag-groups-list" class="p-3 space-y-2" style="max-height:16rem;overflow-y:auto"></div>
+      <div class="px-3 pb-3 pt-3 border-t border-theme-border space-y-2">
+        <input id="tag-group-name" type="text" placeholder="Group name (e.g. Landscape)" class="w-full rounded bg-theme-input-bg border border-theme-input-border px-2 py-1.5 text-xs focus:outline-none focus:border-theme-primary text-theme-text" />
+        <textarea id="tag-group-tags" rows="2" placeholder="#tag1 #tag2 @handle.bsky.social" class="w-full rounded bg-theme-input-bg border border-theme-input-border px-2 py-1.5 text-xs focus:outline-none focus:border-theme-primary text-theme-text resize-none"></textarea>
+        <div class="flex gap-2">
+          <button id="tag-group-save" type="button" style="background:var(--ps-accent,#3b82f6);color:#fff;border:none;border-radius:.375rem;padding:.35rem .75rem;font-size:.75rem;cursor:pointer;flex:1">Save Group</button>
+          <button id="tag-group-cancel" type="button" class="hidden rounded border border-theme-border text-xs px-3 py-1 text-theme-muted hover:bg-theme-surface-hover transition">Cancel</button>
+        </div>
+      </div>
     </div>
   </div>
 </BaseLayout>
@@ -658,7 +695,7 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
 
   // Create a new Bluesky post or reply
   // linkCard can be passed from the preview UI to avoid re-fetching
-  async function createBskyRecord(text, replyTo, linkCard) {
+  async function createBskyRecord(text, replyTo, linkCard, mediaItems = []) {
     // If a link card is attached, strip the detected URL from the body text to save space
     if (linkCard && !linkCard.removed && linkCard.url) {
       const cardUrl = linkCard.url.replace(/^https?:\/\//, '');
@@ -722,13 +759,27 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
     }
     if (facets.length) record.facets = facets;
 
-    // Attach link card embed — use pre-fetched card if provided
+    // Attach embed — quote, images/video, or link card
+    const _readyImages = mediaItems.filter(m => m.type === 'image' && m.blob);
+    const _readyVideo = mediaItems.find(m => m.type === 'video' && m.blob);
     if (window._quoteEmbed && window._quoteEmbed.uri && window._quoteEmbed.cid) {
-      record.embed = {
-        '$type': 'app.bsky.embed.record',
-        record: { uri: window._quoteEmbed.uri, cid: window._quoteEmbed.cid },
-      };
+      if (_readyImages.length) {
+        record.embed = {
+          '$type': 'app.bsky.embed.recordWithMedia',
+          record: { '$type': 'app.bsky.embed.record', record: { uri: window._quoteEmbed.uri, cid: window._quoteEmbed.cid } },
+          media: { '$type': 'app.bsky.embed.images', images: _readyImages.slice(0, 4).map(m => ({ image: m.blob, alt: '' })) },
+        };
+      } else {
+        record.embed = {
+          '$type': 'app.bsky.embed.record',
+          record: { uri: window._quoteEmbed.uri, cid: window._quoteEmbed.cid },
+        };
+      }
       window._quoteEmbed = null;
+    } else if (_readyVideo) {
+      record.embed = { '$type': 'app.bsky.embed.video', video: _readyVideo.blob, alt: '' };
+    } else if (_readyImages.length) {
+      record.embed = { '$type': 'app.bsky.embed.images', images: _readyImages.slice(0, 4).map(m => ({ image: m.blob, alt: '' })) };
     } else if (linkCard && !linkCard.removed) {
       const external = {
         '$type': 'app.bsky.embed.external',
@@ -3588,15 +3639,197 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
 
   if (floatingTriggerBtn) floatingTriggerBtn.addEventListener('click', openFloatingCompose);
   if (floatingCloseBtn) floatingCloseBtn.addEventListener('click', closeFloatingCompose);
+
+  // ============================================================
+  // COMPOSE EXTRAS: Media Attach, Emoji Picker, Tag Groups
+  // ============================================================
+  let composeAttachedMedia = []; // [{blob, localUrl, type}]
+
+  function updateComposeSendBtn() {
+    if (!composeSend || !composeInput) return;
+    const len = composeInput.value.length;
+    composeSend.disabled = (len === 0 && !composeAttachedMedia.length) || len > 300;
+    composeSend.style.opacity = composeSend.disabled ? '.5' : '1';
+  }
+
+  function renderAttachedMedia() {
+    const container = document.getElementById('compose-images');
+    if (!container) return;
+    if (!composeAttachedMedia.length) { container.classList.add('hidden'); container.innerHTML = ''; updateComposeSendBtn(); return; }
+    container.classList.remove('hidden');
+    container.innerHTML = composeAttachedMedia.map((m, i) => `<div style="position:relative;display:inline-block;vertical-align:top">${m.type==='video'?`<video src="${m.localUrl}" style="height:5rem;border-radius:.5rem;object-fit:cover;background:#000;max-width:8rem" muted></video>`:`<img src="${m.localUrl}" style="height:5rem;border-radius:.5rem;object-fit:cover;max-width:8rem" />`}${!m.blob?'<div style="position:absolute;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;border-radius:.5rem"><div class="animate-spin" style="width:.9rem;height:.9rem;border:2px solid #fff;border-top-color:transparent;border-radius:50%"></div></div>':''}<button data-remove-media="${i}" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.7);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:12px;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center">×</button></div>`).join('');
+    container.querySelectorAll('[data-remove-media]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        composeAttachedMedia.splice(parseInt(btn.dataset.removeMedia), 1);
+        renderAttachedMedia();
+        if (!composeAttachedMedia.length) { const lp = document.getElementById('compose-link-preview'); if (lp) lp.style.display = ''; }
+      });
+    });
+    updateComposeSendBtn();
+  }
+
+  async function uploadComposeMedia(file, idx) {
+    try {
+      const res = await fetch('https://bsky.social/xrpc/com.atproto.repo.uploadBlob', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${bskySession.accessJwt}`, 'Content-Type': file.type },
+        body: file,
+      });
+      const data = await res.json();
+      if (data.blob) { composeAttachedMedia[idx].blob = data.blob; renderAttachedMedia(); }
+      else { composeAttachedMedia.splice(idx, 1); renderAttachedMedia(); }
+    } catch { composeAttachedMedia.splice(idx, 1); renderAttachedMedia(); }
+  }
+
+  const EMOJIS = ['😀','😂','🤣','😊','😍','🥰','😘','😎','🤩','😭','😢','😤','😡','🤔','🤯','😱','🥺','😴','🥳','😷','🙄','😏','🫡','🫠','💀','👻','🫶','❤️','🧡','💛','💚','💙','💜','🖤','🤍','💔','❤️‍🔥','🔥','✨','🎉','🙏','👏','🤝','💪','🤞','👀','💯','✅','❌','⚡','🌟','💥','🎯','🎊','🏆','🎸','🎵','🎶','🎤','🎨','📸','📷','🌸','🌺','🌻','🌹','🍀','🌿','🌱','🌲','🌊','🌙','☀️','⭐','🌈','❄️','🦋','🐝','🐶','🐱','🦊','🐻','🦁','🐸','🐧','🦅','🍕','🍔','🌮','🍣','🍜','☕','🧋','🍰','🎂','🍩','🍫','🚀','✈️','🚗','🏠','🏖️','📱','💻','📝','📚','🎁','💰','💎','⚽','🏀','🎾','🧪','🔑','💡','🔒','📧'];
+
+  function initComposeExtras() {
+    const mediaBtn = document.getElementById('compose-media-btn');
+    const mediaInput = document.getElementById('compose-media-input');
+    const emojiBtn = document.getElementById('compose-emoji-btn');
+    const emojiPanel = document.getElementById('compose-emoji-panel');
+    const tagsBtn = document.getElementById('compose-tags-btn');
+
+    if (mediaBtn && mediaInput) {
+      mediaBtn.addEventListener('click', () => mediaInput.click());
+      mediaInput.addEventListener('change', async () => {
+        const files = Array.from(mediaInput.files || []);
+        mediaInput.value = '';
+        if (!bskySession?.accessJwt) { alert('Connect Bluesky to upload media.'); return; }
+        for (const file of files) {
+          const isVideo = file.type.startsWith('video/');
+          const hasVideo = composeAttachedMedia.some(m => m.type === 'video');
+          const imgCount = composeAttachedMedia.filter(m => m.type === 'image').length;
+          if (isVideo && composeAttachedMedia.length > 0) { alert('Cannot mix video with other media.'); continue; }
+          if (!isVideo && hasVideo) { alert('Cannot mix images with video.'); continue; }
+          if (!isVideo && imgCount >= 4) { alert('Maximum 4 images per post.'); continue; }
+          if (isVideo && file.size > 50 * 1024 * 1024) { alert('Video must be under 50 MB.'); continue; }
+          if (!isVideo && file.size > 976563) { alert('Each image must be under 1 MB.'); continue; }
+          const localUrl = URL.createObjectURL(file);
+          const idx = composeAttachedMedia.length;
+          composeAttachedMedia.push({ blob: null, localUrl, type: isVideo ? 'video' : 'image' });
+          renderAttachedMedia();
+          const lp = document.getElementById('compose-link-preview');
+          if (lp) lp.style.display = 'none';
+          uploadComposeMedia(file, idx);
+        }
+      });
+    }
+
+    if (emojiBtn && emojiPanel) {
+      emojiPanel.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:.1rem">${EMOJIS.map(e=>`<button type="button" data-emoji="${e}" style="font-size:1.2rem;width:1.9rem;height:1.9rem;border:none;background:none;cursor:pointer;border-radius:.25rem;display:flex;align-items:center;justify-content:center">${e}</button>`).join('')}</div>`;
+      emojiPanel.addEventListener('click', e => {
+        const btn = e.target.closest('[data-emoji]');
+        if (!btn) return;
+        const inp = document.getElementById('compose-input');
+        if (inp) {
+          const s = inp.selectionStart, en = inp.selectionEnd, v = inp.value;
+          inp.value = v.slice(0, s) + btn.dataset.emoji + v.slice(en);
+          inp.selectionStart = inp.selectionEnd = s + [...btn.dataset.emoji].length;
+          inp.dispatchEvent(new Event('input', { bubbles: true }));
+          inp.focus();
+        }
+        emojiPanel.classList.add('hidden');
+      });
+      emojiBtn.addEventListener('click', e => { e.stopPropagation(); emojiPanel.classList.toggle('hidden'); });
+      document.addEventListener('click', e => {
+        if (!emojiPanel.classList.contains('hidden') && !emojiPanel.contains(e.target) && e.target !== emojiBtn) emojiPanel.classList.add('hidden');
+      });
+    }
+
+    if (tagsBtn) tagsBtn.addEventListener('click', openTagGroupsModal);
+  }
+
+  // Tag groups
+  const TAG_GROUPS_KEY = 'ps_tag_groups';
+  let _editingGroupId = null;
+  const _loadTG = () => { try { return JSON.parse(localStorage.getItem(TAG_GROUPS_KEY) || '[]'); } catch { return []; } };
+  const _saveTG = g => localStorage.setItem(TAG_GROUPS_KEY, JSON.stringify(g));
+
+  function renderTagGroupsList() {
+    const container = document.getElementById('tag-groups-list');
+    if (!container) return;
+    const groups = _loadTG();
+    if (!groups.length) { container.innerHTML = '<p style="text-align:center;padding:.75rem;font-size:.75rem;color:var(--ps-text-faint)">No groups yet — add one below.</p>'; return; }
+    container.innerHTML = groups.map(g => `<div style="display:flex;align-items:center;justify-content:space-between;gap:.5rem;background:var(--ps-input-bg);border-radius:.5rem;padding:.5rem .75rem"><div style="min-width:0;flex:1"><div style="font-size:.75rem;font-weight:600;color:var(--ps-text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(g.name)}</div><div style="font-size:.7rem;color:var(--ps-text-faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(g.tags)}</div></div><div style="display:flex;gap:.25rem;flex-shrink:0"><button data-tg-insert="${g.id}" style="background:var(--ps-accent,#3b82f6);color:#fff;border:none;border-radius:.25rem;padding:.2rem .6rem;font-size:.7rem;cursor:pointer;white-space:nowrap">Insert</button><button data-tg-edit="${g.id}" style="background:none;border:1px solid var(--ps-border,#333);color:var(--ps-text-muted);border-radius:.25rem;padding:.2rem .5rem;font-size:.7rem;cursor:pointer">Edit</button><button data-tg-del="${g.id}" style="background:none;border:none;color:#f87171;padding:.2rem .4rem;font-size:.75rem;cursor:pointer">✕</button></div></div>`).join('');
+    container.querySelectorAll('[data-tg-insert]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const g = _loadTG().find(x => x.id === btn.dataset.tgInsert);
+        if (!g) return;
+        const inp = document.getElementById('compose-input');
+        if (inp) { const v = inp.value, sep = (v && !/\s$/.test(v)) ? ' ' : ''; inp.value = v + sep + g.tags; inp.dispatchEvent(new Event('input', { bubbles: true })); inp.focus(); }
+        closeTagGroupsModal();
+      });
+    });
+    container.querySelectorAll('[data-tg-edit]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const g = _loadTG().find(x => x.id === btn.dataset.tgEdit);
+        if (!g) return;
+        _editingGroupId = g.id;
+        document.getElementById('tag-group-name').value = g.name;
+        document.getElementById('tag-group-tags').value = g.tags;
+        document.getElementById('tag-group-cancel').classList.remove('hidden');
+        document.getElementById('tag-group-save').textContent = 'Update Group';
+      });
+    });
+    container.querySelectorAll('[data-tg-del]').forEach(btn => {
+      btn.addEventListener('click', () => { _saveTG(_loadTG().filter(x => x.id !== btn.dataset.tgDel)); renderTagGroupsList(); });
+    });
+  }
+
+  function openTagGroupsModal() {
+    const modal = document.getElementById('tag-groups-modal');
+    if (!modal) return;
+    _editingGroupId = null;
+    const ni = document.getElementById('tag-group-name'); if (ni) ni.value = '';
+    const ti = document.getElementById('tag-group-tags'); if (ti) ti.value = '';
+    document.getElementById('tag-group-cancel')?.classList.add('hidden');
+    const sb = document.getElementById('tag-group-save'); if (sb) sb.textContent = 'Save Group';
+    renderTagGroupsList();
+    modal.style.display = 'flex';
+  }
+
+  function closeTagGroupsModal() {
+    const modal = document.getElementById('tag-groups-modal');
+    if (modal) modal.style.display = 'none';
+  }
+
+  (function() {
+    document.getElementById('tag-groups-close')?.addEventListener('click', closeTagGroupsModal);
+    document.getElementById('tag-groups-backdrop')?.addEventListener('click', closeTagGroupsModal);
+    document.getElementById('tag-group-cancel')?.addEventListener('click', () => {
+      _editingGroupId = null;
+      document.getElementById('tag-group-name').value = '';
+      document.getElementById('tag-group-tags').value = '';
+      document.getElementById('tag-group-cancel').classList.add('hidden');
+      document.getElementById('tag-group-save').textContent = 'Save Group';
+    });
+    document.getElementById('tag-group-save')?.addEventListener('click', () => {
+      const name = document.getElementById('tag-group-name')?.value.trim();
+      const tags = document.getElementById('tag-group-tags')?.value.trim();
+      if (!name || !tags) return;
+      const groups = _loadTG();
+      if (_editingGroupId) { const idx = groups.findIndex(g => g.id === _editingGroupId); if (idx !== -1) groups[idx] = { ...groups[idx], name, tags }; }
+      else groups.push({ id: Date.now().toString(36), name, tags });
+      _saveTG(groups);
+      _editingGroupId = null;
+      document.getElementById('tag-group-name').value = '';
+      document.getElementById('tag-group-tags').value = '';
+      document.getElementById('tag-group-cancel').classList.add('hidden');
+      document.getElementById('tag-group-save').textContent = 'Save Group';
+      renderTagGroupsList();
+    });
+  })();
+
+  initComposeExtras();
+
   let pendingCountdowns = {};
   let getComposeCard = () => null;
   if (composeInput && composeSend) {
     getComposeCard = setupLinkPreview(composeInput, composeLinkPreview);
     composeInput.addEventListener('input', () => {
-      const len = composeInput.value.length;
-      composeCount.textContent = `${len}/300`;
-      composeSend.disabled = len === 0 || len > 300;
-      composeSend.style.opacity = composeSend.disabled ? '.5' : '1';
+      composeCount.textContent = `${composeInput.value.length}/300`;
+      updateComposeSendBtn();
     });
 
     // Delay dropdown — show/hide custom datetime
@@ -3619,7 +3852,8 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
 
     composeSend.addEventListener('click', async () => {
       const text = composeInput.value.trim();
-      if (!text) return;
+      if (!text && !composeAttachedMedia.length) return;
+      if (composeAttachedMedia.some(m => !m.blob)) { alert('Media is still uploading, please wait.'); return; }
       const delaySec = postDelay ? postDelay.value : '0';
 
       if (delaySec === '0') {
@@ -3628,10 +3862,11 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
         composeSend.disabled = true;
         composeSend.textContent = 'Posting...';
         try {
-          await createBskyRecord(text, null, getComposeCard());
+          await createBskyRecord(text, null, composeAttachedMedia.length ? null : getComposeCard(), composeAttachedMedia.slice());
           composeInput.value = '';
           composeCount.textContent = '0/300';
           getComposeCard.clear?.();
+          composeAttachedMedia = []; renderAttachedMedia();
           composeSend.textContent = 'Post';
           composeSend.disabled = true;
           composeSend.style.opacity = '.5';
@@ -3669,6 +3904,7 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
           composeInput.value = '';
           composeCount.textContent = '0/300';
           getComposeCard.clear?.();
+          composeAttachedMedia = []; renderAttachedMedia();
           composeSend.textContent = 'Post';
           composeSend.disabled = true;
           composeSend.style.opacity = '.5';
