@@ -124,7 +124,7 @@ const socialNavItems = allNavItems.filter((item: any) => socialPaths.some(p => i
     </script>
   </head>
   <body class="min-h-screen bg-theme-bg text-theme-text font-body antialiased transition-colors duration-200" style={`font-size:calc(1rem * ${theme.fonts.bodySize || '1'})`}>
-    <header class="sticky top-0 z-40 border-b border-theme-border bg-theme-header/95 backdrop-blur supports-[backdrop-filter]:bg-theme-header/80">
+    <header class={`sticky top-0 z-40 border-b border-theme-border bg-theme-header/95 backdrop-blur supports-[backdrop-filter]:bg-theme-header/80${navStyle === 'float' ? ' hidden' : ''}`}>
       <nav class="mx-auto flex max-w-6xl items-center justify-between px-3 py-2 md:px-4 md:py-4">
         <a href={`${base}/`} class="flex items-center">
           <span class="text-lg md:text-xl font-bold font-heading text-theme-text">{siteConfig.title}</span>
@@ -191,7 +191,7 @@ const socialNavItems = allNavItems.filter((item: any) => socialPaths.some(p => i
       </nav>
     </header>
 
-    <main class="mx-auto max-w-6xl px-4 py-8">
+    <main class={`mx-auto max-w-6xl px-4${navStyle === 'float' ? ' py-4 pb-28' : ' py-8'}`}>
       <slot />
     </main>
 
