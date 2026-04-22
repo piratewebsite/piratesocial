@@ -2026,7 +2026,7 @@ const sl = labels.social;
             feedContainer.innerHTML = `<div class="text-center py-8 text-theme-faint">${L.noPosts || 'No posts yet'}</div>`;
           } else {
             // Logged in but no Bluesky: guide them to Settings
-            feedContainer.innerHTML = `<div class="rounded-lg border border-theme-border bg-theme-surface p-6 text-center"><p class="text-sm text-theme-muted mb-3">${L.connectBluesky || 'Connect your Bluesky account in Settings to see your feed'}</p><a href="${psBase}settings/bluesky" class="rounded bg-theme-primary text-white px-4 py-2 text-sm font-medium hover:bg-theme-primary-hover transition">Open Settings</a></div>`;
+            feedContainer.innerHTML = `<div class="rounded-lg border border-theme-border bg-theme-surface p-6 text-center"><p class="text-sm text-theme-muted mb-3">${L.connectBluesky || 'Connect your Bluesky account in Settings to see your feed'}</p><a href="${psBase}/settings/bluesky" class="rounded bg-theme-primary text-white px-4 py-2 text-sm font-medium hover:bg-theme-primary-hover transition">Open Settings</a></div>`;
           }
         } else {
           feedContainer.innerHTML = html;
