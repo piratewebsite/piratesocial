@@ -4474,29 +4474,38 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
         }
 
         btn.textContent = 'Loading...';
+        btn.disabled = true;
         try {
-          const res = await fetchWithTimeout(`${hubUrl}/api/youtube/feed?channelId=${encodeURIComponent(ch.channelId)}&max=${ch.videoCount || 5}`);
+          const res = await fetchWithTimeout(`${hubUrl}/api/youtube/feed?channelId=${encodeURIComponent(ch.channelId)}&max=${ch.videoCount || 5}`, {}, 15000);
           if (res.ok) {
             const { videos } = await res.json();
-            container.innerHTML = videos.map(v => `
-              <div class="yt-tab-thumb group relative overflow-hidden rounded border border-theme-input-border hover:border-theme-primary transition cursor-pointer" data-yt-id="${v.videoId}" data-yt-title="${escapeHtml(v.title)}" data-yt-thumb="${escapeHtml(v.thumbnail)}">
-                ${videoHeartBtn(v.videoId, v.title, v.thumbnail)}
-                <img src="${v.thumbnail}" alt="${v.title.slice(0, 50)}" class="w-full aspect-video object-cover group-hover:opacity-75 transition" />
-                <div class="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition flex items-center justify-center pointer-events-none">
-                  <div class="text-white text-2xl opacity-0 group-hover:opacity-100 transition">▶</div>
-                </div>
-                <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-black/0 p-2 pointer-events-none">
-                  <p class="text-white text-xs font-medium line-clamp-2">${v.title}</p>
-                </div>
-              </div>`).join('');
-            btn.textContent = `Hide Videos (${videos.length})`;
-            bindYTTabThumbnails(container, ch.name);
-            initVideoHeartBtns();
+            if (videos.length) {
+              container.innerHTML = videos.map(v => `
+                <div class="yt-tab-thumb group relative overflow-hidden rounded border border-theme-input-border hover:border-theme-primary transition cursor-pointer" data-yt-id="${v.videoId}" data-yt-title="${escapeHtml(v.title)}" data-yt-thumb="${escapeHtml(v.thumbnail)}">
+                  ${videoHeartBtn(v.videoId, v.title, v.thumbnail)}
+                  <img src="${v.thumbnail}" alt="${v.title.slice(0, 50)}" class="w-full aspect-video object-cover group-hover:opacity-75 transition" />
+                  <div class="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition flex items-center justify-center pointer-events-none">
+                    <div class="text-white text-2xl opacity-0 group-hover:opacity-100 transition">▶</div>
+                  </div>
+                  <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-black/0 p-2 pointer-events-none">
+                    <p class="text-white text-xs font-medium line-clamp-2">${v.title}</p>
+                  </div>
+                </div>`).join('');
+              container.classList.remove('hidden');
+              btn.textContent = `Hide Videos (${videos.length})`;
+              bindYTTabThumbnails(container, ch.name);
+              initVideoHeartBtns();
+            } else {
+              btn.textContent = 'No videos found';
+            }
+          } else {
+            btn.textContent = 'Failed — try again';
           }
         } catch (err) {
-          btn.textContent = 'Error loading';
+          btn.textContent = err.name === 'AbortError' ? 'Timed out — try again' : 'Error — try again';
+        } finally {
+          btn.disabled = false;
         }
-        container.classList.remove('hidden');
       });
     });
   }
