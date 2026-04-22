@@ -2,13 +2,16 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { siteConfig } from '../../lib/config';
 import labels from '../../content/labels.json';
+import settings from '../../content/settings.json';
 
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const navStyle = (settings as any).navStyle || 'top';
+const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
 ---
 
 <BaseLayout title="RSS Feeds">
   <div class="mx-auto max-w-2xl">
-    <div class="sticky top-[41px] md:top-[57px] z-30 -mx-4 px-3 py-2 md:px-4 md:py-4 bg-theme-bg/95 backdrop-blur supports-[backdrop-filter]:bg-theme-bg/80 border-b border-theme-border mb-4 md:mb-6">
+    <div class={`sticky ${tabBarTop} z-30 -mx-4 px-3 py-2 md:px-4 md:py-4 bg-theme-bg/95 backdrop-blur supports-[backdrop-filter]:bg-theme-bg/80 border-b border-theme-border mb-4 md:mb-6`}>
       <h1 class="text-lg md:text-2xl font-bold mb-2">{labels.feeds.heading}</h1>
 
       <div id="auth-required" class="hidden text-center py-4 text-theme-faint">

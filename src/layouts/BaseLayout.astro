@@ -237,6 +237,15 @@ const socialNavItems = allNavItems.filter((item: any) => socialPaths.some(p => i
           <a href={`${base}/admin`} class="px-5 py-3 text-sm text-theme-muted hover:bg-theme-surface-hover hover:text-theme-text transition block" data-auth-only hidden>Admin</a>
         )}
         {enableSocial && (
+          <button id="float-notif-btn" class="px-5 py-3 text-sm text-left text-theme-muted hover:bg-theme-surface-hover hover:text-theme-text transition w-full flex items-center gap-2" data-auth-only hidden>
+            <span class="relative inline-flex">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+              <span id="float-notif-menu-badge" class="absolute -top-1 -right-1 min-w-[14px] h-[14px] rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center leading-none px-0.5" hidden></span>
+            </span>
+            Notifications
+          </button>
+        )}
+        {enableSocial && (
           <button id="float-logout-btn" class="px-5 py-3 text-sm text-left text-red-400 hover:bg-theme-surface-hover transition w-full" data-auth-only hidden>Sign out</button>
         )}
       </nav>
@@ -329,13 +338,18 @@ const socialNavItems = allNavItems.filter((item: any) => socialPaths.some(p => i
                 if (res.ok) {
                   const data = await res.json();
                   const count = data.count || 0;
+                  const floatBadge = document.getElementById('float-notif-badge');
+                  const floatMenuBadge = document.getElementById('float-notif-menu-badge');
                   if (count > 0) {
-                    badge.textContent = count > 99 ? '99+' : count;
+                    const label = count > 99 ? '99+' : count;
+                    badge.textContent = label;
                     badge.removeAttribute('hidden');
-                    if (floatBadge) { floatBadge.textContent = badge.textContent; floatBadge.removeAttribute('hidden'); }
+                    if (floatBadge) { floatBadge.textContent = label; floatBadge.removeAttribute('hidden'); }
+                    if (floatMenuBadge) { floatMenuBadge.textContent = label; floatMenuBadge.removeAttribute('hidden'); }
                   } else {
                     badge.setAttribute('hidden', '');
                     if (floatBadge) floatBadge.setAttribute('hidden', '');
+                    if (floatMenuBadge) floatMenuBadge.setAttribute('hidden', '');
                   }
                   // Update app badge if supported
                   if (navigator.setAppBadge) {
@@ -463,6 +477,11 @@ const socialNavItems = allNavItems.filter((item: any) => socialPaths.some(p => i
         localStorage.removeItem(window.__psStorageKey('ps_token'));
         localStorage.removeItem(window.__psStorageKey('ps_bsky_session'));
         window.location.href = psBase + '/';
+      });
+      document.getElementById('float-notif-btn')?.addEventListener('click', () => {
+        closeFloatMenu();
+        localStorage.setItem(window.__psStorageKey('ps_open_tab'), 'notifications');
+        window.location.href = psBase + '/social';
       });
     </script>
   </body>
