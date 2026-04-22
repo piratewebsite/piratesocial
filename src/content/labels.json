@@ -116,12 +116,12 @@
     {
       "label": "Posts",
       "url": "/posts",
-      "visible": true
+      "visible": false
     },
     {
       "label": "Galleries",
       "url": "/galleries",
-      "visible": true
+      "visible": false
     },
     {
       "label": "Social",
@@ -136,7 +136,7 @@
     {
       "label": "About",
       "url": "/about",
-      "visible": true
+      "visible": false
     }
   ],
   "home": {
