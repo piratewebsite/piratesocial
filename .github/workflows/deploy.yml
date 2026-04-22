@@ -89,15 +89,9 @@ jobs:
             cp -r user-repo/public/images/. build/public/images/
           fi
           
-          # User config files
+          # User content settings (not admin CMS config — that comes from template)
           if [ -f user-repo/src/content/settings.json ]; then
             cp user-repo/src/content/settings.json build/src/content/settings.json
-          fi
-          if [ -f user-repo/public/config.yml ]; then
-            cp user-repo/public/config.yml build/public/config.yml
-          fi
-          if [ -f user-repo/public/admin/config.yml ]; then
-            cp user-repo/public/admin/config.yml build/public/admin/config.yml
           fi
 
       - name: Setup Node
@@ -117,6 +111,16 @@ jobs:
             echo "site_url=https://${OWNER}.github.io" >> "$GITHUB_OUTPUT"
             echo "base_path=/${REPO_NAME}" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Configure admin CMS
+        run: |
+          FULL_SITE="${{ steps.site-config.outputs.site_url }}${{ steps.site-config.outputs.base_path }}"
+          # Inject repo and site URL into the template's admin CMS config
+          sed -i "s|repo: your-username/your-repo|repo: ${{ github.repository }}|g" build/public/admin/config.yml
+          sed -i "s|site_url: https://example.com|site_url: ${FULL_SITE}|g" build/public/admin/config.yml
+          sed -i "s|display_url: https://example.com|display_url: ${FULL_SITE}|g" build/public/admin/config.yml
+          # Remove legacy /public/config.yml — admin config lives at /admin/config.yml
+          rm -f build/public/config.yml
 
       - name: Install dependencies
         run: npm ci
