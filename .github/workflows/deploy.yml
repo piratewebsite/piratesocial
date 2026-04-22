@@ -104,7 +104,15 @@ jobs:
         run: |
           REPO_NAME="${{ github.event.repository.name }}"
           OWNER="${{ github.repository_owner }}"
-          if [[ "$REPO_NAME" == *.github.io ]]; then
+          # Check for custom domain (CNAME file in user repo)
+          CUSTOM_DOMAIN=""
+          if [ -f user-repo/CNAME ]; then
+            CUSTOM_DOMAIN=$(cat user-repo/CNAME | tr -d '[:space:]')
+          fi
+          if [ -n "$CUSTOM_DOMAIN" ]; then
+            echo "site_url=https://${CUSTOM_DOMAIN}" >> "$GITHUB_OUTPUT"
+            echo "base_path=" >> "$GITHUB_OUTPUT"
+          elif [[ "$REPO_NAME" == *.github.io ]]; then
             echo "site_url=https://${REPO_NAME}" >> "$GITHUB_OUTPUT"
             echo "base_path=" >> "$GITHUB_OUTPUT"
           else
