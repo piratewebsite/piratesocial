@@ -4198,26 +4198,37 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
       const res = await fetchWithTimeout(`${hubUrl}/api/youtube/channels`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      // Guard: user may have switched tabs while awaiting — bail if our DOM is gone
+      if (!document.getElementById('yt-channels-list')) return;
       if (res.ok) {
         youtubeChannels = await res.json();
         renderYouTubeChannels();
       }
     } catch (err) {
       console.error('YouTube load error:', err);
+      if (!document.getElementById('yt-channels-list')) return;
     }
 
-    document.getElementById('yt-add-btn').addEventListener('click', async () => {
-      const q = document.getElementById('yt-search').value.trim();
+    // Re-check after async work before wiring events
+    const addBtn = document.getElementById('yt-add-btn');
+    const searchInput = document.getElementById('yt-search');
+    const watchlistToggle = document.getElementById('yt-watchlist-toggle');
+    const collapseAll = document.getElementById('yt-collapse-all');
+    const nowHeart = document.getElementById('yt-now-heart');
+    if (!addBtn || !searchInput || !watchlistToggle || !collapseAll || !nowHeart) return;
+
+    addBtn.addEventListener('click', async () => {
+      const q = searchInput.value.trim();
       if (!q) return;
       await subscribeChannel(q);
     });
-    document.getElementById('yt-search').addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') document.getElementById('yt-add-btn').click();
+    searchInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') addBtn.click();
     });
 
     // Watchlist toggle
     renderWatchlistItems();
-    document.getElementById('yt-watchlist-toggle').addEventListener('click', () => {
+    watchlistToggle.addEventListener('click', () => {
       const content = document.getElementById('yt-watchlist-content');
       const chevron = document.getElementById('yt-watchlist-chevron');
       content.classList.toggle('hidden');
@@ -4225,7 +4236,7 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
     });
 
     // Collapse all channel videos
-    document.getElementById('yt-collapse-all').addEventListener('click', () => {
+    collapseAll.addEventListener('click', () => {
       const allOpen = document.querySelectorAll('[id^="ch-videos-"]:not(.hidden)');
       if (allOpen.length > 0) {
         allOpen.forEach(el => el.classList.add('hidden'));
@@ -4234,7 +4245,6 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
     });
 
     // Now-playing heart button
-    const nowHeart = document.getElementById('yt-now-heart');
     nowHeart.addEventListener('click', () => {
       toggleWatchlist(nowHeart.dataset.vidId, nowHeart.dataset.vidTitle, nowHeart.dataset.vidThumb);
       updateNowPlayingHeart(nowHeart.dataset.vidId);
@@ -4375,6 +4385,7 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
 
   function renderYouTubeChannels() {
     const list = document.getElementById('yt-channels-list');
+    if (!list) return;
     if (!youtubeChannels.length) {
       list.innerHTML = '<div class="text-center py-4 text-theme-faint text-sm">No channels subscribed yet.</div>';
       return;
