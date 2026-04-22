@@ -370,6 +370,14 @@ collections:
             widget: boolean
             default: true
             hint: "When OFF, hides the Social page, Settings pages, Sign In button, and social actions on posts. The site becomes a standalone photo blog."
+          - label: "Navigation Style"
+            name: navStyle
+            widget: select
+            default: "top"
+            options:
+              - { label: "Top bar (default)", value: "top" }
+              - { label: "Floating menu button", value: "float" }
+            hint: "Top bar shows all nav links in the header. Floating hides the nav items and shows a hamburger button at the bottom center of the screen that opens a slide-up panel."
           - label: "Show Dates"
             name: showDates
             widget: boolean

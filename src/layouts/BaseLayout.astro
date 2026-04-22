@@ -56,6 +56,7 @@ const bgCss = bgUrl ? `body::before{content:'';position:fixed;inset:0;z-index:-1
 
 // Social features toggle
 const enableSocial = settings.enableSocial !== false;
+const navStyle = (settings as any).navStyle || 'top';
 const socialPaths = ['/social', '/settings', '/admin'];
 const visibleNavItems = (labels.navItems || []).filter((item: any) => {
   if (item.visible === false) return false;
@@ -128,7 +129,7 @@ const socialNavItems = allNavItems.filter((item: any) => socialPaths.some(p => i
         <a href={`${base}/`} class="flex items-center">
           <span class="text-lg md:text-xl font-bold font-heading text-theme-text">{siteConfig.title}</span>
         </a>
-        <div class="flex items-center gap-3 text-xs md:gap-6 md:text-sm">
+        <div class={`flex items-center gap-3 text-xs md:gap-6 md:text-sm${navStyle === 'float' ? ' hidden' : ''}`}>
           {regularNavItems.map((item: any) => {
             const href = item.url.startsWith('/') ? `${base}${item.url}` : item.url;
             const isActive = currentPath === (item.url.startsWith('/') ? `${base}${item.url}`.replace(/\/$/, '') : '');
@@ -209,6 +210,46 @@ const socialNavItems = allNavItems.filter((item: any) => socialPaths.some(p => i
         <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 15l7-7 7 7"/></svg>
       </button>
     </div>
+
+    <!-- Float nav menu (shown when navStyle = 'float') -->
+    <div id="float-nav-panel" class="fixed z-50 w-56 max-w-[calc(100vw-2rem)] rounded-2xl border border-theme-border bg-theme-surface shadow-2xl overflow-hidden" style="left:50%;bottom:5rem;transform:translateX(-50%) translateY(0.75rem);opacity:0;transition:transform .18s ease,opacity .18s ease" aria-hidden="true" hidden>
+      <nav class="flex flex-col py-2">
+        <a href={`${base}/`} class="px-5 py-3 text-sm font-bold font-heading text-theme-text hover:bg-theme-surface-hover transition">{siteConfig.title}</a>
+        <div class="my-1 border-t border-theme-border"></div>
+        {regularNavItems.map((item: any) => {
+          const href = item.url.startsWith('/') ? `${base}${item.url}` : item.url;
+          const isActive = currentPath === (item.url.startsWith('/') ? `${base}${item.url}`.replace(/\/$/, '') : '');
+          return isActive
+            ? <span class="px-5 py-3 text-sm font-medium text-theme-text bg-theme-surface-hover block" aria-current="page">{item.label}</span>
+            : <a href={href} class="px-5 py-3 text-sm text-theme-muted hover:bg-theme-surface-hover hover:text-theme-text transition block">{item.label}</a>;
+        })}
+        {enableSocial && socialNavItems.length > 0 && (
+          <div class="my-1 border-t border-theme-border" data-auth-only hidden></div>
+        )}
+        {enableSocial && socialNavItems.map((item: any) => {
+          const href = item.url.startsWith('/') ? `${base}${item.url}` : item.url;
+          const isActive = currentPath === (item.url.startsWith('/') ? `${base}${item.url}`.replace(/\/$/, '') : '');
+          return isActive
+            ? <span class="px-5 py-3 text-sm font-medium text-theme-text bg-theme-surface-hover block" aria-current="page" data-auth-only hidden>{item.label}</span>
+            : <a href={href} class="px-5 py-3 text-sm text-theme-muted hover:bg-theme-surface-hover hover:text-theme-text transition block" data-auth-only hidden>{item.label}</a>;
+        })}
+        {enableSocial && (
+          <a href={`${base}/admin`} class="px-5 py-3 text-sm text-theme-muted hover:bg-theme-surface-hover hover:text-theme-text transition block" data-auth-only hidden>Admin</a>
+        )}
+        {enableSocial && (
+          <button id="float-logout-btn" class="px-5 py-3 text-sm text-left text-red-400 hover:bg-theme-surface-hover transition w-full" data-auth-only hidden>Sign out</button>
+        )}
+      </nav>
+    </div>
+    <button id="float-menu-btn"
+      class="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 rounded-full p-3 bg-theme-surface border border-theme-border text-theme-muted hover:bg-theme-card-hover transition shadow-lg"
+      style={navStyle !== 'float' ? 'display:none' : ''}
+      aria-label="Open navigation menu" aria-expanded="false" aria-controls="float-nav-panel">
+      <svg class="w-5 h-5" id="float-menu-icon-open" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      <svg class="w-5 h-5 hidden" id="float-menu-icon-close" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      <span id="float-notif-badge" class="absolute -top-1 -right-1 min-w-[14px] h-[14px] rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center leading-none px-0.5" hidden></span>
+    </button>
+    <div id="float-menu-backdrop" class="fixed inset-0 z-40 hidden bg-black/30" aria-hidden="true" style={navStyle !== 'float' ? 'display:none !important' : ''}></div>
 
     {/* Floating players — in layout so they persist across all page navigations */}
     {floatingPlayers.map((block: any, i: number) => (
@@ -291,8 +332,10 @@ const socialNavItems = allNavItems.filter((item: any) => socialPaths.some(p => i
                   if (count > 0) {
                     badge.textContent = count > 99 ? '99+' : count;
                     badge.removeAttribute('hidden');
+                    if (floatBadge) { floatBadge.textContent = badge.textContent; floatBadge.removeAttribute('hidden'); }
                   } else {
                     badge.setAttribute('hidden', '');
+                    if (floatBadge) floatBadge.setAttribute('hidden', '');
                   }
                   // Update app badge if supported
                   if (navigator.setAppBadge) {
@@ -381,6 +424,46 @@ const socialNavItems = allNavItems.filter((item: any) => socialPaths.some(p => i
         window.addEventListener('scroll', toggleTop, { passive: true });
         topBtn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
       }
+
+      // Float nav menu
+      const floatBtn = document.getElementById('float-menu-btn');
+      const floatPanel = document.getElementById('float-nav-panel');
+      const floatBackdrop = document.getElementById('float-menu-backdrop');
+      if (floatBtn && floatPanel) {
+        function openFloatMenu() {
+          floatPanel.hidden = false;
+          floatPanel.removeAttribute('aria-hidden');
+          void floatPanel.offsetHeight; // force reflow before transition
+          floatPanel.style.opacity = '1';
+          floatPanel.style.transform = 'translateX(-50%) translateY(0)';
+          floatBackdrop?.classList.remove('hidden');
+          floatBtn.setAttribute('aria-expanded', 'true');
+          document.getElementById('float-menu-icon-open')?.classList.add('hidden');
+          document.getElementById('float-menu-icon-close')?.classList.remove('hidden');
+        }
+        function closeFloatMenu() {
+          floatPanel.style.opacity = '0';
+          floatPanel.style.transform = 'translateX(-50%) translateY(0.75rem)';
+          floatPanel.setAttribute('aria-hidden', 'true');
+          floatBackdrop?.classList.add('hidden');
+          floatBtn.setAttribute('aria-expanded', 'false');
+          document.getElementById('float-menu-icon-open')?.classList.remove('hidden');
+          document.getElementById('float-menu-icon-close')?.classList.add('hidden');
+          setTimeout(() => { if (floatPanel.getAttribute('aria-hidden') === 'true') floatPanel.hidden = true; }, 200);
+        }
+        floatBtn.addEventListener('click', () => {
+          floatBtn.getAttribute('aria-expanded') === 'true' ? closeFloatMenu() : openFloatMenu();
+        });
+        floatBackdrop?.addEventListener('click', closeFloatMenu);
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeFloatMenu(); });
+        // Close on nav link click
+        floatPanel.querySelectorAll('a').forEach(a => a.addEventListener('click', closeFloatMenu));
+      }
+      document.getElementById('float-logout-btn')?.addEventListener('click', () => {
+        localStorage.removeItem(window.__psStorageKey('ps_token'));
+        localStorage.removeItem(window.__psStorageKey('ps_bsky_session'));
+        window.location.href = psBase + '/';
+      });
     </script>
   </body>
 </html>
