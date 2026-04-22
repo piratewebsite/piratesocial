@@ -373,7 +373,7 @@ collections:
           - label: "Navigation Style"
             name: navStyle
             widget: select
-            default: "top"
+            default: "float"
             options:
               - { label: "Top bar (default)", value: "top" }
               - { label: "Floating menu button", value: "float" }
