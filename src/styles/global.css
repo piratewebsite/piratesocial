@@ -31,3 +31,7 @@
   --font-size-heading-scale: calc(1em * var(--ps-heading-scale, 1));
   --font-size-body-scale: calc(1em * var(--ps-body-scale, 1));
 }
+
+html {
+  scrollbar-gutter: stable;
+}
