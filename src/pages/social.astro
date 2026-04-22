@@ -312,7 +312,7 @@ const sl = labels.social;
     const isLoggedIn = !!token;
     const hasBluesky = isLoggedIn && blueskyConnected;
     const tabVisibility = {
-      timeline: isLoggedIn,
+      timeline: true,
       discover: true,
       squads: hasBluesky,
       posts: hasBluesky,
@@ -1723,10 +1723,10 @@ const sl = labels.social;
     clearCachedAuthState();
     activeFeedUri = null;
     activeFeedName = null;
-    currentDiscoverSub = 'trending';
-    if (!['discover', 'youtube', 'rss'].includes(currentTab)) currentTab = 'discover';
+    // Redirect off Bluesky-only tabs; everything else stays where it is
+    if (['squads', 'posts', 'notifications'].includes(currentTab)) currentTab = 'timeline';
     syncAnonymousTabVisibility();
-    const activeBtn = document.getElementById(`tab-${currentTab}`) || document.getElementById('tab-discover');
+    const activeBtn = document.getElementById(`tab-${currentTab}`) || document.getElementById('tab-timeline');
     if (activeBtn) setActiveTab(activeBtn);
     updateUI();
     loadCurrentTab();

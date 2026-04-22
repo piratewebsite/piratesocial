@@ -263,7 +263,8 @@ const socialNavItems = allNavItems.filter((item: any) => socialPaths.some(p => i
             localStorage.removeItem(window.__psStorageKey('ps_bsky_session'));
             window.location.href = psBase + '/';
           });
-
+        }
+        if (savedToken) {
           // Show notification bell and poll for unread count
           const bell = document.getElementById('notif-bell');
           const badge = document.getElementById('notif-badge');
