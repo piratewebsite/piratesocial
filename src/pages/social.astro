@@ -161,6 +161,8 @@ const sl = labels.social;
   let isLoading = false;
   let hasMore = true;
   let bskySession = null;
+  let blueskyConnected = false;
+  let blueskyStatusLoaded = false;
   let myHandle = null;
   let myDid = null;
   let myAvatar = null;
@@ -293,6 +295,8 @@ const sl = labels.social;
   function clearCachedAuthState() {
     token = null;
     bskySession = null;
+    blueskyConnected = false;
+    blueskyStatusLoaded = false;
     myHandle = null;
     myDid = null;
     myAvatar = null;
@@ -306,11 +310,12 @@ const sl = labels.social;
 
   function syncAnonymousTabVisibility() {
     const isLoggedIn = !!token;
+    const hasBluesky = isLoggedIn && blueskyConnected;
     const tabVisibility = {
       timeline: isLoggedIn,
       discover: true,
-      squads: isLoggedIn,
-      posts: isLoggedIn,
+      squads: hasBluesky,
+      posts: hasBluesky,
       youtube: true,
       rss: true,
     };
@@ -322,27 +327,78 @@ const sl = labels.social;
     });
 
     document.querySelectorAll('.discover-pill').forEach((btn) => {
-      const isVisible = isLoggedIn || btn.dataset.sub === 'trending';
+      let isVisible = btn.dataset.sub === 'trending';
+      if (btn.dataset.sub === 'people') isVisible = true;
+      if (btn.dataset.sub === 'feeds') isVisible = hasBluesky;
       btn.classList.toggle('hidden', !isVisible);
     });
 
+    if (!hasBluesky && currentDiscoverSub === 'feeds') currentDiscoverSub = 'trending';
+    if (!hasBluesky && (currentTab === 'posts' || currentTab === 'squads')) currentTab = isLoggedIn ? 'timeline' : 'discover';
+
     const feedsSelect = document.getElementById('tab-feeds');
     if (feedsSelect) {
-      feedsSelect.style.display = isLoggedIn && subscribedFeeds.length ? '' : 'none';
+      feedsSelect.style.display = hasBluesky && subscribedFeeds.length ? '' : 'none';
       if (!isLoggedIn) feedsSelect.value = '';
     }
   }
 
+  async function ensureBlueskyConnectionStatus(force = false) {
+    if (!token) {
+      blueskyConnected = false;
+      blueskyStatusLoaded = true;
+      return false;
+    }
+    if (!force && blueskyStatusLoaded) return blueskyConnected;
+
+    try {
+      const res = await fetchTimeout(`${hubUrl}/api/bluesky/status`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }, 10000);
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+      const data = await res.json();
+      blueskyConnected = !!data?.connected;
+      blueskyStatusLoaded = true;
+
+      if (!blueskyConnected) {
+        bskySession = null;
+        localStorage.removeItem(authStorageKey('ps_bsky_session'));
+      }
+      return blueskyConnected;
+    } catch (err) {
+      console.warn('[PS] Bluesky status check failed:', err.message);
+      blueskyConnected = false;
+      blueskyStatusLoaded = true;
+      return false;
+    }
+  }
+
   async function ensureBskySession() {
+    const isConnected = await ensureBlueskyConnectionStatus();
+    if (!isConnected) return null;
     if (bskySession?.accessJwt) return bskySession;
     loadBskySession();
     if (bskySession?.accessJwt) return bskySession;
     if (!token) return null;
     try {
       const res = await fetchTimeout(`${hubUrl}/api/bluesky/session`, { headers: { Authorization: `Bearer ${token}` } }, 10000);
-      if (res.ok) { const d = await res.json(); saveBskySession(d); return d; }
+      if (res.ok) {
+        const d = await res.json();
+        blueskyConnected = true;
+        blueskyStatusLoaded = true;
+        saveBskySession(d);
+        return d;
+      }
       else {
         const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+        if (res.status === 400) {
+          blueskyConnected = false;
+          blueskyStatusLoaded = true;
+          localStorage.removeItem(authStorageKey('ps_bsky_session'));
+          bskySession = null;
+        }
         console.warn('[PS] Bluesky session error:', err.error);
       }
     } catch (err) {
@@ -361,6 +417,8 @@ const sl = labels.social;
         const d = await res.json();
         bskySession.accessJwt = d.accessJwt;
         if (d.refreshJwt) bskySession.refreshJwt = d.refreshJwt;
+        blueskyConnected = true;
+        blueskyStatusLoaded = true;
         saveBskySession(bskySession);
         return bskySession;
       }
@@ -4849,6 +4907,7 @@ const sl = labels.social;
 
   (async () => {
     if (await ensureHubAuth()) {
+      await ensureBlueskyConnectionStatus();
       // Start init in background, don't wait for it
       initSquadsProfile().catch(err => console.warn('[PS] Squads init error:', err.message));
 
