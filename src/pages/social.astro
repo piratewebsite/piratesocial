@@ -655,10 +655,9 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
       composeInput.value = '';
       composeInput.focus();
       composeInput.dispatchEvent(new Event('input', { bubbles: true }));
-      // Store quote embed reference for the post
+      // Store quote embed reference for the post; resolve CID async and stash promise
       window._quoteEmbed = { uri, cid: null, author };
-      // Resolve the CID for quote embedding
-      (async () => {
+      window._quoteEmbed._cidPromise = (async () => {
         try {
           const thread = await bskyGet('app.bsky.feed.getPostThread', { uri, depth: 0 }, false);
           if (thread?.thread?.post?.cid) window._quoteEmbed.cid = thread.thread.post.cid;
@@ -3863,6 +3862,8 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
         composeSend.disabled = true;
         composeSend.textContent = 'Posting...';
         try {
+          // Ensure quote CID is resolved before posting
+          if (window._quoteEmbed?._cidPromise) await window._quoteEmbed._cidPromise;
           await createBskyRecord(text, null, composeAttachedMedia.length ? null : getComposeCard(), composeAttachedMedia.slice());
           composeInput.value = '';
           composeCount.textContent = '0/300';
@@ -3893,10 +3894,15 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
           scheduledAt = new Date(Date.now() + parseInt(delaySec, 10) * 1000).toISOString();
         }
         try {
+          // Ensure quote CID is resolved before scheduling
+          if (window._quoteEmbed?._cidPromise) await window._quoteEmbed._cidPromise;
+          const quoteEmbed = (window._quoteEmbed?.uri && window._quoteEmbed?.cid)
+            ? { uri: window._quoteEmbed.uri, cid: window._quoteEmbed.cid }
+            : null;
           const res = await fetch(`${hubUrl}/api/scheduled`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-            body: JSON.stringify({ text, scheduledAt, linkCard: getComposeCard?.() || null }),
+            body: JSON.stringify({ text, scheduledAt, linkCard: getComposeCard?.() || null, quoteEmbed }),
           });
           if (!res.ok) {
             const err = await res.json().catch(() => ({}));
@@ -3906,6 +3912,7 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
           composeCount.textContent = '0/300';
           getComposeCard.clear?.();
           composeAttachedMedia = []; renderAttachedMedia();
+          window._quoteEmbed = null;
           composeSend.textContent = 'Post';
           composeSend.disabled = true;
           composeSend.style.opacity = '.5';
@@ -3955,6 +3962,7 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
         const handle = escapeHtml(myHandle || '');
         soon.forEach(p => {
           const card = p.linkCard;
+          const quote = p.quoteEmbed;
           const cardHtml = card && !card.removed && card.url ? `
             <a href="${escapeHtml(card.url)}" target="_blank" rel="noopener noreferrer" class="mt-2 block rounded-lg overflow-hidden border border-theme-card-border bg-theme-surface hover:bg-theme-surface-hover transition">
               ${card.image ? `<img src="${escapeHtml(card.image)}" alt="" class="w-full aspect-[2/1] object-cover" loading="lazy" onerror="this.style.display='none'" />` : ''}
@@ -3964,6 +3972,7 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
                 <div class="mt-1 text-xs text-theme-faint truncate">${escapeHtml(card.url.replace(/^https?:\/\//, ''))}</div>
               </div>
             </a>` : '';
+          const quoteHtml = quote?.uri ? `<div class="mt-2 rounded border border-theme-input-border px-3 py-2 bg-theme-surface/50 text-xs text-theme-muted">↩ Quoting <a href="https://bsky.app/profile/${escapeHtml(quote.uri.split('/')[2] || '')}/post/${escapeHtml(quote.uri.split('/').pop() || '')}" target="_blank" rel="noopener noreferrer" class="hover:underline">${escapeHtml(quote.uri.split('/')[2] || quote.uri)}</a></div>` : '';
           html += `<article id="pending-${p.id}" class="rounded-lg border border-theme-card-border bg-theme-card overflow-hidden" style="border-left: 3px solid rgb(234 179 8)">
             <div class="p-4">
               <div class="flex items-center gap-3 mb-3">
@@ -3975,6 +3984,7 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
                 <span class="text-yellow-400 text-xs font-medium whitespace-nowrap">⏳ <span class="pending-countdown" data-until="${p.scheduledAt}"></span></span>
               </div>
               <div class="pending-text text-sm whitespace-pre-wrap mb-2" data-id="${p.id}">${formatText(p.text)}</div>
+              ${quoteHtml}
               ${cardHtml}
               <div class="pending-edit-area hidden mb-2" data-id="${p.id}">
                 <textarea class="w-full rounded bg-theme-input-bg border border-theme-input-border p-2 text-sm text-theme-text resize-vertical" rows="3" maxlength="300">${escapeHtml(p.text)}</textarea>
