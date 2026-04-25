@@ -1756,8 +1756,7 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
     const composeBox = document.getElementById('compose-box');
     if (composeBox) composeBox.style.display = (currentTab === 'timeline' && bskySession?.accessJwt) ? '' : 'none';
     const floatingComposeTrigger = document.getElementById('floating-compose-trigger');
-    // Show FAB on non-timeline tabs when logged in (timeline already has inline compose)
-    if (floatingComposeTrigger) floatingComposeTrigger.classList.toggle('hidden', !bskySession?.accessJwt || currentTab === 'timeline');
+    if (floatingComposeTrigger) floatingComposeTrigger.classList.toggle('hidden', !bskySession?.accessJwt);
     // Hide notification pills container if present from prev render
     const notifPills = document.getElementById('notif-pills');
     if (notifPills && currentTab !== 'notifications') notifPills.remove();
