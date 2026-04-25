@@ -109,7 +109,7 @@ const socialNavItems = allNavItems.filter((item: any) => socialPaths.some(p => i
     )}
 
     <!-- Theme CSS custom properties -->
-    <style set:html={`:root{${lightVars};${fontVars}}.dark{${darkVars}}${bgCss}`}></style>
+    <style set:html={`:root{${lightVars};${fontVars}}.dark{${darkVars}}${bgCss}html{font-size:calc(100% * var(--ps-body-scale,1));font-family:var(--ps-font-body)}`}></style>
 
     <ClientRouter />
 
@@ -123,7 +123,7 @@ const socialNavItems = allNavItems.filter((item: any) => socialPaths.some(p => i
       })();
     </script>
   </head>
-  <body class="min-h-screen bg-theme-bg text-theme-text font-body antialiased transition-colors duration-200" style={`font-size:calc(1rem * ${theme.fonts.bodySize || '1'})`}>
+  <body class="min-h-screen bg-theme-bg text-theme-text font-body antialiased transition-colors duration-200">
     <header class={`sticky top-0 z-40 border-b border-theme-border bg-theme-header/95 backdrop-blur supports-[backdrop-filter]:bg-theme-header/80${navStyle === 'float' ? ' hidden' : ''}`}>
       <nav class="mx-auto flex max-w-6xl items-center justify-between px-3 py-2 md:px-4 md:py-4">
         <a href={`${base}/`} class="flex items-center">
