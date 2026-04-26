@@ -28,7 +28,7 @@
           var m2 = hash.match(/^#\/collections\/([^\/]+)\/entries\/?$/);
           if (m2) { window.location.replace('#/collections/' + m2[1]); }
         }
-        window.addEventListener('hashchange', function () { setTimeout(correct, 50); });
+        window.addEventListener('hashchange', function () { setTimeout(correct, 150); });
         correct();
       })();
     </script>
