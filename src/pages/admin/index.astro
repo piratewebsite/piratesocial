@@ -14,55 +14,71 @@
         color: #f4f4f5 !important;
       }
       /* ── Mobile-friendly Decap CMS overrides ── */
-      @media (max-width: 768px) {
-        /* Make the main split layout stack vertically */
-        [class*="SplitPane"] { flex-direction: column !important; }
-        [class*="SplitPane"] > div { width: 100% !important; min-width: 0 !important; max-width: 100% !important; }
-        /* Hide the preview pane on mobile — not enough room */
-        [class*="Pane2"] { display: none !important; }
-        /* Make the editor pane full width */
-        [class*="Pane1"] { width: 100% !important; max-width: 100% !important; }
-        /* Fix the header/toolbar wrapping */
-        header, [class*="ToolbarSection"], [class*="AppHeader"] {
-          flex-wrap: wrap !important;
+      @media (max-width: 799px) {
+        [class*=BackCollection],
+        [class*=BackStatus] {
+          font-size: .6rem;
         }
-        [class*="AppHeader"] > div { flex-wrap: wrap !important; gap: 4px !important; }
-        /* Let form fields wrap and fill width */
-        [class*="ControlPaneContainer"], [class*="EditorControlPane"] {
-          padding: 8px !important;
+        [class*=AppHeaderContent],
+        [class*=AppMainContainer] {
+          margin-right: 0;
+          margin-left: 0;
+          min-width: calc(100vw - 24px);
+          max-width: 100vw;
         }
-        [class*="ControlContainer"], [class*="ObjectWidgetTopBar"] {
-          flex-wrap: wrap !important;
+        [class*=AppHeaderContent] {
+          display: flex;
+          justify-content: space-between;
         }
-        /* Color widget — prevent overflow */
-        [class*="ChromePickerWrapper"], [class*="ColorPickerContainer"] {
-          max-width: 100% !important;
-          overflow-x: auto !important;
+        [class*=AppHeaderQuickNewButton] {
+          width: 100%;
         }
-        /* Image widgets — constrain */
-        [class*="ImageWrapper"] img {
-          max-width: 100% !important;
-          height: auto !important;
+        [class*=AppHeaderButton] {
+          padding-left: 4px;
+          padding-right: 4px;
         }
-        /* Collection sidebar — stack above content on mobile */
-        [class*="CollectionContainer"] {
-          flex-direction: column !important;
+        [class*=EditorContainer],
+        [class*=ToolbarContainer] {
+          min-width: initial;
         }
-        [class*="Sidebar"] {
-          width: 100% !important;
-          max-width: 100% !important;
-          border-right: none !important;
-          border-bottom: 1px solid #333 !important;
+        [class*=ToolbarSubSectionFirst] {
+          display: flex;
+          flex-direction: column;
         }
-        /* Prevent horizontal overflow on body */
-        body { overflow-x: hidden; }
-        /* List widget items wrap better */
-        [data-testid="list-item"], [class*="ListItem"] {
-          flex-wrap: wrap !important;
+        [class*=PublishedToolbarButton] {
+          padding: 0 8px;
         }
-        /* Select widgets */
-        select, [class*="SelectWidget"] {
-          max-width: 100% !important;
+        [class*=PublishedToolbarButton]::after {
+          display: none;
+        }
+        [class*=DeleteButton] {
+          margin-top: 5px;
+          padding: 0 2px;
+        }
+        [class*=ViewControls] {
+          position: initial;
+        }
+        [class*=PreviewPaneContainer-ControlPaneContainer] {
+          padding: 0;
+        }
+        [class*=ControlPaneContainer] {
+          max-width: 100vw;
+        }
+        [class*=EditorControlBar] [class*=ToolbarContainer] {
+          display: flex;
+          flex-direction: column;
+        }
+        [class*=CollectionContainer] {
+          display: flex;
+          flex-direction: column;
+        }
+        [class*=SidebarContainer] {
+          position: initial;
+          width: initial;
+        }
+        [class*=CollectionMain] {
+          padding-left: 0;
+          margin-top: 20px;
         }
       }
     </style>
