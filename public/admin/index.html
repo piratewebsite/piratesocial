@@ -12,6 +12,26 @@
     </style>
   </head>
   <body>
+    <script>
+      // Workaround for Sveltia navigation bug with path: '{{slug}}/index' collections.
+      // Sveltia's breadcrumb strips one segment at a time, landing on an invalid URL.
+      // This intercepts those URLs and redirects to the collection root.
+      (function () {
+        var PAGE_BUNDLE_COLLECTIONS = { posts: true, galleries: true };
+        function correct() {
+          var hash = window.location.hash;
+          var m1 = hash.match(/^#\/collections\/([^\/]+)\/entries\/([^\/]+)$/);
+          if (m1 && PAGE_BUNDLE_COLLECTIONS[m1[1]]) {
+            window.location.replace('#/collections/' + m1[1]);
+            return;
+          }
+          var m2 = hash.match(/^#\/collections\/([^\/]+)\/entries\/?$/);
+          if (m2) { window.location.replace('#/collections/' + m2[1]); }
+        }
+        window.addEventListener('hashchange', function () { setTimeout(correct, 50); });
+        correct();
+      })();
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/@sveltia/cms/dist/sveltia-cms.js"></script>
     <script>
       // Preview styles injected into the preview iframe

@@ -616,52 +616,52 @@ collections:
             widget: object
             collapsed: false
             fields:
-              - { label: "Background", name: background, widget: color, enableAlpha: true, default: "rgba(255, 255, 255, 1)" }
-              - { label: "Surface (cards)", name: surface, widget: color, enableAlpha: true, default: "rgba(255, 255, 255, 1)" }
-              - { label: "Surface Border", name: surfaceBorder, widget: color, enableAlpha: true, default: "rgba(228, 228, 231, 1)" }
-              - { label: "Surface Hover", name: surfaceHover, widget: color, enableAlpha: true, default: "rgba(244, 244, 245, 1)" }
-              - { label: "Text", name: text, widget: color, enableAlpha: true, default: "rgba(24, 24, 27, 1)" }
-              - { label: "Text Muted", name: textMuted, widget: color, enableAlpha: true, default: "rgba(82, 82, 91, 1)" }
-              - { label: "Text Faint", name: textFaint, widget: color, enableAlpha: true, default: "rgba(113, 113, 122, 1)" }
-              - { label: "Primary (links, buttons)", name: primary, widget: color, enableAlpha: true, default: "rgba(59, 130, 246, 1)" }
-              - { label: "Primary Hover", name: primaryHover, widget: color, enableAlpha: true, default: "rgba(37, 99, 235, 1)" }
-              - { label: "Accent", name: accent, widget: color, enableAlpha: true, default: "rgba(139, 92, 246, 1)" }
-              - { label: "Border", name: border, widget: color, enableAlpha: true, default: "rgba(228, 228, 231, 1)" }
-              - { label: "Input Background", name: inputBg, widget: color, enableAlpha: true, default: "rgba(244, 244, 245, 1)" }
-              - { label: "Input Border", name: inputBorder, widget: color, enableAlpha: true, default: "rgba(212, 212, 216, 1)" }
-              - { label: "Tag Background", name: tag, widget: color, enableAlpha: true, default: "rgba(244, 244, 245, 1)" }
-              - { label: "Tag Text", name: tagText, widget: color, enableAlpha: true, default: "rgba(82, 82, 91, 1)" }
-              - { label: "Card Background", name: cardBg, widget: color, enableAlpha: true, default: "rgba(255, 255, 255, 1)" }
-              - { label: "Card Border", name: cardBorder, widget: color, enableAlpha: true, default: "rgba(228, 228, 231, 1)" }
-              - { label: "Card Hover Border", name: cardHover, widget: color, enableAlpha: true, default: "rgba(212, 212, 216, 1)" }
-              - { label: "Header Background", name: headerBg, widget: color, enableAlpha: true, default: "rgba(255, 255, 255, 1)" }
-              - { label: "Footer Background", name: footerBg, widget: color, enableAlpha: true, default: "rgba(255, 255, 255, 1)" }
+              - { label: "Background", name: background, widget: color, enableAlpha: false, default: "rgba(255, 255, 255, 1)" }
+              - { label: "Surface (cards)", name: surface, widget: color, enableAlpha: false, default: "rgba(255, 255, 255, 1)" }
+              - { label: "Surface Border", name: surfaceBorder, widget: color, enableAlpha: false, default: "rgba(228, 228, 231, 1)" }
+              - { label: "Surface Hover", name: surfaceHover, widget: color, enableAlpha: false, default: "rgba(244, 244, 245, 1)" }
+              - { label: "Text", name: text, widget: color, enableAlpha: false, default: "rgba(24, 24, 27, 1)" }
+              - { label: "Text Muted", name: textMuted, widget: color, enableAlpha: false, default: "rgba(82, 82, 91, 1)" }
+              - { label: "Text Faint", name: textFaint, widget: color, enableAlpha: false, default: "rgba(113, 113, 122, 1)" }
+              - { label: "Primary (links, buttons)", name: primary, widget: color, enableAlpha: false, default: "rgba(59, 130, 246, 1)" }
+              - { label: "Primary Hover", name: primaryHover, widget: color, enableAlpha: false, default: "rgba(37, 99, 235, 1)" }
+              - { label: "Accent", name: accent, widget: color, enableAlpha: false, default: "rgba(139, 92, 246, 1)" }
+              - { label: "Border", name: border, widget: color, enableAlpha: false, default: "rgba(228, 228, 231, 1)" }
+              - { label: "Input Background", name: inputBg, widget: color, enableAlpha: false, default: "rgba(244, 244, 245, 1)" }
+              - { label: "Input Border", name: inputBorder, widget: color, enableAlpha: false, default: "rgba(212, 212, 216, 1)" }
+              - { label: "Tag Background", name: tag, widget: color, enableAlpha: false, default: "rgba(244, 244, 245, 1)" }
+              - { label: "Tag Text", name: tagText, widget: color, enableAlpha: false, default: "rgba(82, 82, 91, 1)" }
+              - { label: "Card Background", name: cardBg, widget: color, enableAlpha: false, default: "rgba(255, 255, 255, 1)" }
+              - { label: "Card Border", name: cardBorder, widget: color, enableAlpha: false, default: "rgba(228, 228, 231, 1)" }
+              - { label: "Card Hover Border", name: cardHover, widget: color, enableAlpha: false, default: "rgba(212, 212, 216, 1)" }
+              - { label: "Header Background", name: headerBg, widget: color, enableAlpha: false, default: "rgba(255, 255, 255, 1)" }
+              - { label: "Footer Background", name: footerBg, widget: color, enableAlpha: false, default: "rgba(255, 255, 255, 1)" }
 
           - label: "Dark Mode Colors"
             name: dark
             widget: object
             collapsed: false
             fields:
-              - { label: "Background", name: background, widget: color, enableAlpha: true, default: "rgba(9, 9, 11, 1)" }
-              - { label: "Surface (cards)", name: surface, widget: color, enableAlpha: true, default: "rgba(24, 24, 27, 1)" }
-              - { label: "Surface Border", name: surfaceBorder, widget: color, enableAlpha: true, default: "rgba(39, 39, 42, 1)" }
-              - { label: "Surface Hover", name: surfaceHover, widget: color, enableAlpha: true, default: "rgba(39, 39, 42, 1)" }
-              - { label: "Text", name: text, widget: color, enableAlpha: true, default: "rgba(244, 244, 245, 1)" }
-              - { label: "Text Muted", name: textMuted, widget: color, enableAlpha: true, default: "rgba(161, 161, 170, 1)" }
-              - { label: "Text Faint", name: textFaint, widget: color, enableAlpha: true, default: "rgba(113, 113, 122, 1)" }
-              - { label: "Primary (links, buttons)", name: primary, widget: color, enableAlpha: true, default: "rgba(59, 130, 246, 1)" }
-              - { label: "Primary Hover", name: primaryHover, widget: color, enableAlpha: true, default: "rgba(96, 165, 250, 1)" }
-              - { label: "Accent", name: accent, widget: color, enableAlpha: true, default: "rgba(139, 92, 246, 1)" }
-              - { label: "Border", name: border, widget: color, enableAlpha: true, default: "rgba(39, 39, 42, 1)" }
-              - { label: "Input Background", name: inputBg, widget: color, enableAlpha: true, default: "rgba(39, 39, 42, 1)" }
-              - { label: "Input Border", name: inputBorder, widget: color, enableAlpha: true, default: "rgba(63, 63, 70, 1)" }
-              - { label: "Tag Background", name: tag, widget: color, enableAlpha: true, default: "rgba(39, 39, 42, 1)" }
-              - { label: "Tag Text", name: tagText, widget: color, enableAlpha: true, default: "rgba(161, 161, 170, 1)" }
-              - { label: "Card Background", name: cardBg, widget: color, enableAlpha: true, default: "rgba(24, 24, 27, 1)" }
-              - { label: "Card Border", name: cardBorder, widget: color, enableAlpha: true, default: "rgba(39, 39, 42, 1)" }
-              - { label: "Card Hover Border", name: cardHover, widget: color, enableAlpha: true, default: "rgba(63, 63, 70, 1)" }
-              - { label: "Header Background", name: headerBg, widget: color, enableAlpha: true, default: "rgba(9, 9, 11, 1)" }
-              - { label: "Footer Background", name: footerBg, widget: color, enableAlpha: true, default: "rgba(9, 9, 11, 1)" }
+              - { label: "Background", name: background, widget: color, enableAlpha: false, default: "rgba(9, 9, 11, 1)" }
+              - { label: "Surface (cards)", name: surface, widget: color, enableAlpha: false, default: "rgba(24, 24, 27, 1)" }
+              - { label: "Surface Border", name: surfaceBorder, widget: color, enableAlpha: false, default: "rgba(39, 39, 42, 1)" }
+              - { label: "Surface Hover", name: surfaceHover, widget: color, enableAlpha: false, default: "rgba(39, 39, 42, 1)" }
+              - { label: "Text", name: text, widget: color, enableAlpha: false, default: "rgba(244, 244, 245, 1)" }
+              - { label: "Text Muted", name: textMuted, widget: color, enableAlpha: false, default: "rgba(161, 161, 170, 1)" }
+              - { label: "Text Faint", name: textFaint, widget: color, enableAlpha: false, default: "rgba(113, 113, 122, 1)" }
+              - { label: "Primary (links, buttons)", name: primary, widget: color, enableAlpha: false, default: "rgba(59, 130, 246, 1)" }
+              - { label: "Primary Hover", name: primaryHover, widget: color, enableAlpha: false, default: "rgba(96, 165, 250, 1)" }
+              - { label: "Accent", name: accent, widget: color, enableAlpha: false, default: "rgba(139, 92, 246, 1)" }
+              - { label: "Border", name: border, widget: color, enableAlpha: false, default: "rgba(39, 39, 42, 1)" }
+              - { label: "Input Background", name: inputBg, widget: color, enableAlpha: false, default: "rgba(39, 39, 42, 1)" }
+              - { label: "Input Border", name: inputBorder, widget: color, enableAlpha: false, default: "rgba(63, 63, 70, 1)" }
+              - { label: "Tag Background", name: tag, widget: color, enableAlpha: false, default: "rgba(39, 39, 42, 1)" }
+              - { label: "Tag Text", name: tagText, widget: color, enableAlpha: false, default: "rgba(161, 161, 170, 1)" }
+              - { label: "Card Background", name: cardBg, widget: color, enableAlpha: false, default: "rgba(24, 24, 27, 1)" }
+              - { label: "Card Border", name: cardBorder, widget: color, enableAlpha: false, default: "rgba(39, 39, 42, 1)" }
+              - { label: "Card Hover Border", name: cardHover, widget: color, enableAlpha: false, default: "rgba(63, 63, 70, 1)" }
+              - { label: "Header Background", name: headerBg, widget: color, enableAlpha: false, default: "rgba(9, 9, 11, 1)" }
+              - { label: "Footer Background", name: footerBg, widget: color, enableAlpha: false, default: "rgba(9, 9, 11, 1)" }
 
       - label: "Menus, Labels & Text"
         name: labels
