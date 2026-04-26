@@ -14,6 +14,23 @@
   <body>
     <script src="https://cdn.jsdelivr.net/npm/@sveltia/cms/dist/sveltia-cms.js"></script>
     <script>
+      // Workaround for Sveltia navigation bug with path: '{{slug}}/index'.
+      // When the breadcrumb strips the last segment it lands on an invalid
+      // entries/slug URL. Detect that and jump straight to the collection.
+      (function () {
+        function fixNav() {
+          var hash = window.location.hash;
+          // Matches #/collections/{name}/entries/{slug} with NO further segments
+          var m = hash.match(/^#\/collections\/([^\/]+)\/entries\/([^\/]+)$/);
+          if (m) {
+            window.location.hash = '/collections/' + m[1];
+          }
+        }
+        window.addEventListener('hashchange', fixNav);
+        fixNav(); // also run on initial load
+      })();
+    </script>
+    <script>
       // Preview styles injected into the preview iframe
       var previewStyles = '\
         body {\
