@@ -89,6 +89,7 @@ collections:
       - label: Tags
         name: tags
         widget: list
+        required: false
         default: []
       - label: Slideshow Style
         name: slideshowStyle
@@ -106,7 +107,7 @@ collections:
           - { label: Image, name: src, widget: image }
           - { label: Alt Text, name: alt, widget: string, required: false }
           - { label: Caption, name: caption, widget: string, required: false }
-      - { label: Body, name: body, widget: markdown }
+      - { label: Body, name: body, widget: markdown, required: false }
 
   - name: pages
     label: Pages
@@ -602,10 +603,12 @@ collections:
               - label: "Heading Size Scale (0.8 = smaller, 1 = default, 1.3 = larger)"
                 name: headingSize
                 widget: string
+                required: false
                 default: "1"
               - label: "Body Size Scale (0.8 = smaller, 1 = default, 1.2 = larger)"
                 name: bodySize
                 widget: string
+                required: false
                 default: "1"
 
           - label: "Light Mode Colors"

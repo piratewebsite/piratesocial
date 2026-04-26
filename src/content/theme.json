@@ -15,7 +15,7 @@
   },
   "light": {
     "footerBg": "rgba(255, 255, 255, 1)",
-    "primary": "#3bf652",
+    "primary": "rgba(59, 246, 82, 1)",
     "textFaint": "rgba(113, 113, 122, 1)",
     "tagText": "rgba(82, 82, 91, 1)",
     "accent": "rgba(139, 92, 246, 1)",
