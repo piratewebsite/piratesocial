@@ -32,6 +32,7 @@ collections:
       - label: Tags
         name: tags
         widget: list
+        required: false
         default: []
       - { label: Draft, name: draft, widget: boolean, default: false }
       - label: Visibility
@@ -47,7 +48,6 @@ collections:
         name: privatePassword
         widget: string
         required: false
-        pattern: ['[A-Za-z0-9]{3,6}', 'Must be 3-6 alphanumeric characters']
         hint: "Set only if Visibility is Private. Users will need this to view the post."
       - label: EXIF Data
         name: exif
