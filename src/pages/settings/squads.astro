@@ -166,22 +166,6 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
         }).join('')}
       </div>
 
-      <!-- Add member -->
-      <div class="flex gap-2 mt-4">
-        <input type="text" placeholder="@handle.bsky.social" class="add-member-input flex-1 rounded bg-theme-surface border border-theme-border px-3 py-1.5 text-sm focus:outline-none focus:border-blue-500" data-squad-id="${squad.id}" />
-        <button class="add-member-btn rounded bg-theme-surface-hover px-3 py-1.5 text-sm hover:bg-theme-primary transition" data-squad-id="${squad.id}">Add</button>
-      </div>
-
-      <!-- Member list (compact) -->
-      <div class="mt-3 flex flex-wrap gap-1">
-        ${squad.members.map(m => `
-          <span class="inline-flex items-center gap-1 rounded bg-theme-surface px-2 py-0.5 text-xs text-theme-muted">
-            @${esc(m.handle)}
-            <button class="remove-member-btn text-theme-faint hover:text-red-400 transition" data-squad-id="${squad.id}" data-member-id="${m.id}">✕</button>
-          </span>
-        `).join('')}
-      </div>
-
       <!-- View feed button -->
       ${squad.members.length ? `
       <button class="view-squad-feed-btn mt-4 w-full rounded bg-theme-surface py-2 text-sm hover:bg-theme-surface-hover transition" data-squad-id="${squad.id}">
@@ -189,6 +173,28 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
       </button>
       <div class="squad-feed hidden mt-4 space-y-4" data-squad-id="${squad.id}"></div>
       ` : ''}
+
+      <!-- Add member -->
+      <div class="flex gap-2 mt-4">
+        <input type="text" placeholder="@handle.bsky.social" class="add-member-input flex-1 rounded bg-theme-surface border border-theme-border px-3 py-1.5 text-sm focus:outline-none focus:border-blue-500" data-squad-id="${squad.id}" />
+        <button class="add-member-btn rounded bg-theme-surface-hover px-3 py-1.5 text-sm hover:bg-theme-primary transition" data-squad-id="${squad.id}">Add</button>
+      </div>
+
+      <!-- Member list (collapsible, collapsed by default) -->
+      <div class="mt-3">
+        <button class="toggle-members-btn text-xs text-theme-faint hover:text-theme-muted transition flex items-center gap-1" data-squad-id="${squad.id}">
+          <span class="toggle-members-arrow" data-squad-id="${squad.id}">▶</span>
+          ${squad.members.length} member${squad.members.length !== 1 ? 's' : ''}
+        </button>
+        <div class="members-list hidden mt-2 flex flex-wrap gap-1" data-squad-id="${squad.id}">
+          ${squad.members.map(m => `
+            <span class="inline-flex items-center gap-1 rounded bg-theme-surface px-2 py-0.5 text-xs text-theme-muted">
+              @${esc(m.handle)}
+              <button class="remove-member-btn text-theme-faint hover:text-red-400 transition" data-squad-id="${squad.id}" data-member-id="${m.id}">✕</button>
+            </span>
+          `).join('')}
+        </div>
+      </div>
     </div>`;
   }
 
@@ -268,6 +274,16 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
           loadSquads();
         } catch { alert('Failed to add member'); }
         finally { btn.textContent = 'Add'; btn.disabled = false; }
+      });
+    });
+
+    // Toggle member list
+    document.querySelectorAll('.toggle-members-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const list = document.querySelector(`.members-list[data-squad-id="${btn.dataset.squadId}"]`);
+        const arrow = document.querySelector(`.toggle-members-arrow[data-squad-id="${btn.dataset.squadId}"]`);
+        list.classList.toggle('hidden');
+        arrow.textContent = list.classList.contains('hidden') ? '▶' : '▼';
       });
     });
 
