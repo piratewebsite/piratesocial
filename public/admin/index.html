@@ -15,19 +15,20 @@
     <script src="https://cdn.jsdelivr.net/npm/@sveltia/cms/dist/sveltia-cms.js"></script>
     <script>
       // Workaround for Sveltia navigation bug with path: '{{slug}}/index'.
-      // When the breadcrumb strips the last segment it lands on an invalid
-      // entries/slug URL. Detect that and jump straight to the collection.
+      // Only posts and galleries use that path pattern — their valid entry URLs
+      // always end in /index. If we see entries/{slug} with NO /index suffix
+      // for those collections, it's the broken intermediate state; redirect up.
       (function () {
+        var PAGE_BUNDLE_COLLECTIONS = { posts: true, galleries: true };
         function fixNav() {
           var hash = window.location.hash;
-          // Matches #/collections/{name}/entries/{slug} with NO further segments
           var m = hash.match(/^#\/collections\/([^\/]+)\/entries\/([^\/]+)$/);
-          if (m) {
+          if (m && PAGE_BUNDLE_COLLECTIONS[m[1]]) {
             window.location.hash = '/collections/' + m[1];
           }
         }
         window.addEventListener('hashchange', fixNav);
-        fixNav(); // also run on initial load
+        fixNav();
       })();
     </script>
     <script>
