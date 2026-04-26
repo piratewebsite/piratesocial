@@ -1,14 +1,10 @@
----
-// Decap CMS Admin Page — uses is:inline to prevent Astro module bundling
----
-
 <!doctype html>
 <html>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Content Manager</title>
-    <style is:inline>
+    <style>
       .frame-content {
         background: #09090b !important;
         color: #f4f4f5 !important;
@@ -16,8 +12,8 @@
     </style>
   </head>
   <body>
-    <script is:inline src="https://cdn.jsdelivr.net/npm/@sveltia/cms/dist/sveltia-cms.js"></script>
-    <script is:inline>
+    <script src="https://cdn.jsdelivr.net/npm/@sveltia/cms/dist/sveltia-cms.js"></script>
+    <script>
       // Preview styles injected into the preview iframe
       var previewStyles = '\
         body {\
@@ -505,7 +501,7 @@
               var count = parseInt(block.get('count') || '6', 10);
               var columns = block.get('columns') || '3';
               var cols = parseInt(columns, 10);
-              var displayCount = Math.min(count, 6); // show up to 6 placeholders
+              var displayCount = Math.min(count, 6);
 
               return h('div', { key: i, style: { marginBottom: '20px' }},
                 heading && h('h2', { style: { fontSize: '18px', fontWeight: 600, color: '#f4f4f5', marginBottom: '12px' }}, heading),
@@ -727,15 +723,6 @@
           var slug = entry.getIn(['data', 'slug']) || '';
           var blocks = entry.getIn(['data', 'blocks']);
 
-          // Reuse HomePreview's renderBlock by creating a temporary instance
-          var homeInst = new HomePreview({ entry: entry, getAsset: getAsset });
-          var renderBlock = function(block, i) {
-            // Access the renderBlock from HomePreview's render closure
-            return homeInst.render.call(homeInst);
-          };
-
-          // Actually, just inline the block rendering from HomePreview
-          // We'll call HomePreview render with modified entry
           return h('div', { style: { padding: '20px 24px', maxWidth: '800px', margin: '0 auto' }},
             title && h('div', { style: { marginBottom: '20px', paddingBottom: '16px', borderBottom: '1px solid #27272a' }},
               h('h1', { style: { fontSize: '28px', fontWeight: 700, color: '#f4f4f5', margin: '0 0 4px 0' }}, title),
