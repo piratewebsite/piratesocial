@@ -16,5 +16,10 @@
   "location": "",
   "title": "My Photo Site",
   "avatar": "",
-  "description": "A photography site on the Pirate Social network"
+  "description": "A photography site on the Pirate Social network",
+  "cloudinary": {
+    "enabled": false,
+    "cloudName": "",
+    "apiKey": ""
+  }
 }

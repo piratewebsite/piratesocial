@@ -405,6 +405,19 @@ collections:
                 hint: "Choose whether to show an image or text in the header"
               - { label: "Logo Image", name: image, widget: image, default: "/images/logoImage.svg", required: false, hint: "Used when Logo Type is 'Image'" }
               - { label: "Logo Text", name: text, widget: string, required: false, hint: "Used when Logo Type is 'Text' (e.g. your site name)" }
+          - label: "Cloudinary Media Library"
+            name: cloudinary
+            widget: object
+            collapsed: true
+            hint: "Optional: use Cloudinary CDN for browsable media folders instead of storing images in your repo. Get your credentials at cloudinary.com/console"
+            fields:
+              - label: "Enable Cloudinary"
+                name: enabled
+                widget: boolean
+                default: false
+                hint: "When ON, all media uploads go to Cloudinary CDN instead of your Git repo"
+              - { label: "Cloud Name", name: cloudName, widget: string, required: false, hint: "Found in your Cloudinary dashboard (e.g. 'my-site-abc123')" }
+              - { label: "API Key", name: apiKey, widget: string, required: false, hint: "From Cloudinary > Settings > API Keys. This is safe to store — it is not your secret key." }
 
       - label: PWA & Open Graph
         name: pwa
