@@ -19,7 +19,7 @@
     }
   
     [class*=AppHeaderQuickNewButton] {
-      width: 100%;
+      display: none !important;
     }
   
     [class*=AppHeaderButton] {
