@@ -1,6 +1,6 @@
 ---
 import { ClientRouter } from 'astro:transitions';
-import { siteConfig } from '../lib/config';
+import { siteConfig, withBase } from '../lib/config';
 import theme from '../content/theme.json';
 import labels from '../content/labels.json';
 import pwa from '../content/pwa.json';
@@ -22,7 +22,10 @@ const { title, description, image } = Astro.props;
 const defaultTitle = pwa.ogTitle || siteConfig.title;
 const pageTitle = title ? `${title} | ${defaultTitle}` : defaultTitle;
 const pageDescription = description || pwa.ogDescription || siteConfig.description;
-const ogImage = image || pwa.ogImage || siteConfig.avatar;
+const siteOrigin = siteConfig.siteUrl.replace(/\/$/, '');
+// image prop already has base applied (via withBase in page); apply withBase to fallbacks
+const ogImageRaw = image || withBase(pwa.ogImage || '') || siteConfig.avatar || '';
+const ogImage = ogImageRaw.startsWith('http') ? ogImageRaw : `${siteOrigin}${ogImageRaw.startsWith('/') ? '' : '/'}${ogImageRaw}`;
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 const currentPath = Astro.url.pathname.replace(/\/$/, '') || '/';
 
@@ -89,6 +92,7 @@ const socialNavItems = allNavItems.filter((item: any) => socialPaths.some(p => i
     <meta property="og:title" content={pageTitle} />
     <meta property="og:description" content={pageDescription} />
     <meta property="og:image" content={ogImage} />
+    <meta property="og:url" content={`${siteOrigin}${Astro.url.pathname}`} />
     <meta property="og:type" content="website" />
 
     <!-- RSS -->
