@@ -115,6 +115,28 @@ jobs:
           sed -i "s|display_url: https://example.com|display_url: ${FULL_SITE}|g" build/public/admin/config.yml
           # Remove legacy /public/config.yml — admin config lives at /admin/config.yml
           rm -f build/public/config.yml
+          # Inject Cloudinary media_library if user has enabled it in settings
+          node -e "
+            const fs = require('fs');
+            const settings = JSON.parse(fs.readFileSync('build/src/content/settings.json', 'utf8'));
+            const cl = settings.cloudinary;
+            if (!cl?.enabled || !cl.cloudName || !cl.apiKey) {
+              console.log('Cloudinary not configured, using local media library');
+              process.exit(0);
+            }
+            let yaml = fs.readFileSync('build/public/admin/config.yml', 'utf8');
+            const block = [
+              'media_library:',
+              '  name: cloudinary',
+              '  config:',
+              '    cloud_name: ' + cl.cloudName,
+              '    api_key: ' + cl.apiKey,
+              ''
+            ].join('\n');
+            yaml = yaml.replace(/(logo_url:[^\n]*\n)/, '\$1\n' + block);
+            fs.writeFileSync('build/public/admin/config.yml', yaml);
+            console.log('Cloudinary media library injected: ' + cl.cloudName);
+          "
 
       - name: Install dependencies
         run: npm ci
