@@ -34,6 +34,21 @@ jobs:
           repository: piratewebsite/piratesocial
           path: template-source
 
+      - name: Self-update workflow from template
+        run: |
+          TEMPLATE_WF="template-source/.github/workflows/deploy.yml"
+          USER_WF="user-repo/.github/workflows/deploy.yml"
+          if [ -f "$TEMPLATE_WF" ] && ! diff -q "$TEMPLATE_WF" "$USER_WF" > /dev/null 2>&1; then
+            mkdir -p "$(dirname "$USER_WF")"
+            cp "$TEMPLATE_WF" "$USER_WF"
+            cd user-repo
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add .github/workflows/deploy.yml
+            git commit -m "chore: update deploy workflow from template"
+            git push
+          fi
+
       - name: Merge template + user content
         run: |
           # Start with fresh template code (files now at root, not in node-template/)
