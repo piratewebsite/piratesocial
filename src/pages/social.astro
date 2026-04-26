@@ -3420,7 +3420,6 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
           </div>`;
         }).join('')}
       </div>
-      ${squad.members.length ? `<div class="squad-feed hidden mt-4 space-y-4" data-squad-id="${squad.id}"></div>` : ''}
       <div class="flex gap-2 mt-4">
         <input type="text" placeholder="@handle.bsky.social" class="add-member-input flex-1 rounded bg-theme-input-bg border border-theme-input-border px-3 py-1.5 text-sm focus:outline-none focus:border-theme-primary" data-squad-id="${squad.id}" />
         <button class="add-member-btn rounded bg-theme-surface-hover px-3 py-1.5 text-sm hover:bg-theme-card-hover transition" data-squad-id="${squad.id}">Add</button>
@@ -3439,6 +3438,7 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
           `).join('')}
         </div>
       </div>
+      ${squad.members.length ? `<div class="squad-feed hidden mt-4 space-y-4" data-squad-id="${squad.id}"></div>` : ''}
     </div>`;
   }
 
