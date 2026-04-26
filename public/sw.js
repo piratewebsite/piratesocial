@@ -25,25 +25,25 @@ self.addEventListener('push', (event) => {
     requireInteraction: false,
   };
 
+  // Single waitUntil with Promise.all — required so the SW isn't killed early
+  // (calling event.waitUntil twice is a spec violation; only the first extends lifetime)
   event.waitUntil(
-    self.registration.showNotification(title || '🏴‍☠️ Pirate Social', options)
-  );
-  // Update app badge count
-  if (navigator.setAppBadge) {
-    navigator.setAppBadge().catch(() => {});
-  }
-  // Broadcast to open clients
-  event.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
-      for (const client of clients) {
-        client.postMessage({
-          type: 'PUSH_NOTIFICATION',
-          title,
-          body,
-          data,
-        });
-      }
-    })
+    Promise.all([
+      self.registration.showNotification(title || '🏴\u200d☠️ Pirate Social', options),
+      // Badging API — Chrome/Edge, and Safari 16.4+ home-screen PWA on iOS
+      self.navigator?.setAppBadge?.().catch(() => {}),
+      // Broadcast to any open app windows
+      self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+        for (const client of clients) {
+          client.postMessage({
+            type: 'PUSH_NOTIFICATION',
+            title,
+            body,
+            data,
+          });
+        }
+      }),
+    ])
   );
 });
 

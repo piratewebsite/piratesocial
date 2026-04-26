@@ -5226,6 +5226,11 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
     }
   });
 
+  // iOS pauses JS timers when the app is backgrounded — re-check badge on resume
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) checkUnreadBadge();
+  });
+
   // Load saved data
   loadBskySession();
   loadBookmarks();
