@@ -28,7 +28,10 @@ self.addEventListener('push', (event) => {
   event.waitUntil(
     self.registration.showNotification(title || '🏴‍☠️ Pirate Social', options)
   );
-
+  // Update app badge count
+  if (navigator.setAppBadge) {
+    navigator.setAppBadge().catch(() => {});
+  }
   // Broadcast to open clients
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {

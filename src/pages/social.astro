@@ -5196,7 +5196,36 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
   // ============================================================
   // INITIALIZATION
   // ============================================================
-  
+
+  // Poll Bluesky for unread notification count and update PWA badge
+  async function checkUnreadBadge() {
+    if (!token || !navigator.setAppBadge) return;
+    try {
+      const res = await fetchTimeout(`${hubUrl}/api/notifications/bluesky?limit=30`, { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) return;
+      const data = await res.json();
+      const unreadCount = (data.notifications || []).filter(n => !n.isRead).length;
+      if (unreadCount > 0) {
+        navigator.setAppBadge(unreadCount).catch(() => {});
+        const badge = document.getElementById('notif-badge');
+        if (badge) badge.removeAttribute('hidden');
+      } else {
+        navigator.clearAppBadge().catch(() => {});
+        const badge = document.getElementById('notif-badge');
+        if (badge) badge.setAttribute('hidden', '');
+      }
+    } catch {}
+  }
+
+  // Listen for push messages from SW to update badge immediately
+  navigator.serviceWorker?.addEventListener('message', (event) => {
+    if (event.data?.type === 'PUSH_NOTIFICATION') {
+      if (navigator.setAppBadge) navigator.setAppBadge().catch(() => {});
+      const badge = document.getElementById('notif-badge');
+      if (badge) badge.removeAttribute('hidden');
+    }
+  });
+
   // Load saved data
   loadBskySession();
   loadBookmarks();
@@ -5225,6 +5254,10 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
 
       updateUI();
       loadCurrentTab();
+
+      // Check unread count for PWA badge, then poll every 5 minutes
+      checkUnreadBadge();
+      setInterval(checkUnreadBadge, 5 * 60 * 1000);
     } else {
       showLoggedOutSocialState();
     }
