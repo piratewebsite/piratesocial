@@ -4,17 +4,17 @@ import { glob } from 'astro/loaders';
 
 const posts = defineCollection({
   loader: glob({ pattern: '**/*.md', base: './src/content/posts' }),
-  schema: ({ image }) => z.object({
+  schema: z.object({
       title: z.string(),
       description: z.string().optional(),
       pubDate: z.coerce.date(),
       updatedDate: z.coerce.date().optional(),
-      image: image().optional(),
+      image: z.string().optional(),
       imageAlt: z.string().optional(),
       gallery: z
         .array(
           z.object({
-            src: image(),
+            src: z.string(),
             alt: z.string().optional(),
             caption: z.string().optional(),
           })
@@ -41,15 +41,15 @@ const posts = defineCollection({
 
 const galleries = defineCollection({
   loader: glob({ pattern: '**/*.md', base: './src/content/galleries' }),
-  schema: ({ image }) => z.object({
+  schema: z.object({
       title: z.string(),
       description: z.string().optional(),
       pubDate: z.coerce.date(),
       draft: z.boolean().default(false),
-      coverImage: image().optional(),
+      coverImage: z.string().optional(),
       photos: z.array(
         z.object({
-          src: image(),
+          src: z.string(),
           alt: z.string().optional(),
           caption: z.string().optional(),
         })
