@@ -9,7 +9,7 @@ site_url: https://example.com
 display_url: https://example.com
 
 logo:
-  src: /images/logoImage.svg
+  src: https://piratesocial.app/logoImage.svg
 
 media_folder: public/images
 public_folder: /images
