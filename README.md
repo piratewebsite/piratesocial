@@ -1,6 +1,6 @@
 <div align="center">
   <a href="https://piratesocial.app">
-    <img src="node-template/public/images/logoImage.svg" alt="Pirate Social Logo" width="200" height="200">
+    <img src="public/images/logoImage.svg" alt="Pirate Social Logo" width="200" height="200">
   </a>
   <h1>Pirate Social</h1>
   <h3>Own Your Content • Connect Your Community • Sail the Open Web</h3>
