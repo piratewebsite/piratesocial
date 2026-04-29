@@ -36,7 +36,7 @@ Built on top of the latest open source tools, Pirate Social adds a full social l
 Every user runs their own independent website. Pirate Social connects these sites into a network using RSS — the same open standard that's powered the web for decades. Your site publishes an RSS feed, Pirate Social aggregates feeds from everyone in the network, and you get a social timeline without giving up ownership of anything.
 
 ```
-        ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+        ┌─────────────-┐     ┌─────────────-┐     ┌─────────────┐
         │  Your Site   │     │  Their Site  │     │  Any Site   │
         │  (Astro SSG) │     │  (Astro SSG) │     │  (Astro SSG)│
         │  GitHub Pages│     │  Netlify     │     │  Vercel     │
