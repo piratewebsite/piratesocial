@@ -1,6 +1,6 @@
 <div align="center">
   <a href="https://piratesocial.app">
-    <img src="node-template/public/images/logoImage.svg" alt="Pirate Social Logo" width="200" height="200">
+    <img src="public/images/logoImage.svg" alt="Pirate Social Logo" width="200" height="200">
   </a>
   <h1>Pirate Social</h1>
   <h3>Own Your Content • Connect Your Community • Sail the Open Web</h3>
@@ -25,15 +25,15 @@
 
 Social media shouldn't be owned by a single company, run for profit, or subject to the whims of any one platform. **Pirate Social** is the fix — a completely independent, decentralized social network built on RSS where **every user owns their own website and content**.
 
-Each user gets a free static site deployed on GitHub Pages, Netlify, or Vercel. Sites discover and connect with each other through standard RSS feeds and a shared hub. No algorithms. No ads. No corporate overlord. If a platform disappears tomorrow, your content stays right where it is — on your site, under your control.
+Each user gets a free static site deployed on GitHub Pages, Netlify, or Vercel. Sites discover and connect with each other through standard RSS feeds and a shared network. No algorithms. No ads. No corporate overlord. If a platform disappears tomorrow, your content stays right where it is — on your site, under your control.
 
-Built on the foundation of [PIRATE CMS](https://github.com/piratewebsite/pirate), Pirate Social adds a full social layer: follows, likes, comments, real-time notifications, Bluesky cross-posting, YouTube playlists, RSS feed aggregation, and more.
+Built on top of the latest open source tools, Pirate Social adds a full social layer: follows, likes, comments, real-time notifications, Bluesky cross-posting, YouTube playlists, RSS feed aggregation, and more.
 
 <p align="center"><strong>Deploy free on GitHub Pages, Netlify, or Vercel</strong></p>
 
 ## How It Works
 
-Every user runs their own independent website. The Pirate Social Hub connects these sites into a network using RSS — the same open standard that's powered the web for decades. Your site publishes an RSS feed, the hub aggregates feeds from everyone in the network, and you get a social timeline without giving up ownership of anything.
+Every user runs their own independent website. Pirate Social connects these sites into a network using RSS — the same open standard that's powered the web for decades. Your site publishes an RSS feed, Pirate Social aggregates feeds from everyone in the network, and you get a social timeline without giving up ownership of anything.
 
 ```
         ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
@@ -48,7 +48,6 @@ Every user runs their own independent website. The Pirate Social Hub connects th
                              │
                     ┌────────▼────────┐
                     │  PIRATE SOCIAL  │
-                    │      HUB        │
                     │                 │
                     │  Aggregates RSS │
                     │  Follows/Likes  │
@@ -76,7 +75,7 @@ Every user runs their own independent website. The Pirate Social Hub connects th
 - **Discover feed** — browse all public posts across the network
 - **User directory** with search
 - **Personalized timeline** — posts from people you follow + your RSS subscriptions
-- **No vendor lock-in** — your site works independently even without the hub
+- **No vendor lock-in** — your site works independently even without Pirate Social
 
 ### 🦋 Bluesky Integration
 - **Connect your Bluesky account** via app password
@@ -94,7 +93,7 @@ Every user runs their own independent website. The Pirate Social Hub connects th
 - **Start/end time trimming** per track
 
 ### 📄 Content Management
-- **Decap CMS** — edit posts, galleries, and settings from the browser via GitHub
+- **Sveltia CMS** — edit posts, galleries, and settings from the browser via GitHub
 - **Drag-and-drop page builder** with 8 block types:
   - Hero banner, Profile card, Recent posts grid, YouTube video, Photo gallery, Text/Markdown, Image, Location/map
 - **Markdown + MDX** posts with tags and categories
@@ -112,8 +111,9 @@ Every user runs their own independent website. The Pirate Social Hub connects th
 ### Join the network
 
 1. Sign in at [piratesocial.app](https://piratesocial.app) with GitHub
-2. The hub provisions your site repo and first build triggers automatically
-3. Go to `yoursite.github.io/admin` to manage content via Decap CMS
+2. Pirate Social provisions your site repo and first build triggers automatically
+3. Go to `yoursite.github.io/admin` to manage content via Sveltia CMS
+4. Go to `yoursite.github.io/social` to connect your Bluesky account and access your Pirate Social feed
 
 ### Local Development
 
@@ -164,10 +164,10 @@ node-template/
 │   ├── content/            # Posts, galleries, slideshows, pages,
 │   │                       #   settings, theme, labels, PWA config
 │   ├── layouts/            # BaseLayout with floating player
-│   ├── lib/                # Hub API client, site config
+│   ├── lib/                # API client, site config
 │   └── pages/              # index, about, social, posts/,
 │                           #   galleries/, settings/, feed.xml
-├── public/admin/           # Decap CMS configuration
+├── public/admin/           # Sveltia CMS configuration
 └── .github/workflows/      # Auto-deploy to GitHub Pages
 ```
 
@@ -179,7 +179,7 @@ node-template/
 | UI | Preact 10 |
 | Styling | Tailwind CSS 4 |
 | Content | Markdown + MDX |
-| CMS | Decap CMS (GitHub backend) |
+| CMS | Sveltia CMS (GitHub backend) |
 | Auth | GitHub OAuth |
 | Federation | RSS with custom photo/social namespaces |
 | Bluesky | AT Protocol (`@atproto/api`) |
