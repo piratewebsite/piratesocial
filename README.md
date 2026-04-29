@@ -114,6 +114,7 @@ Every user runs their own independent website. The Pirate Social Hub connects th
 1. Sign in at [piratesocial.app](https://piratesocial.app) with GitHub
 2. The hub provisions your site repo and first build triggers automatically
 3. Go to `yoursite.github.io/admin` to manage content via Sveltia CMS
+4. Go to `yoursite.github.io/social` to connect your Bluesky account and access your Pirate Social feed
 
 ### Local Development
 
