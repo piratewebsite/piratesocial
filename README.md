@@ -43,8 +43,8 @@ Every user runs their own independent website. Pirate Social connects these site
         │       │      │     │       │      │     │       │     │
         │   RSS Feed   │     │   RSS Feed   │     │   RSS Feed  │
         └───────┬──────┘     └───────┬──────┘     └───────┬─────┘
-                │                    │                     │
-                └────────────┬───────┘─────────────────────┘
+                │                    │                    │
+                └────────────┬───────┘────────────────────┘
                              │
                     ┌────────▼────────┐
                     │  PIRATE SOCIAL  │
