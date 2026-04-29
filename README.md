@@ -94,7 +94,7 @@ Every user runs their own independent website. The Pirate Social Hub connects th
 - **Start/end time trimming** per track
 
 ### 📄 Content Management
-- **Decap CMS** — edit posts, galleries, and settings from the browser via GitHub
+- **Sveltia CMS** — edit posts, galleries, and settings from the browser via GitHub
 - **Drag-and-drop page builder** with 8 block types:
   - Hero banner, Profile card, Recent posts grid, YouTube video, Photo gallery, Text/Markdown, Image, Location/map
 - **Markdown + MDX** posts with tags and categories
@@ -113,7 +113,7 @@ Every user runs their own independent website. The Pirate Social Hub connects th
 
 1. Sign in at [piratesocial.app](https://piratesocial.app) with GitHub
 2. The hub provisions your site repo and first build triggers automatically
-3. Go to `yoursite.github.io/admin` to manage content via Decap CMS
+3. Go to `yoursite.github.io/admin` to manage content via Sveltia CMS
 
 ### Local Development
 
@@ -167,7 +167,7 @@ node-template/
 │   ├── lib/                # Hub API client, site config
 │   └── pages/              # index, about, social, posts/,
 │                           #   galleries/, settings/, feed.xml
-├── public/admin/           # Decap CMS configuration
+├── public/admin/           # Sveltia CMS configuration
 └── .github/workflows/      # Auto-deploy to GitHub Pages
 ```
 
@@ -179,7 +179,7 @@ node-template/
 | UI | Preact 10 |
 | Styling | Tailwind CSS 4 |
 | Content | Markdown + MDX |
-| CMS | Decap CMS (GitHub backend) |
+| CMS | Sveltia CMS (GitHub backend) |
 | Auth | GitHub OAuth |
 | Federation | RSS with custom photo/social namespaces |
 | Bluesky | AT Protocol (`@atproto/api`) |
