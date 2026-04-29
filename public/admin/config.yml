@@ -8,7 +8,8 @@ backend:
 site_url: https://example.com
 display_url: https://example.com
 
-logo_url: /images/logoImage.svg
+logo:
+  src: /images/logoImage.svg
 
 media_folder: public/images
 public_folder: /images
