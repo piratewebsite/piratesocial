@@ -3984,6 +3984,10 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
 
   async function attachGifToCompose(gifUrl, _unused, gifTitle, previewUrl) {
     if (!bskySession?.accessJwt) { alert('Connect Bluesky to post GIFs.'); return; }
+    // Strip Giphy tracking query params so the URL ends cleanly in .gif
+    // — Bluesky uses the URL suffix to detect animated GIFs for autoplay
+    let cleanGifUrl = gifUrl;
+    try { const u = new URL(gifUrl); u.search = ''; cleanGifUrl = u.toString(); } catch {}
     _gifCard = null;
     // Close the GIF picker panel
     document.getElementById('compose-gif-panel')?.classList.add('hidden');
@@ -4016,7 +4020,7 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
       const uploadData = await uploadRes.json();
       if (!uploadData.blob) throw new Error('Upload failed');
 
-      _gifCard = { url: gifUrl, title: gifTitle || 'GIF', description: '', image: thumbSrc, thumb: uploadData.blob, removed: false };
+      _gifCard = { url: cleanGifUrl, title: gifTitle || 'GIF', description: '', image: thumbSrc, thumb: uploadData.blob, removed: false };
 
       // Show animated preview with remove button
       if (gifPreviewEl) {
