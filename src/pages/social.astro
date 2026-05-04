@@ -1584,14 +1584,29 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
           <div class="flex gap-3">
             <div class="flex-1">
               <textarea id="thread-reply-input" rows="3" placeholder="Write a reply..." style="width:100%;background:var(--ps-input-bg,#1a1a2e);border:1px solid var(--ps-input-border,#333);border-radius:.5rem;padding:.75rem;color:var(--ps-text,#e0e0e0);font-size:.875rem;resize:vertical;outline:none" maxlength="300"></textarea>
+              <div id="thread-reply-images" class="hidden flex gap-2 flex-wrap mt-2"></div>
+              <div id="thread-reply-gif-preview" class="hidden flex gap-2 flex-wrap mt-2"></div>
               <div id="thread-reply-link-preview"></div>
               <div id="thread-reply-emoji-panel" class="hidden mt-2 rounded-lg border border-theme-border bg-theme-surface p-2" style="max-height:12rem;overflow-y:auto"></div>
-              <div class="flex items-center justify-between mt-2">
-                <div class="flex items-center gap-1">
-                  <span id="thread-reply-count" style="font-size:.75rem;color:var(--ps-text-faint,#888)">0/300</span>
-                  <button id="thread-reply-emoji-btn" type="button" title="Emoji" class="p-1.5 rounded text-theme-muted hover:text-theme-text hover:bg-theme-surface-hover transition" style="border:none;background:none;cursor:pointer;line-height:1"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 13s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></button>
+              <div id="thread-reply-gif-panel" class="hidden mt-2 rounded-lg border border-theme-border bg-theme-surface p-2" style="max-height:18rem;overflow-y:auto"></div>
+              <div class="flex items-center justify-between mt-2 pt-2 border-t border-theme-border">
+                <div class="flex items-center gap-0.5">
+                  <button id="thread-reply-media-btn" type="button" title="Add photo/video" class="p-1.5 rounded text-theme-muted hover:text-theme-text hover:bg-theme-surface-hover transition">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                  </button>
+                  <input id="thread-reply-media-input" type="file" accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/quicktime" multiple hidden>
+                  <button id="thread-reply-emoji-btn" type="button" title="Emoji" class="p-1.5 rounded text-theme-muted hover:text-theme-text hover:bg-theme-surface-hover transition">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 13s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+                  </button>
+                  ${giphyKey ? '<button id="thread-reply-gif-btn" type="button" title="GIF" class="p-1.5 rounded text-theme-muted hover:text-theme-text hover:bg-theme-surface-hover transition" style="font-size:.65rem;font-weight:700;letter-spacing:.04em;line-height:1;padding:3px 5px">GIF</button>' : ''}
+                  <button id="thread-reply-tags-btn" type="button" title="Tag groups" class="p-1.5 rounded text-theme-muted hover:text-theme-text hover:bg-theme-surface-hover transition">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+                  </button>
                 </div>
-                <button id="thread-reply-send" style="background:var(--ps-accent,#3b82f6);color:#fff;border:none;border-radius:.375rem;padding:.375rem 1rem;font-size:.875rem;cursor:pointer;opacity:.5" disabled>Reply</button>
+                <div class="flex items-center gap-2">
+                  <span id="thread-reply-count" style="font-size:.75rem;color:var(--ps-text-faint,#888)">0/300</span>
+                  <button id="thread-reply-send" style="background:var(--ps-accent,#3b82f6);color:#fff;border:none;border-radius:.375rem;padding:.375rem 1rem;font-size:.875rem;cursor:pointer;opacity:.5" disabled>Reply</button>
+                </div>
               </div>
             </div>
           </div>
@@ -1610,102 +1625,180 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
       const replyLabel = document.getElementById('thread-reply-label');
       const replyPreviewContainer = document.getElementById('thread-reply-link-preview');
       let getReplyCard = () => null;
+      let replyAttachedMedia = [];
+      let _replyGifCard = null;
+
+      function updateReplySendBtn() {
+        if (!replyBtn || !replyInput) return;
+        const len = replyInput.value.length;
+        replyBtn.disabled = (len === 0 && !replyAttachedMedia.length && !_replyGifCard) || len > 300;
+        replyBtn.style.opacity = replyBtn.disabled ? '.5' : '1';
+      }
+
+      function renderReplyAttachedMedia() {
+        const container = document.getElementById('thread-reply-images');
+        if (!container) return;
+        if (!replyAttachedMedia.length) { container.classList.add('hidden'); container.innerHTML = ''; updateReplySendBtn(); return; }
+        container.classList.remove('hidden');
+        container.innerHTML = replyAttachedMedia.map((m, i) => `<div style="position:relative;display:inline-block;vertical-align:top">${m.type==='video'?`<video src="${m.localUrl}" style="height:5rem;border-radius:.5rem;object-fit:cover;background:#000;max-width:8rem" muted></video>`:`<img src="${m.localUrl}" style="height:5rem;border-radius:.5rem;object-fit:cover;max-width:8rem" />`}${!m.blob?'<div style="position:absolute;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;border-radius:.5rem"><div class="animate-spin" style="width:.9rem;height:.9rem;border:2px solid #fff;border-top-color:transparent;border-radius:50%"></div></div>':''}<button data-remove-reply-media="${i}" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.7);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:12px;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center">×</button></div>`).join('');
+        container.querySelectorAll('[data-remove-reply-media]').forEach(btn => {
+          btn.addEventListener('click', () => { replyAttachedMedia.splice(parseInt(btn.dataset.removeReplyMedia), 1); renderReplyAttachedMedia(); });
+        });
+        updateReplySendBtn();
+      }
+
+      async function uploadReplyMedia(file, idx) {
+        try {
+          const res = await fetch('https://bsky.social/xrpc/com.atproto.repo.uploadBlob', {
+            method: 'POST', headers: { Authorization: `Bearer ${bskySession.accessJwt}`, 'Content-Type': file.type }, body: file,
+          });
+          const data = await res.json();
+          if (data.blob) { replyAttachedMedia[idx].blob = data.blob; renderReplyAttachedMedia(); }
+          else { replyAttachedMedia.splice(idx, 1); renderReplyAttachedMedia(); }
+        } catch { replyAttachedMedia.splice(idx, 1); renderReplyAttachedMedia(); }
+      }
+
+      async function attachGifToReply(gifUrl, _unused, gifTitle, previewUrl) {
+        if (!bskySession?.accessJwt) { alert('Connect Bluesky to post GIFs.'); return; }
+        let cleanGifUrl = gifUrl;
+        try { const u = new URL(gifUrl); u.search = ''; cleanGifUrl = u.toString(); } catch {}
+        _replyGifCard = null;
+        document.getElementById('thread-reply-gif-panel')?.classList.add('hidden');
+        const lp = document.getElementById('thread-reply-link-preview');
+        if (lp) lp.style.display = 'none';
+        const gifPreviewEl = document.getElementById('thread-reply-gif-preview');
+        const thumbSrc = previewUrl || gifUrl;
+        if (gifPreviewEl) {
+          gifPreviewEl.classList.remove('hidden');
+          gifPreviewEl.innerHTML = `<div style="position:relative;display:inline-block"><img src="${escapeHtml(thumbSrc)}" style="height:5rem;border-radius:.5rem;max-width:10rem;object-fit:cover;opacity:.5" /><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center"><div class="animate-spin" style="width:.9rem;height:.9rem;border:2px solid #fff;border-top-color:transparent;border-radius:50%"></div></div></div>`;
+        }
+        try {
+          const resp = await fetch(thumbSrc);
+          const blob = await resp.blob();
+          const file = new File([blob], 'giphy-thumb.gif', { type: blob.type || 'image/gif' });
+          const uploadRes = await fetch('https://bsky.social/xrpc/com.atproto.repo.uploadBlob', {
+            method: 'POST', headers: { Authorization: `Bearer ${bskySession.accessJwt}`, 'Content-Type': file.type }, body: file,
+          });
+          const uploadData = await uploadRes.json();
+          if (!uploadData.blob) throw new Error('Upload failed');
+          _replyGifCard = { url: cleanGifUrl, title: gifTitle || 'GIF', description: '', image: thumbSrc, thumb: uploadData.blob, removed: false };
+          if (gifPreviewEl) {
+            gifPreviewEl.classList.remove('hidden');
+            gifPreviewEl.innerHTML = `<div style="position:relative;display:inline-block"><img src="${escapeHtml(thumbSrc)}" style="height:5rem;border-radius:.5rem;max-width:10rem;object-fit:cover" /><button id="reply-gif-remove" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.7);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:12px;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center">\u00d7</button></div>`;
+            document.getElementById('reply-gif-remove')?.addEventListener('click', () => {
+              _replyGifCard = null; gifPreviewEl.classList.add('hidden'); gifPreviewEl.innerHTML = '';
+              if (lp) lp.style.display = ''; updateReplySendBtn();
+            });
+          }
+          updateReplySendBtn();
+        } catch (e) {
+          console.error('Reply GIF attach error:', e);
+          _replyGifCard = null;
+          if (gifPreviewEl) { gifPreviewEl.classList.add('hidden'); gifPreviewEl.innerHTML = ''; }
+          if (lp) lp.style.display = '';
+        }
+      }
+
       if (replyInput && replyBtn) {
-        if (replyPreviewContainer) {
-          getReplyCard = setupLinkPreview(replyInput, replyPreviewContainer);
+        if (replyPreviewContainer) getReplyCard = setupLinkPreview(replyInput, replyPreviewContainer);
+
+        // Media button
+        const replyMediaBtn = document.getElementById('thread-reply-media-btn');
+        const replyMediaInput = document.getElementById('thread-reply-media-input');
+        if (replyMediaBtn && replyMediaInput) {
+          replyMediaBtn.addEventListener('click', () => replyMediaInput.click());
+          replyMediaInput.addEventListener('change', async () => {
+            const files = Array.from(replyMediaInput.files || []);
+            replyMediaInput.value = '';
+            if (!bskySession?.accessJwt) { alert('Connect Bluesky to upload media.'); return; }
+            for (const file of files) {
+              const isVideo = file.type.startsWith('video/');
+              const hasVideo = replyAttachedMedia.some(m => m.type === 'video');
+              const imgCount = replyAttachedMedia.filter(m => m.type === 'image').length;
+              if (isVideo && replyAttachedMedia.length > 0) { alert('Cannot mix video with other media.'); continue; }
+              if (!isVideo && hasVideo) { alert('Cannot mix images with video.'); continue; }
+              if (!isVideo && imgCount >= 4) { alert('Maximum 4 images per post.'); continue; }
+              if (isVideo && file.size > 50 * 1024 * 1024) { alert('Video must be under 50 MB.'); continue; }
+              if (!isVideo && file.size > 976563) { alert('Each image must be under 1 MB.'); continue; }
+              const localUrl = URL.createObjectURL(file);
+              const idx = replyAttachedMedia.length;
+              replyAttachedMedia.push({ blob: null, localUrl, type: isVideo ? 'video' : 'image' });
+              renderReplyAttachedMedia();
+              if (replyPreviewContainer) replyPreviewContainer.style.display = 'none';
+              uploadReplyMedia(file, idx);
+            }
+          });
         }
 
-        // Wire emoji button for reply composer (reuses shared emojiOrder + _renderEmojiPanel)
+        // Emoji button (shares emojiOrder)
         const replyEmojiBtn = document.getElementById('thread-reply-emoji-btn');
         const replyEmojiPanel = document.getElementById('thread-reply-emoji-panel');
         if (replyEmojiBtn && replyEmojiPanel) {
           let replyEmojiEditMode = false;
           function renderReplyEmojiPanel() {
-            const hdr = `<div style="display:flex;align-items:center;justify-content:space-between;padding:.1rem .2rem .35rem;gap:.5rem">
-              <span style="font-size:.68rem;color:var(--ps-text-faint)">${replyEmojiEditMode ? 'Drag to reorder · tap Done when finished' : ''}</span>
-              <div style="display:flex;gap:.35rem;flex-shrink:0">
-                ${replyEmojiEditMode ? `<button id="reply-emoji-reset-btn" type="button" style="font-size:.68rem;padding:.15rem .4rem;border-radius:.25rem;border:1px solid var(--ps-border);background:var(--ps-surface);color:var(--ps-text-faint);cursor:pointer">Reset</button>` : ''}
-                <button id="reply-emoji-edit-btn" type="button" style="font-size:.68rem;padding:.15rem .5rem;border-radius:.25rem;border:1px solid var(--ps-border);background:var(--ps-surface);color:var(--ps-text-muted);cursor:pointer">${replyEmojiEditMode ? '✓ Done' : '✎ Edit'}</button>
-              </div>
-            </div>`;
-            const btns = emojiOrder.map((e, i) => {
-              const drag = replyEmojiEditMode ? `draggable="true" data-drag-idx="${i}"` : '';
-              const bg = replyEmojiEditMode ? 'background:var(--ps-surface-hover)' : 'background:none';
-              const cur = replyEmojiEditMode ? 'grab' : 'pointer';
-              return `<button type="button" data-emoji="${e}" data-emoji-idx="${i}" ${drag} style="font-size:1.2rem;width:1.9rem;height:1.9rem;border:none;${bg};cursor:${cur};border-radius:.25rem;display:flex;align-items:center;justify-content:center">${e}</button>`;
-            }).join('');
-            replyEmojiPanel.innerHTML = hdr + `<div id="reply-emoji-grid" style="display:flex;flex-wrap:wrap;gap:.1rem">${btns}</div>`;
-
-            document.getElementById('reply-emoji-edit-btn')?.addEventListener('click', ev => {
-              ev.stopPropagation(); replyEmojiEditMode = !replyEmojiEditMode; renderReplyEmojiPanel();
-            });
-            document.getElementById('reply-emoji-reset-btn')?.addEventListener('click', ev => {
-              ev.stopPropagation(); emojiOrder = [...EMOJIS]; _saveEmojiOrder(); renderReplyEmojiPanel();
-            });
-
+            const hdr = `<div style="display:flex;align-items:center;justify-content:space-between;padding:.1rem .2rem .35rem;gap:.5rem"><span style="font-size:.68rem;color:var(--ps-text-faint)">${replyEmojiEditMode ? 'Drag to reorder · tap Done when finished' : ''}</span><div style="display:flex;gap:.35rem;flex-shrink:0">${replyEmojiEditMode ? `<button id="re-emoji-reset" type="button" style="font-size:.68rem;padding:.15rem .4rem;border-radius:.25rem;border:1px solid var(--ps-border);background:var(--ps-surface);color:var(--ps-text-faint);cursor:pointer">Reset</button>` : ''}<button id="re-emoji-edit" type="button" style="font-size:.68rem;padding:.15rem .5rem;border-radius:.25rem;border:1px solid var(--ps-border);background:var(--ps-surface);color:var(--ps-text-muted);cursor:pointer">${replyEmojiEditMode ? '✓ Done' : '✎ Edit'}</button></div></div>`;
+            const btns = emojiOrder.map((e, i) => { const drag = replyEmojiEditMode ? `draggable="true" data-drag-idx="${i}"` : ''; const bg = replyEmojiEditMode ? 'background:var(--ps-surface-hover)' : 'background:none'; const cur = replyEmojiEditMode ? 'grab' : 'pointer'; return `<button type="button" data-emoji="${e}" data-emoji-idx="${i}" ${drag} style="font-size:1.2rem;width:1.9rem;height:1.9rem;border:none;${bg};cursor:${cur};border-radius:.25rem;display:flex;align-items:center;justify-content:center">${e}</button>`; }).join('');
+            replyEmojiPanel.innerHTML = hdr + `<div id="re-emoji-grid" style="display:flex;flex-wrap:wrap;gap:.1rem">${btns}</div>`;
+            replyEmojiPanel.querySelector('#re-emoji-edit')?.addEventListener('click', ev => { ev.stopPropagation(); replyEmojiEditMode = !replyEmojiEditMode; renderReplyEmojiPanel(); });
+            replyEmojiPanel.querySelector('#re-emoji-reset')?.addEventListener('click', ev => { ev.stopPropagation(); emojiOrder = [...EMOJIS]; _saveEmojiOrder(); renderReplyEmojiPanel(); });
             if (!replyEmojiEditMode) {
-              replyEmojiPanel.querySelector('#reply-emoji-grid')?.addEventListener('click', ev => {
-                const btn = ev.target.closest('[data-emoji]');
-                if (!btn) return;
+              replyEmojiPanel.querySelector('#re-emoji-grid')?.addEventListener('click', ev => {
+                const btn = ev.target.closest('[data-emoji]'); if (!btn) return;
                 const s = replyInput.selectionStart, en = replyInput.selectionEnd, v = replyInput.value;
                 replyInput.value = v.slice(0, s) + btn.dataset.emoji + v.slice(en);
                 replyInput.selectionStart = replyInput.selectionEnd = s + [...btn.dataset.emoji].length;
-                replyInput.dispatchEvent(new Event('input', { bubbles: true }));
-                replyInput.focus();
+                replyInput.dispatchEvent(new Event('input', { bubbles: true })); replyInput.focus();
                 replyEmojiPanel.classList.add('hidden');
               });
             } else {
-              // Drag-and-drop reorder (shares logic with main panel)
-              const grid = document.getElementById('reply-emoji-grid');
-              let dragSrc = null;
+              const grid = replyEmojiPanel.querySelector('#re-emoji-grid'); let dragSrc = null;
               grid?.querySelectorAll('[data-drag-idx]').forEach(btn => {
                 btn.addEventListener('dragstart', ev => { dragSrc = parseInt(btn.dataset.dragIdx); ev.dataTransfer.effectAllowed = 'move'; btn.style.opacity = '.35'; });
                 btn.addEventListener('dragend', () => { btn.style.opacity = ''; grid.querySelectorAll('[data-drag-idx]').forEach(b => b.style.outline = ''); });
                 btn.addEventListener('dragover', ev => { ev.preventDefault(); grid.querySelectorAll('[data-drag-idx]').forEach(b => b.style.outline = ''); if (parseInt(btn.dataset.dragIdx) !== dragSrc) btn.style.outline = '2px solid var(--ps-primary)'; });
                 btn.addEventListener('dragleave', () => { btn.style.outline = ''; });
-                btn.addEventListener('drop', ev => {
-                  ev.preventDefault();
-                  const ti = parseInt(btn.dataset.dragIdx);
-                  if (dragSrc === null || dragSrc === ti) return;
-                  const moved = emojiOrder.splice(dragSrc, 1)[0];
-                  emojiOrder.splice(ti, 0, moved);
-                  _saveEmojiOrder();
-                  renderReplyEmojiPanel();
-                });
+                btn.addEventListener('drop', ev => { ev.preventDefault(); const ti = parseInt(btn.dataset.dragIdx); if (dragSrc === null || dragSrc === ti) return; const moved = emojiOrder.splice(dragSrc, 1)[0]; emojiOrder.splice(ti, 0, moved); _saveEmojiOrder(); renderReplyEmojiPanel(); });
               });
             }
           }
-          replyEmojiBtn.addEventListener('click', ev => {
-            ev.stopPropagation();
-            const opening = replyEmojiPanel.classList.contains('hidden');
-            replyEmojiPanel.classList.toggle('hidden');
-            if (opening) { replyEmojiEditMode = false; renderReplyEmojiPanel(); }
-          });
-          document.addEventListener('click', ev => {
-            if (!replyEmojiPanel.classList.contains('hidden') && !replyEmojiPanel.contains(ev.target) && ev.target !== replyEmojiBtn) {
-              replyEmojiPanel.classList.add('hidden'); replyEmojiEditMode = false;
-            }
+          replyEmojiBtn.addEventListener('click', ev => { ev.stopPropagation(); const opening = replyEmojiPanel.classList.contains('hidden'); document.getElementById('thread-reply-gif-panel')?.classList.add('hidden'); replyEmojiPanel.classList.toggle('hidden'); if (opening) { replyEmojiEditMode = false; renderReplyEmojiPanel(); } });
+          document.addEventListener('click', ev => { if (!replyEmojiPanel.classList.contains('hidden') && !replyEmojiPanel.contains(ev.target) && ev.target !== replyEmojiBtn) { replyEmojiPanel.classList.add('hidden'); replyEmojiEditMode = false; } });
+        }
+
+        // GIF button
+        const replyGifBtn = document.getElementById('thread-reply-gif-btn');
+        const replyGifPanel = document.getElementById('thread-reply-gif-panel');
+        if (replyGifBtn && replyGifPanel && giphyKey) {
+          initGifPicker(replyGifBtn, replyGifPanel, (gifUrl, gifMp4Url, gifTitle, gifPreviewUrl) => {
+            attachGifToReply(gifUrl, gifMp4Url, gifTitle, gifPreviewUrl);
+            replyGifPanel.classList.add('hidden');
           });
         }
+
+        // Tags button
+        const replyTagsBtn = document.getElementById('thread-reply-tags-btn');
+        if (replyTagsBtn) replyTagsBtn.addEventListener('click', () => openTagGroupsModal(replyInput));
 
         replyInput.addEventListener('input', () => {
           const len = replyInput.value.length;
           replyCount.textContent = `${len}/300`;
-          replyBtn.disabled = len === 0 || len > 300;
-          replyBtn.style.opacity = replyBtn.disabled ? '.5' : '1';
+          updateReplySendBtn();
         });
+
         replyBtn.addEventListener('click', async () => {
           const text = replyInput.value.trim();
-          if (!text) return;
+          if (!text && !replyAttachedMedia.length && !_replyGifCard) return;
+          if (replyAttachedMedia.some(m => !m.blob)) { alert('Media is still uploading, please wait.'); return; }
           replyBtn.disabled = true;
           replyBtn.textContent = 'Sending...';
           try {
-            await createBskyRecord(text, { uri: replyTarget.uri, cid: replyTarget.cid, root: { uri: rootUri, cid: rootCid } }, getReplyCard());
+            await createBskyRecord(text, { uri: replyTarget.uri, cid: replyTarget.cid, root: { uri: rootUri, cid: rootCid } }, replyAttachedMedia.length ? null : (_replyGifCard || getReplyCard()), replyAttachedMedia.slice());
             replyInput.value = '';
             replyCount.textContent = '0/300';
+            replyAttachedMedia = []; renderReplyAttachedMedia();
+            _replyGifCard = null; { const _gp = document.getElementById('thread-reply-gif-preview'); if (_gp) { _gp.classList.add('hidden'); _gp.innerHTML = ''; } }
             if (replyPreviewContainer) replyPreviewContainer.innerHTML = '';
             replyBtn.textContent = 'Reply';
-            // Reload thread to show the new reply
             openThread(uri);
           } catch (err) {
             console.error('Reply error:', err);
@@ -3962,7 +4055,7 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
       });
     }
 
-    if (tagsBtn) tagsBtn.addEventListener('click', openTagGroupsModal);
+    if (tagsBtn) tagsBtn.addEventListener('click', () => openTagGroupsModal(composeInput));
 
     // GIF picker
     const gifBtn = document.getElementById('compose-gif-btn');
@@ -4130,6 +4223,7 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
   // Tag groups
   const TAG_GROUPS_KEY = 'ps_tag_groups';
   let _editingGroupId = null;
+  let _tagGroupsTarget = null; // the textarea to insert tags into
   const _loadTG = () => { try { return JSON.parse(localStorage.getItem(TAG_GROUPS_KEY) || '[]'); } catch { return []; } };
   const _saveTG = g => localStorage.setItem(TAG_GROUPS_KEY, JSON.stringify(g));
 
@@ -4143,7 +4237,7 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
       btn.addEventListener('click', () => {
         const g = _loadTG().find(x => x.id === btn.dataset.tgInsert);
         if (!g) return;
-        const inp = document.getElementById('compose-input');
+        const inp = _tagGroupsTarget || document.getElementById('compose-input');
         if (inp) { const v = inp.value, sep = (v && !/\s$/.test(v)) ? ' ' : ''; inp.value = v + sep + g.tags; inp.dispatchEvent(new Event('input', { bubbles: true })); inp.focus(); }
         closeTagGroupsModal();
       });
@@ -4164,9 +4258,10 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
     });
   }
 
-  function openTagGroupsModal() {
+  function openTagGroupsModal(targetInput) {
     const modal = document.getElementById('tag-groups-modal');
     if (!modal) return;
+    _tagGroupsTarget = targetInput || null;
     _editingGroupId = null;
     const ni = document.getElementById('tag-group-name'); if (ni) ni.value = '';
     const ti = document.getElementById('tag-group-tags'); if (ti) ti.value = '';
