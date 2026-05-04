@@ -29,4 +29,5 @@ export const siteConfig = {
     instagram: settings.instagram || '',
     mastodon: settings.mastodon || '',
   },
+  tenorKey: (settings as any).tenorKey || '',
 };

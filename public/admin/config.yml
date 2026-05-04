@@ -452,6 +452,11 @@ collections:
                 hint: "When ON, all media uploads go to Cloudinary CDN instead of your Git repo"
               - { label: "Cloud Name", name: cloudName, widget: string, required: false, hint: "Found in your Cloudinary dashboard (e.g. 'my-site-abc123')" }
               - { label: "API Key", name: apiKey, widget: string, required: false, hint: "From Cloudinary > Settings > API Keys. This is safe to store — it is not your secret key." }
+          - label: "Tenor GIF API Key"
+            name: tenorKey
+            widget: string
+            required: false
+            hint: "Optional: enables the GIF button in the compose window. Get a free key at console.cloud.google.com — create a project, enable the Tenor API, then create an API Key credential and restrict it to your domain."
 
       - label: PWA & Open Graph
         name: pwa
