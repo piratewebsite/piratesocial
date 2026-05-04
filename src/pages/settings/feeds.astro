@@ -154,7 +154,7 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
       }
 
       input.value = '';
-      loadFeeds();
+      switchView('feeds');
     } catch (err) {
       errorEl.textContent = 'Network error';
       errorEl.classList.remove('hidden');
@@ -306,6 +306,19 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
             <span class="text-sm text-theme-faint ml-auto">${data.total} posts</span>
           </div>
         `;
+      }
+
+      // If no posts and never fetched before, auto-trigger a refresh
+      if (!append && (data.posts || []).length === 0 && !data.feed?.lastFetched) {
+        container.innerHTML = `<div class="text-center py-8 text-theme-faint">Fetching posts for the first time…</div>`;
+        try {
+          await fetch(`${hubUrl}/api/external-feeds/${feedId}/refresh`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}` },
+          });
+        } catch {}
+        loadFeedDetail(feedId);
+        return;
       }
 
       const html = renderPostCards(data.posts || []);
@@ -476,7 +489,8 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
             headers: { Authorization: `Bearer ${token}` },
           });
           const data = await res.json();
-          btn.textContent = `+${data.newPosts}`;
+          if (!res.ok) throw new Error(data.error || 'Refresh failed');
+          btn.textContent = `+${data.newPosts ?? 0}`;
           setTimeout(() => { btn.textContent = '↻'; btn.disabled = false; loadFeeds(); }, 1500);
         } catch {
           btn.textContent = '!';
