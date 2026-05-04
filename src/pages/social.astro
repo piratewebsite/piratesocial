@@ -4016,7 +4016,7 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
       const uploadData = await uploadRes.json();
       if (!uploadData.blob) throw new Error('Upload failed');
 
-      _gifCard = { url: gifUrl, title: gifTitle || 'GIF', description: '', thumb: uploadData.blob, removed: false };
+      _gifCard = { url: gifUrl, title: gifTitle || 'GIF', description: '', image: thumbSrc, thumb: uploadData.blob, removed: false };
 
       // Show animated preview with remove button
       if (gifPreviewEl) {
@@ -4286,7 +4286,7 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
           const res = await fetch(`${hubUrl}/api/scheduled`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-            body: JSON.stringify({ text, scheduledAt, linkCard: getComposeCard?.() || null, quoteEmbed }),
+            body: JSON.stringify({ text, scheduledAt, linkCard: _gifCard || getComposeCard?.() || null, quoteEmbed }),
           });
           if (!res.ok) {
             const err = await res.json().catch(() => ({}));
