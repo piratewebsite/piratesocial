@@ -78,6 +78,8 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
       <textarea id="compose-input" rows="3" placeholder="What's Up?" style="width:100%;background:var(--ps-input-bg,#1a1a2e);border:1px solid var(--ps-input-border,#333);border-radius:.5rem;padding:.75rem;color:var(--ps-text,#e0e0e0);font-size:.875rem;resize:vertical;outline:none" maxlength="300"></textarea>
       <!-- Attached media thumbnails -->
       <div id="compose-images" class="hidden flex gap-2 flex-wrap mt-2"></div>
+      <!-- Attached GIF preview (external embed) -->
+      <div id="compose-gif-preview" class="hidden flex gap-2 flex-wrap mt-2"></div>
       <div id="compose-link-preview"></div>
       <!-- Compose toolbar -->
       <div class="flex items-center justify-between mt-2 pt-2 border-t border-theme-border">
@@ -1157,7 +1159,8 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
     if (embed.external?.uri) {
       const ytId = getYouTubeId(embed.external.uri);
       const isTenor = /^https?:\/\/(media\.)?tenor\.com\//i.test(embed.external.uri);
-      if (isTenor) {
+      const isGiphy = /^https?:\/\/media\d*\.giphy\.com\//i.test(embed.external.uri);
+      if (isTenor || isGiphy) {
         const gifUrl = embed.external.uri;
         html += `<div class="mt-2 rounded overflow-hidden bg-black flex justify-center"><img src="${escapeHtml(gifUrl)}" alt="${escapeHtml(embed.external.title || 'GIF')}" style="width:100%;max-height:28rem;object-fit:contain" loading="lazy" onerror="this.parentElement.style.display='none'" /></div>`;
       } else if (ytId) {
@@ -3743,7 +3746,7 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
   function updateComposeSendBtn() {
     if (!composeSend || !composeInput) return;
     const len = composeInput.value.length;
-    composeSend.disabled = (len === 0 && !composeAttachedMedia.length) || len > 300;
+    composeSend.disabled = (len === 0 && !composeAttachedMedia.length && !_gifCard) || len > 300;
     composeSend.style.opacity = composeSend.disabled ? '.5' : '1';
   }
 
@@ -3968,8 +3971,8 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
       if (!giphyKey) {
         gifBtn.style.display = 'none';
       } else {
-        initGifPicker(gifBtn, gifPanel, (gifUrl, gifMp4Url) => {
-          attachGifToCompose(gifUrl, gifMp4Url);
+        initGifPicker(gifBtn, gifPanel, (gifUrl, gifMp4Url, gifTitle, gifPreviewUrl) => {
+          attachGifToCompose(gifUrl, gifMp4Url, gifTitle, gifPreviewUrl);
           gifPanel.classList.add('hidden');
         });
       }
@@ -3977,45 +3980,65 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
   }
 
   // ── GIF Picker ─────────────────────────────────────────────────────────────
-  let _gifAttached = null; // { gifUrl, mp4Url } — only one GIF per post
+  let _gifCard = null; // { url, title, description, thumb } — external embed for animated GIFs
 
-  async function attachGifToCompose(gifUrl, mp4Url) {
-    // Fetch the GIF bytes and attach as a blob (same flow as photo upload)
-    const inp = document.getElementById('compose-input');
+  async function attachGifToCompose(gifUrl, _unused, gifTitle, previewUrl) {
     if (!bskySession?.accessJwt) { alert('Connect Bluesky to post GIFs.'); return; }
-    // Show a temporary placeholder thumbnail while fetching
+    _gifCard = null;
+    // Close the GIF picker panel
+    document.getElementById('compose-gif-panel')?.classList.add('hidden');
+    // Hide the link preview area while GIF is attaching
     const lp = document.getElementById('compose-link-preview');
     if (lp) lp.style.display = 'none';
-    _gifAttached = { gifUrl, mp4Url };
-    // Fetch GIF as blob
+
+    const gifPreviewEl = document.getElementById('compose-gif-preview');
+    const thumbSrc = previewUrl || gifUrl;
+    // Show loading spinner in the GIF preview area
+    if (gifPreviewEl) {
+      gifPreviewEl.classList.remove('hidden');
+      gifPreviewEl.innerHTML = `<div style="position:relative;display:inline-block">
+        <img src="${escapeHtml(thumbSrc)}" style="height:5rem;border-radius:.5rem;max-width:10rem;object-fit:cover;opacity:.5" />
+        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">
+          <div class="animate-spin" style="width:.9rem;height:.9rem;border:2px solid #fff;border-top-color:transparent;border-radius:50%"></div>
+        </div></div>`;
+    }
+
     try {
-      const resp = await fetch(gifUrl);
+      // Upload the small preview thumbnail as the Bluesky thumb blob
+      const resp = await fetch(thumbSrc);
       const blob = await resp.blob();
-      const file = new File([blob], 'giphy.gif', { type: 'image/gif' });
-      if (file.size > 976563) {
-        // Try MP4 fallback (much smaller)
-        if (mp4Url) {
-          const resp2 = await fetch(mp4Url);
-          const blob2 = await resp2.blob();
-          const file2 = new File([blob2], 'giphy.mp4', { type: 'video/mp4' });
-          if (file2.size > 50 * 1024 * 1024) { alert('GIF is too large to attach.'); _gifAttached = null; return; }
-          const localUrl2 = URL.createObjectURL(file2);
-          composeAttachedMedia = [{ blob: null, localUrl: localUrl2, type: 'video' }];
-          renderAttachedMedia();
-          uploadComposeMedia(file2, 0);
-          return;
-        }
-        alert('GIF is too large (>1 MB). Try a smaller one.');
-        _gifAttached = null;
-        return;
+      const file = new File([blob], 'giphy-thumb.gif', { type: blob.type || 'image/gif' });
+      const uploadRes = await fetch('https://bsky.social/xrpc/com.atproto.repo.uploadBlob', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${bskySession.accessJwt}`, 'Content-Type': file.type },
+        body: file,
+      });
+      const uploadData = await uploadRes.json();
+      if (!uploadData.blob) throw new Error('Upload failed');
+
+      _gifCard = { url: gifUrl, title: gifTitle || 'GIF', description: '', thumb: uploadData.blob, removed: false };
+
+      // Show animated preview with remove button
+      if (gifPreviewEl) {
+        gifPreviewEl.classList.remove('hidden');
+        gifPreviewEl.innerHTML = `<div style="position:relative;display:inline-block">
+          <img src="${escapeHtml(thumbSrc)}" style="height:5rem;border-radius:.5rem;max-width:10rem;object-fit:cover" />
+          <button id="compose-gif-remove" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.7);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:12px;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center">\u00d7</button>
+        </div>`;
+        document.getElementById('compose-gif-remove')?.addEventListener('click', () => {
+          _gifCard = null;
+          gifPreviewEl.classList.add('hidden');
+          gifPreviewEl.innerHTML = '';
+          if (lp) lp.style.display = '';
+          updateComposeSendBtn();
+        });
       }
-      const localUrl = URL.createObjectURL(file);
-      composeAttachedMedia = [{ blob: null, localUrl, type: 'image' }];
-      renderAttachedMedia();
-      uploadComposeMedia(file, 0);
+      updateComposeSendBtn();
     } catch (e) {
       console.error('GIF attach error:', e);
-      _gifAttached = null;
+      _gifCard = null;
+      if (gifPreviewEl) { gifPreviewEl.classList.add('hidden'); gifPreviewEl.innerHTML = ''; }
+      if (lp) lp.style.display = '';
     }
   }
 
@@ -4060,7 +4083,7 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
         img.alt = gif.title || 'GIF';
         img.loading = 'lazy';
         img.style.cssText = 'width:100%;border-radius:.25rem;cursor:pointer;display:block;margin-bottom:.25rem;break-inside:avoid';
-        img.addEventListener('click', () => onSelect(full?.url || preview.url, mp4 || null));
+        img.addEventListener('click', () => onSelect(full?.url || preview.url, mp4 || null, gif.title, preview.url));
         frag.appendChild(img);
       });
       grid.appendChild(frag);
@@ -4212,7 +4235,7 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
 
     composeSend.addEventListener('click', async () => {
       const text = composeInput.value.trim();
-      if (!text && !composeAttachedMedia.length) return;
+      if (!text && !composeAttachedMedia.length && !_gifCard) return;
       if (composeAttachedMedia.some(m => !m.blob)) { alert('Media is still uploading, please wait.'); return; }
       const delaySec = postDelay ? postDelay.value : '0';
 
@@ -4224,11 +4247,12 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
         try {
           // Ensure quote CID is resolved before posting
           if (window._quoteEmbed?._cidPromise) await window._quoteEmbed._cidPromise;
-          await createBskyRecord(text, null, composeAttachedMedia.length ? null : getComposeCard(), composeAttachedMedia.slice());
+          await createBskyRecord(text, null, composeAttachedMedia.length ? null : (_gifCard || getComposeCard()), composeAttachedMedia.slice());
           composeInput.value = '';
           composeCount.textContent = '0/300';
           getComposeCard.clear?.();
           composeAttachedMedia = []; renderAttachedMedia();
+          _gifCard = null; { const _gp = document.getElementById('compose-gif-preview'); if (_gp) { _gp.classList.add('hidden'); _gp.innerHTML = ''; } }
           composeSend.textContent = 'Post';
           composeSend.disabled = true;
           composeSend.style.opacity = '.5';
@@ -4272,6 +4296,7 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
           composeCount.textContent = '0/300';
           getComposeCard.clear?.();
           composeAttachedMedia = []; renderAttachedMedia();
+          _gifCard = null; { const _gp = document.getElementById('compose-gif-preview'); if (_gp) { _gp.classList.add('hidden'); _gp.innerHTML = ''; } }
           window._quoteEmbed = null;
           composeSend.textContent = 'Post';
           composeSend.disabled = true;
