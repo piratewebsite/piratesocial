@@ -12,13 +12,23 @@ const { platform, handle, embedCode, heading } = Astro.props;
       <a
         class="twitter-timeline"
         data-theme="dark"
-        data-chrome="noheader nofooter noborders transparent"
-        data-tweet-limit="5"
         href={`https://twitter.com/${handle.replace(/^@/, '')}`}
       >
-        Posts by @{handle.replace(/^@/, '')}
+        Tweets by @{handle.replace(/^@/, '')}
       </a>
-      <script async src="https://platform.twitter.com/widgets.js" charset="utf-8" is:inline></script>
+      <script is:inline>
+        // If widgets.js already ran, manually trigger it to pick up new anchors.
+        // Otherwise inject the script for the first time.
+        if (window.twttr && window.twttr.widgets) {
+          window.twttr.widgets.load();
+        } else {
+          var _s = document.createElement('script');
+          _s.src = 'https://platform.twitter.com/widgets.js';
+          _s.async = true;
+          _s.charset = 'utf-8';
+          document.head.appendChild(_s);
+        }
+      </script>
     </div>
   )}
 
