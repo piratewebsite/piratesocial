@@ -1579,8 +1579,12 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
             <div class="flex-1">
               <textarea id="thread-reply-input" rows="3" placeholder="Write a reply..." style="width:100%;background:var(--ps-input-bg,#1a1a2e);border:1px solid var(--ps-input-border,#333);border-radius:.5rem;padding:.75rem;color:var(--ps-text,#e0e0e0);font-size:.875rem;resize:vertical;outline:none" maxlength="300"></textarea>
               <div id="thread-reply-link-preview"></div>
+              <div id="thread-reply-emoji-panel" class="hidden mt-2 rounded-lg border border-theme-border bg-theme-surface p-2" style="max-height:12rem;overflow-y:auto"></div>
               <div class="flex items-center justify-between mt-2">
-                <span id="thread-reply-count" style="font-size:.75rem;color:var(--ps-text-faint,#888)">0/300</span>
+                <div class="flex items-center gap-1">
+                  <span id="thread-reply-count" style="font-size:.75rem;color:var(--ps-text-faint,#888)">0/300</span>
+                  <button id="thread-reply-emoji-btn" type="button" title="Emoji" class="p-1.5 rounded text-theme-muted hover:text-theme-text hover:bg-theme-surface-hover transition" style="border:none;background:none;cursor:pointer;font-size:1rem;line-height:1">🙂</button>
+                </div>
                 <button id="thread-reply-send" style="background:var(--ps-accent,#3b82f6);color:#fff;border:none;border-radius:.375rem;padding:.375rem 1rem;font-size:.875rem;cursor:pointer;opacity:.5" disabled>Reply</button>
               </div>
             </div>
@@ -1604,6 +1608,80 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
         if (replyPreviewContainer) {
           getReplyCard = setupLinkPreview(replyInput, replyPreviewContainer);
         }
+
+        // Wire emoji button for reply composer (reuses shared emojiOrder + _renderEmojiPanel)
+        const replyEmojiBtn = document.getElementById('thread-reply-emoji-btn');
+        const replyEmojiPanel = document.getElementById('thread-reply-emoji-panel');
+        if (replyEmojiBtn && replyEmojiPanel) {
+          let replyEmojiEditMode = false;
+          function renderReplyEmojiPanel() {
+            const hdr = `<div style="display:flex;align-items:center;justify-content:space-between;padding:.1rem .2rem .35rem;gap:.5rem">
+              <span style="font-size:.68rem;color:var(--ps-text-faint)">${replyEmojiEditMode ? 'Drag to reorder · tap Done when finished' : ''}</span>
+              <div style="display:flex;gap:.35rem;flex-shrink:0">
+                ${replyEmojiEditMode ? `<button id="reply-emoji-reset-btn" type="button" style="font-size:.68rem;padding:.15rem .4rem;border-radius:.25rem;border:1px solid var(--ps-border);background:var(--ps-surface);color:var(--ps-text-faint);cursor:pointer">Reset</button>` : ''}
+                <button id="reply-emoji-edit-btn" type="button" style="font-size:.68rem;padding:.15rem .5rem;border-radius:.25rem;border:1px solid var(--ps-border);background:var(--ps-surface);color:var(--ps-text-muted);cursor:pointer">${replyEmojiEditMode ? '✓ Done' : '✎ Edit'}</button>
+              </div>
+            </div>`;
+            const btns = emojiOrder.map((e, i) => {
+              const drag = replyEmojiEditMode ? `draggable="true" data-drag-idx="${i}"` : '';
+              const bg = replyEmojiEditMode ? 'background:var(--ps-surface-hover)' : 'background:none';
+              const cur = replyEmojiEditMode ? 'grab' : 'pointer';
+              return `<button type="button" data-emoji="${e}" data-emoji-idx="${i}" ${drag} style="font-size:1.2rem;width:1.9rem;height:1.9rem;border:none;${bg};cursor:${cur};border-radius:.25rem;display:flex;align-items:center;justify-content:center">${e}</button>`;
+            }).join('');
+            replyEmojiPanel.innerHTML = hdr + `<div id="reply-emoji-grid" style="display:flex;flex-wrap:wrap;gap:.1rem">${btns}</div>`;
+
+            document.getElementById('reply-emoji-edit-btn')?.addEventListener('click', ev => {
+              ev.stopPropagation(); replyEmojiEditMode = !replyEmojiEditMode; renderReplyEmojiPanel();
+            });
+            document.getElementById('reply-emoji-reset-btn')?.addEventListener('click', ev => {
+              ev.stopPropagation(); emojiOrder = [...EMOJIS]; _saveEmojiOrder(); renderReplyEmojiPanel();
+            });
+
+            if (!replyEmojiEditMode) {
+              replyEmojiPanel.querySelector('#reply-emoji-grid')?.addEventListener('click', ev => {
+                const btn = ev.target.closest('[data-emoji]');
+                if (!btn) return;
+                const s = replyInput.selectionStart, en = replyInput.selectionEnd, v = replyInput.value;
+                replyInput.value = v.slice(0, s) + btn.dataset.emoji + v.slice(en);
+                replyInput.selectionStart = replyInput.selectionEnd = s + [...btn.dataset.emoji].length;
+                replyInput.dispatchEvent(new Event('input', { bubbles: true }));
+                replyInput.focus();
+                replyEmojiPanel.classList.add('hidden');
+              });
+            } else {
+              // Drag-and-drop reorder (shares logic with main panel)
+              const grid = document.getElementById('reply-emoji-grid');
+              let dragSrc = null;
+              grid?.querySelectorAll('[data-drag-idx]').forEach(btn => {
+                btn.addEventListener('dragstart', ev => { dragSrc = parseInt(btn.dataset.dragIdx); ev.dataTransfer.effectAllowed = 'move'; btn.style.opacity = '.35'; });
+                btn.addEventListener('dragend', () => { btn.style.opacity = ''; grid.querySelectorAll('[data-drag-idx]').forEach(b => b.style.outline = ''); });
+                btn.addEventListener('dragover', ev => { ev.preventDefault(); grid.querySelectorAll('[data-drag-idx]').forEach(b => b.style.outline = ''); if (parseInt(btn.dataset.dragIdx) !== dragSrc) btn.style.outline = '2px solid var(--ps-primary)'; });
+                btn.addEventListener('dragleave', () => { btn.style.outline = ''; });
+                btn.addEventListener('drop', ev => {
+                  ev.preventDefault();
+                  const ti = parseInt(btn.dataset.dragIdx);
+                  if (dragSrc === null || dragSrc === ti) return;
+                  const moved = emojiOrder.splice(dragSrc, 1)[0];
+                  emojiOrder.splice(ti, 0, moved);
+                  _saveEmojiOrder();
+                  renderReplyEmojiPanel();
+                });
+              });
+            }
+          }
+          replyEmojiBtn.addEventListener('click', ev => {
+            ev.stopPropagation();
+            const opening = replyEmojiPanel.classList.contains('hidden');
+            replyEmojiPanel.classList.toggle('hidden');
+            if (opening) { replyEmojiEditMode = false; renderReplyEmojiPanel(); }
+          });
+          document.addEventListener('click', ev => {
+            if (!replyEmojiPanel.classList.contains('hidden') && !replyEmojiPanel.contains(ev.target) && ev.target !== replyEmojiBtn) {
+              replyEmojiPanel.classList.add('hidden'); replyEmojiEditMode = false;
+            }
+          });
+        }
+
         replyInput.addEventListener('input', () => {
           const len = replyInput.value.length;
           replyCount.textContent = `${len}/300`;
