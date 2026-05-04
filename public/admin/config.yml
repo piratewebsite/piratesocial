@@ -346,6 +346,31 @@ collections:
                     default: "primary"
                   - { label: "Open in New Tab", name: openInNewTab, widget: boolean, default: false }
 
+          - label: "Social Media Feed"
+            name: socialEmbed
+            widget: object
+            fields:
+              - { label: "Heading", name: heading, widget: string, required: false }
+              - label: "Platform"
+                name: platform
+                widget: select
+                options:
+                  - { label: "X (Twitter)", value: "x" }
+                  - { label: "Facebook", value: "facebook" }
+                  - { label: "Instagram", value: "instagram" }
+                  - { label: "Custom Embed Code", value: "custom" }
+                default: "x"
+              - label: "Username / Handle"
+                name: handle
+                widget: string
+                required: false
+                hint: "Your username on that platform, e.g. @yourname. Not needed for Custom."
+              - label: "Custom Embed Code"
+                name: embedCode
+                widget: text
+                required: false
+                hint: "Paste raw embed HTML from any platform. Only used when Platform = Custom."
+
           - label: "Galleries List"
             name: galleriesList
             widget: object
