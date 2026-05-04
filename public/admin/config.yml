@@ -101,9 +101,16 @@ collections:
         name: slideshowInterval
         widget: number
         default: 0
+      - label: "Quick Add Photos (no alt/caption)"
+        name: quickPhotos
+        widget: image
+        multiple: true
+        required: false
+        hint: "Select multiple images at once. Use 'Photos' below for per-photo alt text and captions."
       - label: Photos
         name: photos
         widget: list
+        required: false
         fields:
           - { label: Image, name: src, widget: image }
           - { label: Alt Text, name: alt, widget: string, required: false }

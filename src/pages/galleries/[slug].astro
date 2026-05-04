@@ -1,4 +1,5 @@
 ---
+import type { CollectionEntry } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import Slideshow from '../../components/Slideshow.astro';
 import { getCollection, render } from 'astro:content';
@@ -7,13 +8,22 @@ import settings from '../../content/settings.json';
 import { cleanSlug } from '../../lib/config';
 
 const showDates = settings.showDates !== false;
+
 export async function getStaticPaths() {
-  const galleries = (await getCollection('galleries')).filter((g) => !g.data?.draft);
-  return galleries.map(g => ({ params: { slug: cleanSlug(g.id) }, props: { gallery: g } }));
+  const galleries = (await getCollection('galleries')).filter((g: CollectionEntry<'galleries'>) => !g.data?.draft);
+  return galleries.map((g: CollectionEntry<'galleries'>) => ({ params: { slug: cleanSlug(g.id) }, props: { gallery: g } }));
 }
+
+type Props = { gallery: CollectionEntry<'galleries'> };
 
 const { gallery } = Astro.props;
 const { Content } = await render(gallery);
+
+// Merge quickPhotos (flat strings) + photos (objects with alt/caption)
+const allPhotos = [
+  ...(gallery.data.photos ?? []),
+  ...(gallery.data.quickPhotos ?? []).map((src: string) => ({ src, alt: '', caption: '' })),
+];
 ---
 
 <BaseLayout title={gallery.data.title} description={gallery.data.description}>
@@ -24,7 +34,7 @@ const { Content } = await render(gallery);
         <p class="mt-2 text-theme-muted">{gallery.data.description}</p>
       )}
       <p class="mt-1 text-sm text-theme-faint">
-        {gallery.data.photos.length} photos
+        {allPhotos.length} photos
         {showDates && (
           <Fragment>
             &middot;
@@ -38,7 +48,7 @@ const { Content } = await render(gallery);
 
     <!-- Slideshow -->
     <Slideshow
-      photos={gallery.data.photos}
+      photos={allPhotos}
       transition={gallery.data.slideshowStyle}
       interval={gallery.data.slideshowInterval}
     />
@@ -51,7 +61,7 @@ const { Content } = await render(gallery);
     <!-- Grid view -->
     <h2 class="mt-12 mb-6 text-xl font-semibold">{labels.galleries.allPhotos}</h2>
     <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-      {gallery.data.photos.map((photo, i) => (
+      {allPhotos.map((photo, i) => (
         <button
           class="group aspect-square overflow-hidden rounded cursor-pointer slideshow-jump"
           data-index={i}

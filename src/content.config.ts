@@ -53,7 +53,8 @@ const galleries = defineCollection({
           alt: z.string().optional(),
           caption: z.string().optional(),
         })
-      ),
+      ).default([]),
+      quickPhotos: z.array(z.string()).optional(),
       tags: z.array(z.string()).default([]),
       /** Slideshow transition style */
       slideshowStyle: z.enum(['fade', 'slide', 'zoom']).default('fade'),

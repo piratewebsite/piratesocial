@@ -8,27 +8,25 @@ const { platform, handle, embedCode, heading } = Astro.props;
   )}
 
   {platform === 'x' && handle && (
-    <div class="max-w-lg mx-auto">
+    <div class="max-w-2xl mx-auto px-4 text-center">
+      <p class="text-theme-muted mb-3">
+        Follow <a
+          class="text-theme-primary underline font-medium"
+          href={`https://x.com/${handle.replace(/^@/, '')}`}
+          target="_blank"
+          rel="noopener noreferrer"
+        >@{handle.replace(/^@/, '')}</a> on X
+      </p>
       <a
-        class="twitter-timeline"
-        data-theme="dark"
-        href={`https://twitter.com/${handle.replace(/^@/, '')}`}
+        href={`https://x.com/${handle.replace(/^@/, '')}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        class="inline-flex items-center gap-2 rounded-lg border border-theme-border bg-theme-card px-5 py-3 text-sm font-medium hover:bg-theme-card-hover transition"
       >
-        Tweets by @{handle.replace(/^@/, '')}
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+        View on X
       </a>
-      <script is:inline>
-        // If widgets.js already ran, manually trigger it to pick up new anchors.
-        // Otherwise inject the script for the first time.
-        if (window.twttr && window.twttr.widgets) {
-          window.twttr.widgets.load();
-        } else {
-          var _s = document.createElement('script');
-          _s.src = 'https://platform.twitter.com/widgets.js';
-          _s.async = true;
-          _s.charset = 'utf-8';
-          document.head.appendChild(_s);
-        }
-      </script>
+      <p class="mt-3 text-xs text-theme-faint">X's embedded timeline widget is no longer reliable. Use "Custom Embed Code" if you have a working embed snippet.</p>
     </div>
   )}
 
