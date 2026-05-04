@@ -184,7 +184,7 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
 </BaseLayout>
 
 <script is:inline src="https://cdn.jsdelivr.net/npm/hls.js@latest/dist/hls.min.js"></script>
-<script is:inline define:vars={{ hubUrl: siteConfig.hubUrl, L: labels.social, FL: labels.feeds, psBase: base, tenorKey: siteConfig.tenorKey }} data-astro-rerun>
+<script is:inline define:vars={{ hubUrl: siteConfig.hubUrl, L: labels.social, FL: labels.feeds, psBase: base, giphyKey: siteConfig.giphyKey }} data-astro-rerun>
   const authStorageKey = (key) => `${key}:${psBase || '/'}`;
   // ============================================================
   // STATE
@@ -3965,7 +3965,7 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
     const gifBtn = document.getElementById('compose-gif-btn');
     const gifPanel = document.getElementById('compose-gif-panel');
     if (gifBtn && gifPanel) {
-      if (!tenorKey) {
+      if (!giphyKey) {
         gifBtn.style.display = 'none';
       } else {
         initGifPicker(gifBtn, gifPanel, (gifUrl, gifMp4Url) => {
@@ -3991,13 +3991,13 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
     try {
       const resp = await fetch(gifUrl);
       const blob = await resp.blob();
-      const file = new File([blob], 'tenor.gif', { type: 'image/gif' });
+      const file = new File([blob], 'giphy.gif', { type: 'image/gif' });
       if (file.size > 976563) {
         // Try MP4 fallback (much smaller)
         if (mp4Url) {
           const resp2 = await fetch(mp4Url);
           const blob2 = await resp2.blob();
-          const file2 = new File([blob2], 'tenor.mp4', { type: 'video/mp4' });
+          const file2 = new File([blob2], 'giphy.mp4', { type: 'video/mp4' });
           if (file2.size > 50 * 1024 * 1024) { alert('GIF is too large to attach.'); _gifAttached = null; return; }
           const localUrl2 = URL.createObjectURL(file2);
           composeAttachedMedia = [{ blob: null, localUrl: localUrl2, type: 'video' }];
@@ -4021,8 +4021,9 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
 
   function initGifPicker(btn, panel, onSelect) {
     let gifSearchTimer = null;
-    let gifNextPos = '';
+    let gifOffset = 0;
     let gifQuery = '';
+    let hasMore = false;
 
     function renderGifPanel(gifs, append = false) {
       if (!append) {
@@ -4030,7 +4031,7 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
           <div style="display:flex;gap:.4rem;align-items:center;padding-bottom:.4rem;position:sticky;top:0;background:var(--ps-surface);z-index:1">
             <input id="gif-search-input" type="text" placeholder="Search GIFs…" value="${escapeHtml(gifQuery)}"
               style="flex:1;background:var(--ps-input-bg);border:1px solid var(--ps-input-border);border-radius:.375rem;padding:.3rem .6rem;font-size:.8rem;color:var(--ps-text);outline:none">
-            <span style="font-size:.55rem;color:var(--ps-text-faint);flex-shrink:0">via Tenor</span>
+            <span style="font-size:.55rem;color:var(--ps-text-faint);flex-shrink:0">via Giphy</span>
           </div>
           <div id="gif-grid" style="columns:3;gap:.25rem"></div>
           <div id="gif-load-more" style="text-align:center;padding:.5rem;font-size:.75rem;color:var(--ps-text-faint);cursor:pointer;display:none">Load more</div>`;
@@ -4039,7 +4040,7 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
         searchInput?.addEventListener('input', () => {
           clearTimeout(gifSearchTimer);
           gifQuery = searchInput.value.trim();
-          gifNextPos = '';
+          gifOffset = 0;
           gifSearchTimer = setTimeout(() => loadGifs(false), 400);
         });
         document.getElementById('gif-load-more')?.addEventListener('click', () => loadGifs(true));
@@ -4049,34 +4050,37 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
       if (!grid) return;
       const frag = document.createDocumentFragment();
       gifs.forEach(gif => {
-        const preview = gif.media_formats?.tinygif || gif.media_formats?.gif || Object.values(gif.media_formats || {})[0];
-        const full = gif.media_formats?.gif || gif.media_formats?.mediumgif || preview;
-        const mp4 = gif.media_formats?.mp4 || gif.media_formats?.loopedmp4;
+        // Giphy: prefer fixed_width_downsampled for previews, original for download
+        const preview = gif.images?.fixed_width_downsampled || gif.images?.fixed_width || gif.images?.downsized;
+        const full = gif.images?.original || gif.images?.downsized || preview;
+        const mp4 = gif.images?.original?.mp4 || gif.images?.fixed_width?.mp4;
         if (!preview?.url) return;
         const img = document.createElement('img');
         img.src = preview.url;
-        img.alt = gif.content_description || 'GIF';
+        img.alt = gif.title || 'GIF';
         img.loading = 'lazy';
         img.style.cssText = 'width:100%;border-radius:.25rem;cursor:pointer;display:block;margin-bottom:.25rem;break-inside:avoid';
-        img.addEventListener('click', () => onSelect(full?.url || preview.url, mp4?.url || null));
+        img.addEventListener('click', () => onSelect(full?.url || preview.url, mp4 || null));
         frag.appendChild(img);
       });
       grid.appendChild(frag);
-      document.getElementById('gif-load-more').style.display = gifNextPos ? 'block' : 'none';
+      document.getElementById('gif-load-more').style.display = hasMore ? 'block' : 'none';
     }
 
     async function loadGifs(append = false) {
       const grid = document.getElementById('gif-grid');
       if (!append && grid) grid.innerHTML = '<div style="text-align:center;padding:1.5rem;font-size:.8rem;color:var(--ps-text-faint)">Loading…</div>';
       try {
-        const endpoint = gifQuery ? 'search' : 'featured';
-        const params = new URLSearchParams({ key: tenorKey, limit: '24', media_filter: 'gif,tinygif,mp4,loopedmp4', client_key: 'piratesocial' });
+        const endpoint = gifQuery ? 'search' : 'trending';
+        const params = new URLSearchParams({ api_key: giphyKey, limit: '24', rating: 'g', offset: String(gifOffset) });
         if (gifQuery) params.set('q', gifQuery);
-        if (gifNextPos) params.set('pos', gifNextPos);
-        const res = await fetch(`https://tenor.googleapis.com/v2/${endpoint}?${params}`);
+        const res = await fetch(`https://api.giphy.com/v1/gifs/${endpoint}?${params}`);
         const data = await res.json();
-        gifNextPos = data.next || '';
-        renderGifPanel(data.results || [], append);
+        const results = data.data || [];
+        gifOffset += results.length;
+        const total = data.pagination?.total_count || 0;
+        hasMore = gifOffset < total && results.length === 24;
+        renderGifPanel(results, append);
       } catch (e) {
         if (!append) panel.querySelector('#gif-grid').innerHTML = '<div style="text-align:center;padding:1.5rem;font-size:.8rem;color:#f87171">Failed to load GIFs</div>';
       }
@@ -4088,7 +4092,7 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
       // Close emoji panel if open
       document.getElementById('compose-emoji-panel')?.classList.add('hidden');
       panel.classList.toggle('hidden');
-      if (opening) { gifNextPos = ''; gifQuery = ''; renderGifPanel([]); loadGifs(false); }
+      if (opening) { gifOffset = 0; gifQuery = ''; hasMore = false; renderGifPanel([]); loadGifs(false); }
     });
     document.addEventListener('click', ev => {
       if (!panel.classList.contains('hidden') && !panel.contains(ev.target) && ev.target !== btn) panel.classList.add('hidden');
