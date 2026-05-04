@@ -3697,6 +3697,135 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
 
   const EMOJIS = ['😀','😂','🤣','😊','😍','🥰','😘','😎','🤩','😭','😢','😤','😡','🤔','🤯','😱','🥺','😴','🥳','😷','🙄','😏','🫡','🫠','💀','👻','🫶','❤️','🧡','💛','💚','💙','💜','🖤','🤍','💔','❤️‍🔥','🔥','✨','🎉','🙏','👏','🤝','💪','🤞','👀','💯','✅','❌','⚡','🌟','💥','🎯','🎊','🏆','🎸','🎵','🎶','🎤','🎨','📸','📷','🌸','🌺','🌻','🌹','🍀','🌿','🌱','🌲','🌊','🌙','☀️','⭐','🌈','❄️','🦋','🐝','🐶','🐱','🦊','🐻','🦁','🐸','🐧','🦅','🍕','🍔','🌮','🍣','🍜','☕','🧋','🍰','🎂','🍩','🍫','🚀','✈️','🚗','🏠','🏖️','📱','💻','📝','📚','🎁','💰','💎','⚽','🏀','🎾','🧪','🔑','💡','🔒','📧'];
 
+  const EMOJI_ORDER_KEY = 'ps_emoji_order';
+  let emojiOrder = (() => { try { const s = JSON.parse(localStorage.getItem(EMOJI_ORDER_KEY) || 'null'); return Array.isArray(s) && s.length ? s : [...EMOJIS]; } catch { return [...EMOJIS]; } })();
+  let emojiEditMode = false;
+  let _emojiPanel = null;
+  let _emojiBtn = null;
+
+  function _saveEmojiOrder() { localStorage.setItem(EMOJI_ORDER_KEY, JSON.stringify(emojiOrder)); }
+
+  function _renderEmojiPanel() {
+    if (!_emojiPanel) return;
+    const hdr = `<div style="display:flex;align-items:center;justify-content:space-between;padding:.1rem .2rem .35rem;gap:.5rem">
+      <span style="font-size:.68rem;color:var(--ps-text-faint)">${emojiEditMode ? 'Drag to reorder · tap Done when finished' : ''}</span>
+      <div style="display:flex;gap:.35rem;flex-shrink:0">
+        ${emojiEditMode ? `<button id="emoji-reset-btn" type="button" style="font-size:.68rem;padding:.15rem .4rem;border-radius:.25rem;border:1px solid var(--ps-border);background:var(--ps-surface);color:var(--ps-text-faint);cursor:pointer">Reset</button>` : ''}
+        <button id="emoji-edit-btn" type="button" style="font-size:.68rem;padding:.15rem .5rem;border-radius:.25rem;border:1px solid var(--ps-border);background:var(--ps-surface);color:var(--ps-text-muted);cursor:pointer">${emojiEditMode ? '✓ Done' : '✎ Edit'}</button>
+      </div>
+    </div>`;
+    const btns = emojiOrder.map((e, i) => {
+      const drag = emojiEditMode ? `draggable="true" data-drag-idx="${i}"` : '';
+      const bg = emojiEditMode ? 'background:var(--ps-surface-hover)' : 'background:none';
+      const cur = emojiEditMode ? 'grab' : 'pointer';
+      return `<button type="button" data-emoji="${e}" data-emoji-idx="${i}" ${drag} style="font-size:1.2rem;width:1.9rem;height:1.9rem;border:none;${bg};cursor:${cur};border-radius:.25rem;display:flex;align-items:center;justify-content:center;transition:opacity .15s">${e}</button>`;
+    }).join('');
+    _emojiPanel.innerHTML = hdr + `<div id="emoji-grid" style="display:flex;flex-wrap:wrap;gap:.1rem">${btns}</div>`;
+
+    document.getElementById('emoji-edit-btn')?.addEventListener('click', ev => {
+      ev.stopPropagation();
+      emojiEditMode = !emojiEditMode;
+      _renderEmojiPanel();
+    });
+    document.getElementById('emoji-reset-btn')?.addEventListener('click', ev => {
+      ev.stopPropagation();
+      emojiOrder = [...EMOJIS];
+      _saveEmojiOrder();
+      _renderEmojiPanel();
+    });
+
+    if (!emojiEditMode) {
+      // Insert emoji on click (normal mode)
+      _emojiPanel.querySelector('#emoji-grid')?.addEventListener('click', ev => {
+        const btn = ev.target.closest('[data-emoji]');
+        if (!btn) return;
+        const inp = document.getElementById('compose-input');
+        if (inp) {
+          const s = inp.selectionStart, en = inp.selectionEnd, v = inp.value;
+          inp.value = v.slice(0, s) + btn.dataset.emoji + v.slice(en);
+          inp.selectionStart = inp.selectionEnd = s + [...btn.dataset.emoji].length;
+          inp.dispatchEvent(new Event('input', { bubbles: true }));
+          inp.focus();
+        }
+        _emojiPanel.classList.add('hidden');
+      });
+    } else {
+      _attachEmojiDragDrop();
+    }
+  }
+
+  function _attachEmojiDragDrop() {
+    const grid = document.getElementById('emoji-grid');
+    if (!grid) return;
+    let dragSrc = null;
+
+    grid.querySelectorAll('[data-drag-idx]').forEach(btn => {
+      btn.addEventListener('dragstart', ev => {
+        dragSrc = parseInt(btn.dataset.dragIdx);
+        ev.dataTransfer.effectAllowed = 'move';
+        btn.style.opacity = '.35';
+      });
+      btn.addEventListener('dragend', () => {
+        btn.style.opacity = '';
+        grid.querySelectorAll('[data-drag-idx]').forEach(b => b.style.outline = '');
+      });
+      btn.addEventListener('dragover', ev => {
+        ev.preventDefault();
+        ev.dataTransfer.dropEffect = 'move';
+        grid.querySelectorAll('[data-drag-idx]').forEach(b => b.style.outline = '');
+        const ti = parseInt(btn.dataset.dragIdx);
+        if (ti !== dragSrc) btn.style.outline = '2px solid var(--ps-primary)';
+      });
+      btn.addEventListener('dragleave', () => { btn.style.outline = ''; });
+      btn.addEventListener('drop', ev => {
+        ev.preventDefault();
+        const ti = parseInt(btn.dataset.dragIdx);
+        if (dragSrc === null || dragSrc === ti) return;
+        const moved = emojiOrder.splice(dragSrc, 1)[0];
+        emojiOrder.splice(ti, 0, moved);
+        _saveEmojiOrder();
+        _renderEmojiPanel();
+      });
+    });
+
+    // Touch drag support for mobile
+    let touchSrc = null, touchSrcEl = null, touchClone = null;
+    grid.querySelectorAll('[data-drag-idx]').forEach(btn => {
+      btn.addEventListener('touchstart', ev => {
+        touchSrc = parseInt(btn.dataset.dragIdx);
+        touchSrcEl = btn;
+        touchClone = btn.cloneNode(true);
+        touchClone.style.cssText = 'position:fixed;pointer-events:none;z-index:9999;opacity:.75;font-size:1.6rem;width:2rem;height:2rem;display:flex;align-items:center;justify-content:center';
+        document.body.appendChild(touchClone);
+        btn.style.opacity = '.35';
+      }, { passive: true });
+      btn.addEventListener('touchmove', ev => {
+        if (!touchClone) return;
+        ev.preventDefault();
+        const t = ev.touches[0];
+        touchClone.style.left = (t.clientX - 16) + 'px';
+        touchClone.style.top = (t.clientY - 16) + 'px';
+      }, { passive: false });
+      btn.addEventListener('touchend', ev => {
+        if (touchClone) { touchClone.remove(); touchClone = null; }
+        if (touchSrcEl) touchSrcEl.style.opacity = '';
+        const t = ev.changedTouches[0];
+        const el = document.elementFromPoint(t.clientX, t.clientY);
+        const target = el?.closest('[data-drag-idx]');
+        if (target && touchSrc !== null) {
+          const ti = parseInt(target.dataset.dragIdx);
+          if (ti !== touchSrc) {
+            const moved = emojiOrder.splice(touchSrc, 1)[0];
+            emojiOrder.splice(ti, 0, moved);
+            _saveEmojiOrder();
+            _renderEmojiPanel();
+          }
+        }
+        touchSrc = null; touchSrcEl = null;
+      });
+    });
+  }
+
   function initComposeExtras() {
     const mediaBtn = document.getElementById('compose-media-btn');
     const mediaInput = document.getElementById('compose-media-input');
@@ -3731,23 +3860,21 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
     }
 
     if (emojiBtn && emojiPanel) {
-      emojiPanel.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:.1rem">${EMOJIS.map(e=>`<button type="button" data-emoji="${e}" style="font-size:1.2rem;width:1.9rem;height:1.9rem;border:none;background:none;cursor:pointer;border-radius:.25rem;display:flex;align-items:center;justify-content:center">${e}</button>`).join('')}</div>`;
-      emojiPanel.addEventListener('click', e => {
-        const btn = e.target.closest('[data-emoji]');
-        if (!btn) return;
-        const inp = document.getElementById('compose-input');
-        if (inp) {
-          const s = inp.selectionStart, en = inp.selectionEnd, v = inp.value;
-          inp.value = v.slice(0, s) + btn.dataset.emoji + v.slice(en);
-          inp.selectionStart = inp.selectionEnd = s + [...btn.dataset.emoji].length;
-          inp.dispatchEvent(new Event('input', { bubbles: true }));
-          inp.focus();
-        }
-        emojiPanel.classList.add('hidden');
+      _emojiBtn = emojiBtn;
+      _emojiPanel = emojiPanel;
+      _renderEmojiPanel();
+      emojiBtn.addEventListener('click', ev => {
+        ev.stopPropagation();
+        const opening = emojiPanel.classList.contains('hidden');
+        emojiPanel.classList.toggle('hidden');
+        // Re-render on open so order is always fresh (edit mode resets on close)
+        if (opening) { emojiEditMode = false; _renderEmojiPanel(); }
       });
-      emojiBtn.addEventListener('click', e => { e.stopPropagation(); emojiPanel.classList.toggle('hidden'); });
-      document.addEventListener('click', e => {
-        if (!emojiPanel.classList.contains('hidden') && !emojiPanel.contains(e.target) && e.target !== emojiBtn) emojiPanel.classList.add('hidden');
+      document.addEventListener('click', ev => {
+        if (!emojiPanel.classList.contains('hidden') && !emojiPanel.contains(ev.target) && ev.target !== emojiBtn) {
+          emojiPanel.classList.add('hidden');
+          emojiEditMode = false;
+        }
       });
     }
 
