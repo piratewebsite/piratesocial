@@ -505,5 +505,18 @@
       });
       CMS.registerPreviewTemplate('galleries', GalleryPreview);
     </script>
+    <script>
+      // Hide "Sveltia CMS" branding text on the login page
+      (function () {
+        var observer = new MutationObserver(function () {
+          var h1 = document.querySelector('h1');
+          if (h1 && h1.textContent.trim() === 'Sveltia CMS') {
+            h1.style.display = 'none';
+            observer.disconnect();
+          }
+        });
+        observer.observe(document.documentElement, { childList: true, subtree: true });
+      })();
+    </script>
   </body>
 </html>
