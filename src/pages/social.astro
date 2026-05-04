@@ -4900,8 +4900,19 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
   // ============================================================
 
   function renderNotificationItem(n) {
-    const a = n.author;
-    const avatar = a.avatar ? `<img src="${escapeHtml(a.avatar)}" alt="" class="w-10 h-10 rounded-full object-cover flex-shrink-0" loading="lazy" />` : `<div class="w-10 h-10 rounded-full bg-theme-surface flex-shrink-0 flex items-center justify-center text-theme-faint text-sm">👤</div>`;
+    const a = n._grouped ? n.authors[0] : n.author;
+
+    // Build avatar HTML — stacked for grouped notifications, single otherwise
+    let avatar;
+    if (n._grouped && n.authors.length > 1) {
+      const shown = n.authors.slice(0, 4);
+      avatar = `<div class="flex -space-x-2 flex-shrink-0 mt-0.5">${shown.map(auth => auth.avatar
+        ? `<img src="${escapeHtml(auth.avatar)}" alt="" class="w-8 h-8 rounded-full object-cover ring-2 ring-theme-bg" loading="lazy">`
+        : `<div class="w-8 h-8 rounded-full bg-theme-surface ring-2 ring-theme-bg flex items-center justify-center text-theme-faint text-xs">👤</div>`
+      ).join('')}</div>`;
+    } else {
+      avatar = a.avatar ? `<img src="${escapeHtml(a.avatar)}" alt="" class="w-10 h-10 rounded-full object-cover flex-shrink-0" loading="lazy" />` : `<div class="w-10 h-10 rounded-full bg-theme-surface flex-shrink-0 flex items-center justify-center text-theme-faint text-sm">👤</div>`;
+    }
 
     const reasonIcons = {
       like: `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" class="text-red-500"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>`,
@@ -5013,9 +5024,11 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
             <div class="absolute -bottom-1 -right-1 bg-theme-bg rounded-full p-0.5">${icon}</div>
           </div>
           <div class="flex-1 min-w-0">
-            <div class="flex items-center gap-2">
-              <span class="font-medium text-sm truncate">${escapeHtml(a.displayName)}</span>
-              <span class="text-theme-faint text-xs">@${escapeHtml(a.handle)}</span>
+            <div class="flex items-center gap-2 flex-wrap">
+              ${n._grouped && n.authors.length > 1
+                ? `<span class="font-medium text-sm">${escapeHtml(a.displayName || a.handle)}</span><span class="text-theme-faint text-xs">and ${n.authors.length - 1} other${n.authors.length - 1 !== 1 ? 's' : ''}</span>`
+                : `<span class="font-medium text-sm truncate">${escapeHtml(a.displayName)}</span><span class="text-theme-faint text-xs">@${escapeHtml(a.handle)}</span>`
+              }
               <span class="text-theme-faint text-xs ml-auto flex-shrink-0">${time}</span>
               ${unreadDot}
             </div>
@@ -5052,6 +5065,47 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
         ${msg}
       </div>
     </div>`;
+  }
+
+  // Group like/repost/follow notifications for the same subject into one item.
+  // Keeps reply/mention/quote ungrouped since they carry unique content.
+  function groupNotifications(notifications) {
+    const GROUPABLE = new Set(['like', 'repost', 'follow', 'like-via-repost', 'repost-via-repost']);
+    const groups = new Map();
+    const result = [];
+
+    for (const n of notifications) {
+      if (!GROUPABLE.has(n.reason)) {
+        result.push(n);
+        continue;
+      }
+      // Follows grouped together; likes/reposts grouped per subject post URI
+      const key = n.reason === 'follow' ? 'follow' : `${n.reason}::${n.reasonSubject || n.uri}`;
+      if (groups.has(key)) {
+        const g = groups.get(key);
+        g.authors.push(n.author);
+        if (!n.isRead) g.isRead = false;
+        if (n.indexedAt > g.indexedAt) g.indexedAt = n.indexedAt;
+      } else {
+        const g = {
+          _grouped: true,
+          reason: n.reason,
+          reasonSubject: n.reasonSubject || n.uri,
+          subjectPost: n.subjectPost,
+          embed: n.embed,
+          record: n.record,
+          uri: n.uri,
+          cid: n.cid,
+          viewer: n.viewer,
+          authors: [n.author],
+          indexedAt: n.indexedAt,
+          isRead: n.isRead,
+        };
+        groups.set(key, g);
+        result.push(g);
+      }
+    }
+    return result;
   }
 
   async function loadNotificationsTab(append = false) {
@@ -5108,6 +5162,9 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
         if (notifSub === 'mentions') {
           notifications = notifications.filter(n => n.reason === 'mention' || n.reason === 'reply' || n.reason === 'quote');
         }
+
+        // Group likes/reposts/follows on the same post into single items
+        notifications = groupNotifications(notifications);
 
         const html = notifications.map(n => renderNotificationItem(n)).join('');
 
