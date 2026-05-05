@@ -5699,7 +5699,9 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
       // Click handlers for notification items (open post thread or profile)
       feedContainer.querySelectorAll('[data-notif-uri]').forEach(el => {
         el.addEventListener('click', (e) => {
-          if (e.target.closest('.bsky-like-btn, .bsky-repost-btn, .bsky-reply-btn, .bsky-bookmark-btn, .share-btn, a[target="_blank"]')) return;
+          // Only open thread when clicking on non-interactive areas (text, images, empty space)
+          // Buttons, links, and any child interactive element handle their own actions
+          if (e.target.closest('button, a, input, select, textarea, [role="button"]')) return;
           const uri = el.dataset.notifUri;
           if (uri) openThread(uri);
         });
