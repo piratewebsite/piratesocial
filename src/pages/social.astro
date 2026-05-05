@@ -2587,7 +2587,8 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
     // Bluesky likes
     document.querySelectorAll('.bsky-like-btn:not([data-bound])').forEach(btn => {
       btn.dataset.bound = '1';
-      btn.addEventListener('click', async () => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
         if (!bskySession?.accessJwt) return;
         const uri = btn.dataset.uri;
         const cid = btn.dataset.cid;
@@ -2664,7 +2665,8 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
     // Bookmark button → toggle bookmark
     document.querySelectorAll('.bsky-bookmark-btn:not([data-bound])').forEach(btn => {
       btn.dataset.bound = '1';
-      btn.addEventListener('click', async () => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
         const uri = btn.dataset.uri;
         const cid = btn.dataset.cid;
         const text = btn.dataset.text;
