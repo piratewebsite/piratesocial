@@ -336,8 +336,14 @@ const socialNavItems = allNavItems.filter((item: any) => socialPaths.some(p => i
             bell.addEventListener('click', (e) => {
               e.preventDefault();
               e.stopPropagation();
-              localStorage.setItem(window.__psStorageKey('ps_open_tab'), 'notifications');
-              window.location.href = (window.__PS_BASE || '') + '/social';
+              const socialPath = (window.__PS_BASE || '').replace(/\/$/, '') + '/social';
+              if (window.location.pathname === socialPath || window.location.pathname === socialPath + '/') {
+                // Already on social page — switch tab without navigation
+                if (typeof window.__switchSocialTab === 'function') window.__switchSocialTab('notifications');
+              } else {
+                localStorage.setItem(window.__psStorageKey('ps_open_tab'), 'notifications');
+                window.location.href = socialPath;
+              }
             });
 
             // Poll unread count
@@ -490,13 +496,23 @@ const socialNavItems = allNavItems.filter((item: any) => socialPaths.some(p => i
         window.location.href = psBase + '/';
       });
       document.getElementById('float-bell-btn')?.addEventListener('click', () => {
-        localStorage.setItem(window.__psStorageKey('ps_open_tab'), 'notifications');
-        window.location.href = psBase + '/social';
+        const socialPath = (psBase || '').replace(/\/$/, '') + '/social';
+        if (window.location.pathname === socialPath || window.location.pathname === socialPath + '/') {
+          if (typeof window.__switchSocialTab === 'function') window.__switchSocialTab('notifications');
+        } else {
+          localStorage.setItem(window.__psStorageKey('ps_open_tab'), 'notifications');
+          window.location.href = socialPath;
+        }
       });
       document.getElementById('float-notif-btn')?.addEventListener('click', () => {
         closeFloatMenu();
-        localStorage.setItem(window.__psStorageKey('ps_open_tab'), 'notifications');
-        window.location.href = psBase + '/social';
+        const socialPath = (psBase || '').replace(/\/$/, '') + '/social';
+        if (window.location.pathname === socialPath || window.location.pathname === socialPath + '/') {
+          if (typeof window.__switchSocialTab === 'function') window.__switchSocialTab('notifications');
+        } else {
+          localStorage.setItem(window.__psStorageKey('ps_open_tab'), 'notifications');
+          window.location.href = socialPath;
+        }
       });
     </script>
   </body>

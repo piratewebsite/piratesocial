@@ -1949,6 +1949,18 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
     else if (currentTab === 'notifications') loadNotificationsTab();
   }
 
+  // Exposed so BaseLayout bell buttons can switch tabs without a page reload
+  window.__switchSocialTab = function(tabName) {
+    const btn = document.getElementById(`tab-${tabName}`);
+    if (!btn) return;
+    setActiveTab(btn);
+    document.getElementById('tab-feeds').value = '';
+    currentTab = tabName;
+    resetPagination();
+    updateUI();
+    loadCurrentTab();
+  };
+
   function showLoggedOutSocialState() {
     clearCachedAuthState();
     activeFeedUri = null;
@@ -5584,6 +5596,7 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
     if (!append) {
       feedContainer.innerHTML = SPINNER;
       notifCursor = null;
+      scrollSentinel.classList.add('hidden');
     }
 
     try {
@@ -5618,7 +5631,7 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
         } catch {}
       } else {
         // Load Bluesky notifications
-        const params = new URLSearchParams({ limit: '30' });
+        const params = new URLSearchParams({ limit: '100' });
         if (notifCursor) params.set('cursor', notifCursor);
         const res = await fetchTimeout(`${hubUrl}/api/notifications/bluesky?${params}`, { headers: { Authorization: `Bearer ${token}` } });
         const data = await res.json();
@@ -5718,7 +5731,10 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
       hasMore = false;
     } finally {
       isLoading = false;
-      scrollSentinel.classList.toggle('hidden', !hasMore);
+      // Always hide first, then re-show if needed — forces IntersectionObserver to re-fire
+      // even when the sentinel was already visible (e.g. short/grouped notification list)
+      scrollSentinel.classList.add('hidden');
+      if (hasMore) requestAnimationFrame(() => scrollSentinel.classList.remove('hidden'));
     }
   }
 
