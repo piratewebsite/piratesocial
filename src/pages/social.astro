@@ -1951,6 +1951,20 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
 
   // Exposed so BaseLayout bell buttons can switch tabs without a page reload
   window.__switchSocialTab = function(tabName) {
+    if (tabName === 'notifications') {
+      // Notifications has no tab button — deactivate all tabs then load directly
+      currentTab = 'notifications';
+      document.querySelectorAll('[id^="tab-"]:not(#tab-feeds)').forEach(b => {
+        b.classList.remove('active-tab', 'bg-theme-surface-hover');
+        b.removeAttribute('aria-current');
+        b.setAttribute('aria-selected', 'false');
+        b.removeAttribute('tabindex');
+      });
+      resetPagination();
+      updateUI();
+      loadNotificationsTab();
+      return;
+    }
     const btn = document.getElementById(`tab-${tabName}`);
     if (!btn) return;
     setActiveTab(btn);

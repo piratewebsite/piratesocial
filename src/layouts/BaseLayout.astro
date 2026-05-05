@@ -305,6 +305,19 @@ const socialNavItems = allNavItems.filter((item: any) => socialPaths.some(p => i
       // Handle auth token from OAuth redirect
       window.__PS_BASE = psBase;
       window.__psStorageKey = (key) => `${key}:${window.__PS_BASE || '/'}`;
+
+      // Navigate to notifications tab: soft-switch if already on social page, else hard navigate
+      function goToNotifications() {
+        const socialPath = (psBase || '').replace(/\/$/, '') + '/social';
+        const onSocial = window.location.pathname === socialPath || window.location.pathname === socialPath + '/';
+        if (onSocial && typeof window.__switchSocialTab === 'function') {
+          window.__switchSocialTab('notifications');
+        } else {
+          localStorage.setItem(window.__psStorageKey('ps_open_tab'), 'notifications');
+          window.location.href = socialPath;
+        }
+      }
+
       if (socialEnabled) {
         const params = new URLSearchParams(window.location.search);
         const token = params.get('token');
@@ -336,14 +349,7 @@ const socialNavItems = allNavItems.filter((item: any) => socialPaths.some(p => i
             bell.addEventListener('click', (e) => {
               e.preventDefault();
               e.stopPropagation();
-              const socialPath = (window.__PS_BASE || '').replace(/\/$/, '') + '/social';
-              if (window.location.pathname === socialPath || window.location.pathname === socialPath + '/') {
-                // Already on social page — switch tab without navigation
-                if (typeof window.__switchSocialTab === 'function') window.__switchSocialTab('notifications');
-              } else {
-                localStorage.setItem(window.__psStorageKey('ps_open_tab'), 'notifications');
-                window.location.href = socialPath;
-              }
+              goToNotifications();
             });
 
             // Poll unread count
@@ -495,25 +501,8 @@ const socialNavItems = allNavItems.filter((item: any) => socialPaths.some(p => i
         localStorage.removeItem(window.__psStorageKey('ps_bsky_session'));
         window.location.href = psBase + '/';
       });
-      document.getElementById('float-bell-btn')?.addEventListener('click', () => {
-        const socialPath = (psBase || '').replace(/\/$/, '') + '/social';
-        if (window.location.pathname === socialPath || window.location.pathname === socialPath + '/') {
-          if (typeof window.__switchSocialTab === 'function') window.__switchSocialTab('notifications');
-        } else {
-          localStorage.setItem(window.__psStorageKey('ps_open_tab'), 'notifications');
-          window.location.href = socialPath;
-        }
-      });
-      document.getElementById('float-notif-btn')?.addEventListener('click', () => {
-        closeFloatMenu();
-        const socialPath = (psBase || '').replace(/\/$/, '') + '/social';
-        if (window.location.pathname === socialPath || window.location.pathname === socialPath + '/') {
-          if (typeof window.__switchSocialTab === 'function') window.__switchSocialTab('notifications');
-        } else {
-          localStorage.setItem(window.__psStorageKey('ps_open_tab'), 'notifications');
-          window.location.href = socialPath;
-        }
-      });
+      document.getElementById('float-bell-btn')?.addEventListener('click', () => goToNotifications());
+      document.getElementById('float-notif-btn')?.addEventListener('click', () => { closeFloatMenu(); goToNotifications(); });
     </script>
   </body>
 </html>
