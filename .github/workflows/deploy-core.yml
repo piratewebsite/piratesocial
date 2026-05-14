@@ -6,6 +6,10 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: read
+      id-token: write
     steps:
       - name: Checkout user repo
         uses: actions/checkout@v6
