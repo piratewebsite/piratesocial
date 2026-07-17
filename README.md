@@ -151,6 +151,21 @@ npm run build
   </tr>
 </table>
 
+### ⚠️ Template auto-updates (read before customizing code)
+
+Sites deployed with the included GitHub Actions workflow (`.github/workflows/deploy.yml`)
+rebuild from the **latest version of this template** on every push and weekly on a
+schedule. Only your `src/content/` folder (posts, galleries, pages, settings, theme —
+with `labels.json` merged, not overwritten) is carried over into the deployed site.
+That's the point: your content is yours, and the code underneath stays current
+automatically.
+
+The flip side: **any code you change outside `src/content/` — components, pages,
+scripts, styles, `public/` assets — will not appear in those deploys.** If you're
+customizing code, delete `.github/workflows/deploy.yml` (and `deploy-core.yml`) from
+your repo and deploy your fork as-is. Netlify and Vercel deploys build your repository
+directly and are not affected by this mechanism.
+
 ## Project Structure
 
 ```
