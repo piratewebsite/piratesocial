@@ -5,7 +5,7 @@ import Slideshow from '../../components/Slideshow.astro';
 import { getCollection, render } from 'astro:content';
 import labels from '../../content/labels.json';
 import settings from '../../content/settings.json';
-import { cleanSlug } from '../../lib/config';
+import { withBase, cleanSlug } from '../../lib/config';
 
 const showDates = settings.showDates !== false;
 
@@ -62,18 +62,30 @@ const allPhotos = [
     <h2 class="mt-12 mb-6 text-xl font-semibold">{labels.galleries.allPhotos}</h2>
     <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
       {allPhotos.map((photo, i) => (
-        <button
-          class="group aspect-square overflow-hidden rounded cursor-pointer slideshow-jump"
-          data-index={i}
+        <a
+          href={withBase(typeof photo.src === 'string' ? photo.src : photo.src.src)}
+          class="glightbox group block aspect-square overflow-hidden rounded"
+          data-gallery="gallery-photos"
+          data-description={photo.caption || ''}
         >
           <img
-            src={typeof photo.src === 'string' ? photo.src : photo.src.src}
+            src={withBase(typeof photo.src === 'string' ? photo.src : photo.src.src)}
             alt={photo.alt || `Photo ${i + 1}`}
             class="h-full w-full object-cover transition group-hover:scale-110"
             loading="lazy"
           />
-        </button>
+        </a>
       ))}
     </div>
   </article>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/glightbox/dist/css/glightbox.min.css" />
+  <script is:inline src="https://cdn.jsdelivr.net/npm/glightbox/dist/js/glightbox.min.js"></script>
+  <script is:inline>
+    document.addEventListener('DOMContentLoaded', function() {
+      if (typeof GLightbox !== 'undefined') {
+        GLightbox({ selector: '.glightbox', touchNavigation: true, loop: true });
+      }
+    });
+  </script>
 </BaseLayout>
