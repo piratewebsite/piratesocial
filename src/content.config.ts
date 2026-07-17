@@ -93,6 +93,9 @@ const pages = defineCollection({
       slug: z.string(),
       description: z.string().optional(),
       showInNav: z.boolean().default(false),
+      /** Social/OG share image for this page (falls back to the page's
+          first hero image, then the site default in pwa.json) */
+      ogImage: z.string().optional(),
       blocks: z.array(z.any()).default([]),
     }),
 });

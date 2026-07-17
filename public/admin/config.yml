@@ -129,6 +129,7 @@ collections:
       - { label: "Title", name: title, widget: string }
       - { label: "URL Slug", name: slug, widget: string, hint: "The URL path for this page (e.g. 'contact' → /contact)" }
       - { label: "Description", name: description, widget: text, required: false, hint: "Used for SEO meta description" }
+      - { label: "Social Share Image", name: ogImage, widget: image, required: false, hint: "OG/Twitter image for this page. Defaults to the page's hero image, then the site default." }
       - { label: "Show in Navigation", name: showInNav, widget: boolean, default: false, hint: "Automatically add this page to the site navigation" }
       - label: "Content Blocks"
         name: blocks

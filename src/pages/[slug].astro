@@ -2,6 +2,7 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import BlockRenderer from '../components/BlockRenderer.astro';
 import { getCollection, type CollectionEntry } from 'astro:content';
+import { withBase } from '../lib/config';
 
 export async function getStaticPaths() {
   const pages = await getCollection('pages');
@@ -13,8 +14,19 @@ export async function getStaticPaths() {
 
 interface Props { page: CollectionEntry<'pages'>; }
 const { page } = Astro.props as Props;
+
+// OG image: explicit page override → the page's first hero image → (layout
+// falls back to the site default in pwa.json).
+const heroImage = (page.data.blocks || []).find(
+  (b: any) => b.type === 'hero' && b.image
+)?.image;
+const ogImage = page.data.ogImage || heroImage;
 ---
 
-<BaseLayout title={page.data.title} description={page.data.description}>
+<BaseLayout
+  title={page.data.title}
+  description={page.data.description}
+  image={ogImage ? withBase(ogImage) : undefined}
+>
   <BlockRenderer blocks={page.data.blocks || []} />
 </BaseLayout>
