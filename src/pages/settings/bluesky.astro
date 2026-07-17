@@ -228,7 +228,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
       localStorage.removeItem(authStorageKey('ps_bsky_session'));
       loadStatus();
     } catch (err) {
-      errorEl.textContent = 'Network error';
+      errorEl.textContent = "Couldn't reach the Pirate hub. If this site just moved to a new domain, it announces itself automatically — wait a minute, reload this page, and try again. Still stuck? Sign out and back in, which re-registers the site too.";
       errorEl.classList.remove('hidden');
     }
   });

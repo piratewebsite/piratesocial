@@ -311,10 +311,63 @@ const socialNavItems = allNavItems.filter((item: any) => socialPaths.some(p => i
     </footer>
     -->
 
-    <script is:inline define:vars={{ hubUrl: siteConfig.hubUrl, socialEnabled: enableSocial, psBase: base }} data-astro-rerun>
+    <script is:inline define:vars={{ hubUrl: siteConfig.hubUrl, socialEnabled: enableSocial, psBase: base, siteOwner: settings.github || '' }} data-astro-rerun>
       // Handle auth token from OAuth redirect
       window.__PS_BASE = psBase;
       window.__psStorageKey = (key) => `${key}:${window.__PS_BASE || '/'}`;
+
+      // Announce this site's origin to the hub. Registered origins join the
+      // hub's CORS allow-list, so a site moved to a custom domain keeps its
+      // social features working with no admin step. The endpoint answers any
+      // origin (it exists precisely for origins the hub doesn't know yet).
+      // Once a day is plenty.
+      (function registerSite() {
+        try {
+          if (['localhost', '127.0.0.1'].includes(location.hostname)) return;
+          const KEY = window.__psStorageKey('ps_site_registered');
+          if (Date.now() - Number(localStorage.getItem(KEY) || 0) < 86400000) return;
+          fetch(`${hubUrl}/api/register-site`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ origin: location.origin }),
+          }).then((r) => {
+            if (r.ok) localStorage.setItem(KEY, String(Date.now()));
+          }).catch(() => {});
+        } catch {}
+      })();
+
+      // If the site's owner is signed in on a domain their hub profile doesn't
+      // know yet (e.g. after moving to a custom domain), update their profile
+      // siteUrl/feedUrl so the network follows them: their RSS feed keeps
+      // aggregating and links point at the new home. Authenticated, only ever
+      // touches the signed-in user's own record, and only on the owner's site.
+      (function syncOwnerSiteUrl() {
+        try {
+          if (!siteOwner || ['localhost', '127.0.0.1'].includes(location.hostname)) return;
+          const token = localStorage.getItem(window.__psStorageKey('ps_token'));
+          if (!token) return;
+          const KEY = window.__psStorageKey('ps_owner_synced');
+          if (Date.now() - Number(localStorage.getItem(KEY) || 0) < 86400000) return;
+          fetch(`${hubUrl}/api/auth/me`, { headers: { Authorization: `Bearer ${token}` } })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((me) => {
+              if (!me || !me.username) return;
+              if (me.username.toLowerCase() !== siteOwner.toLowerCase()) return;
+              if (me.siteUrl === location.origin) {
+                localStorage.setItem(KEY, String(Date.now()));
+                return;
+              }
+              return fetch(`${hubUrl}/api/users/me`, {
+                method: 'PATCH',
+                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ siteUrl: location.origin, feedUrl: `${location.origin}/feed.xml` }),
+              }).then((r) => {
+                if (r.ok) localStorage.setItem(KEY, String(Date.now()));
+              });
+            })
+            .catch(() => {});
+        } catch {}
+      })();
 
       // Navigate to notifications tab: soft-switch if already on social page, else hard navigate
       function goToNotifications() {

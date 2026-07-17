@@ -151,6 +151,24 @@ npm run build
   </tr>
 </table>
 
+### Custom domains — zero configuration
+
+Point your domain at your host (each has a no-code setting: GitHub Pages →
+repo Settings → Pages → Custom domain; Netlify → Domain management; Vercel →
+Project → Domains) and you're done. Pirate sites register their own address
+with the hub automatically, three ways:
+
+1. **On page load** — every site announces `location.origin` to the hub once a
+   day (`/api/register-site`, reachable from any origin by design).
+2. **On sign-in** — completing GitHub sign-in from a site registers that
+   site's origin, so even sites running older template code self-heal.
+3. **On owner sign-in** — if the signed-in user is the site's configured
+   owner, their hub profile's site/feed URL is updated to the new domain, so
+   the network keeps aggregating their posts from the right place.
+
+No admin action, no code, no support ticket. A just-moved domain can take up
+to a minute to propagate; social pages say so instead of failing silently.
+
 ### ⚠️ Template auto-updates (read before customizing code)
 
 Sites deployed with the included GitHub Actions workflow (`.github/workflows/deploy.yml`)
