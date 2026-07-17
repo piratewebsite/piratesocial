@@ -35,3 +35,17 @@
 html {
   scrollbar-gutter: stable;
 }
+
+/* GLightbox captions: the default skin uses a white description panel and
+   inherits the page text color, which turns white-on-white in dark theme.
+   A lightbox sits on a near-black backdrop, so keep its chrome dark in
+   both themes. (!important: the CDN skin stylesheet loads after this.) */
+.glightbox-clean .gslide-description {
+  background: rgba(9, 8, 10, 0.95) !important;
+}
+.glightbox-clean .gslide-title {
+  color: #f4f4f5 !important;
+}
+.glightbox-clean .gslide-desc {
+  color: #d4d4d8 !important;
+}

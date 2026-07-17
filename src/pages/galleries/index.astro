@@ -1,0 +1,50 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import type { CollectionEntry } from 'astro:content';
+import { getCollection } from 'astro:content';
+import { withBase, cleanSlug } from '../../lib/config';
+import labels from '../../content/labels.json';
+
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const galleries = (await getCollection('galleries'))
+  .filter((g: CollectionEntry<'galleries'>) => !g.data.draft)
+  .sort((a: CollectionEntry<'galleries'>, b: CollectionEntry<'galleries'>) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
+---
+
+<BaseLayout title={labels.galleries.heading}>
+  <h1 class="mb-8 text-2xl font-bold">{labels.galleries.heading}</h1>
+  {galleries.length === 0 ? (
+    <p class="text-theme-faint">No galleries yet.</p>
+  ) : (
+    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      {galleries.map((gallery) => {
+        const cover = gallery.data.coverImage || gallery.data.photos?.[0]?.src;
+        const count = (gallery.data.photos?.length ?? 0) + (gallery.data.quickPhotos?.length ?? 0);
+        return (
+          <a
+            href={`${base}/galleries/${cleanSlug(gallery.id)}`}
+            class="group overflow-hidden rounded-lg border border-theme-card-border bg-theme-card transition hover:border-theme-card-hover"
+          >
+            {cover && (
+              <div class="aspect-[4/3] overflow-hidden">
+                <img
+                  src={withBase(cover)}
+                  alt={gallery.data.title}
+                  class="h-full w-full object-cover transition group-hover:scale-105"
+                  loading="lazy"
+                />
+              </div>
+            )}
+            <div class="p-4">
+              <h3 class="font-medium">{gallery.data.title}</h3>
+              {gallery.data.description && (
+                <p class="mt-1 text-sm text-theme-muted line-clamp-2">{gallery.data.description}</p>
+              )}
+              <p class="mt-2 text-xs text-theme-faint">{count} photos</p>
+            </div>
+          </a>
+        );
+      })}
+    </div>
+  )}
+</BaseLayout>
