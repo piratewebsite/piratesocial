@@ -2080,7 +2080,7 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
   // Delegated handler for sign-in button (dynamically injected into feed-container)
   feedContainer.addEventListener('click', (e) => {
     if (e.target?.id === 'social-login') {
-      window.location.href = `${hubUrl}/api/auth/github?site=${encodeURIComponent(window.location.origin + (psBase || '/'))}`;
+      window.location.href = `${hubUrl}/api/auth/github?site=${encodeURIComponent(window.location.origin + window.location.pathname)}`;
     }
   });
 

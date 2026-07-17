@@ -1929,7 +1929,7 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
           }
         });
       } else {
-        window.location.href = `${hubUrl}/api/auth/github?site=${encodeURIComponent(window.location.origin + (psBase || '/'))}`;
+        window.location.href = `${hubUrl}/api/auth/github?site=${encodeURIComponent(window.location.origin + window.location.pathname)}`;
       }
     }
   });

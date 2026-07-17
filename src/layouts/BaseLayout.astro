@@ -389,6 +389,13 @@ const socialNavItems = allNavItems.filter((item: any) => socialPaths.some(p => i
           window.history.replaceState({}, '', window.location.pathname);
         }
 
+        // Pages with a sign-in prompt (settings, etc.) link to /social by
+        // default; send them straight into OAuth instead, returning to the
+        // page the user is actually on (the hub honors a full return URL).
+        document.querySelectorAll('#auth-required a').forEach((a) => {
+          a.href = `${hubUrl}/api/auth/github?site=${encodeURIComponent(window.location.origin + window.location.pathname)}`;
+        });
+
         // Show auth-only nav links when logged in
         const savedToken = localStorage.getItem(window.__psStorageKey('ps_token'));
         if (savedToken) {
