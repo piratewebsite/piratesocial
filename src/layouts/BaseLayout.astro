@@ -25,7 +25,9 @@ const pageDescription = description || pwa.ogDescription || siteConfig.descripti
 const siteOrigin = siteConfig.siteUrl.replace(/\/$/, '');
 // image prop already has base applied (via withBase in page); apply withBase to fallbacks
 const ogImageRaw = image || withBase(pwa.ogImage || '') || siteConfig.avatar || '';
-const ogImage = ogImageRaw.startsWith('http') ? ogImageRaw : `${siteOrigin}${ogImageRaw.startsWith('/') ? '' : '/'}${ogImageRaw}`;
+const ogImageAbs = ogImageRaw.startsWith('http') ? ogImageRaw : `${siteOrigin}${ogImageRaw.startsWith('/') ? '' : '/'}${ogImageRaw}`;
+// Encode spaces etc. — image paths with spaces break some scrapers unencoded.
+const ogImage = encodeURI(ogImageAbs);
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 const currentPath = Astro.url.pathname.replace(/\/$/, '') || '/';
 
@@ -89,11 +91,19 @@ const socialNavItems = allNavItems.filter((item: any) => socialPaths.some(p => i
     {!pwa.searchEngineVisibility && <meta name="robots" content="noindex, nofollow" />}
 
     <!-- Open Graph -->
+    <meta property="og:site_name" content={pwa.name || siteConfig.title} />
     <meta property="og:title" content={pageTitle} />
     <meta property="og:description" content={pageDescription} />
     <meta property="og:image" content={ogImage} />
+    <meta property="og:image:alt" content={pageTitle} />
     <meta property="og:url" content={`${siteOrigin}${Astro.url.pathname}`} />
     <meta property="og:type" content="website" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={pageTitle} />
+    <meta name="twitter:description" content={pageDescription} />
+    <meta name="twitter:image" content={ogImage} />
 
     <!-- RSS -->
     <link rel="alternate" type="application/rss+xml" title={siteConfig.title} href={`${base}/feed.xml`} />
