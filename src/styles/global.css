@@ -49,3 +49,28 @@ html {
 .glightbox-clean .gslide-desc {
   color: #d4d4d8 !important;
 }
+
+/* GLightbox on phones: the stock skin parks prev/next off-screen
+   (top:-100%) below 769px, puts the 35px close button at top:15px —
+   under the notch/status bar in standalone PWAs, leaving no visible way
+   to close — and lets long captions cover the whole photo. */
+.glightbox-clean .gclose {
+  top: calc(env(safe-area-inset-top, 0px) + 12px) !important;
+  right: calc(env(safe-area-inset-right, 0px) + 12px) !important;
+  width: 44px !important;
+  height: 44px !important;
+  opacity: 1 !important;
+  background-color: rgba(0, 0, 0, 0.55) !important;
+  border-radius: 50% !important;
+}
+.glightbox-clean .gprev,
+.glightbox-clean .gnext {
+  top: 45% !important;
+}
+.glightbox-mobile .glightbox-container .gslide-description {
+  max-height: 35vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  background: rgba(9, 8, 10, 0.85) !important;
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+}
