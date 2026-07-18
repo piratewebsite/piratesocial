@@ -424,9 +424,9 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
   async function ensureBskySession() {
     const isConnected = await ensureBlueskyConnectionStatus();
     if (!isConnected) return null;
-    if (bskySession?.accessJwt) return bskySession;
+    if (bskySession?.accessJwt || bskySession?.oauth) return bskySession;
     loadBskySession();
-    if (bskySession?.accessJwt) return bskySession;
+    if (bskySession?.accessJwt || bskySession?.oauth) return bskySession;
     if (!token) return null;
     try {
       const res = await fetchTimeout(`${hubUrl}/api/bluesky/session`, { headers: { Authorization: `Bearer ${token}` } }, 10000);
@@ -486,7 +486,23 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
     return fetch(url, { ...opts, signal: c.signal }).finally(() => clearTimeout(t));
   }
 
+  // True when authenticated Bluesky calls are possible: raw tokens from an
+  // app-password session, or an OAuth session proxied through the hub.
+  function bskyAuthed() {
+    return !!(bskySession?.accessJwt || bskySession?.oauth);
+  }
+
   async function bskyGet(endpoint, params = {}, auth = false) {
+    // OAuth sessions are DPoP-bound — no browser tokens. Route through the
+    // hub, which restores the user's own PDS session server-side.
+    if (auth && !bskySession?.accessJwt && bskySession?.oauth && token) {
+      const qs0 = new URLSearchParams(params).toString();
+      const url0 = `${hubUrl}/api/bluesky-feed/xrpc/${endpoint}${qs0 ? '?' + qs0 : ''}`;
+      const r = await fetchTimeout(url0, { headers: { Authorization: `Bearer ${token}` } }, 15000);
+      if (!r.ok) throw new Error(`API ${r.status}`);
+      return r.json();
+    }
+
     const base = auth ? BSKY_AUTH : BSKY_PUBLIC;
     const qs = new URLSearchParams(params).toString();
     const url = `${base}/${endpoint}${qs ? '?' + qs : ''}`;
@@ -508,6 +524,15 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
   }
 
   async function bskyPost(endpoint, body) {
+    if (!bskySession?.accessJwt && bskySession?.oauth && token) {
+      const r = await fetchTimeout(`${hubUrl}/api/bluesky-feed/xrpc/${endpoint}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      }, 15000);
+      if (!r.ok) throw new Error(`API ${r.status}`);
+      return r.json();
+    }
     const url = `${BSKY_AUTH}/${endpoint}`;
     const res = await fetchTimeout(url, {
       method: 'POST',
@@ -556,7 +581,7 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
   }
 
   async function fetchBskyProfile(handle) {
-    return bskyGet('app.bsky.actor.getProfile', { actor: handle }, !!bskySession?.accessJwt);
+    return bskyGet('app.bsky.actor.getProfile', { actor: handle }, bskyAuthed());
   }
 
   async function searchBskyPosts(query, cursor) {
@@ -652,7 +677,7 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
 
   // Quote post functionality
   function quotePost(uri, author, text) {
-    if (!bskySession?.accessJwt) return alert('Sign in to quote post');
+    if (!bskyAuthed()) return alert('Sign in to quote post');
     const composeBox = document.getElementById('compose-box');
     const composeInput = document.getElementById('compose-input');
     if (composeBox && composeInput) {
@@ -1432,7 +1457,7 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
       // Follow/unfollow button (not for self)
       let followBtn = '';
       let nudgeBtn = '';
-      if (!isMe && bskySession?.accessJwt) {
+      if (!isMe && bskyAuthed()) {
         if (isBlocked) {
           followBtn = `<button class="profile-follow-btn text-xs px-4 py-1.5 rounded-full border border-red-500/50 text-red-400 cursor-not-allowed" disabled>Blocked</button>`;
         } else if (followingUri) {
@@ -1578,7 +1603,7 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
       // Track which post is being replied to (default: main post)
       let replyTarget = { uri: mainPost.uri, cid: mainPost.cid, handle: mainPost.author.handle };
 
-      const replyComposer = bskySession?.accessJwt ? `
+      const replyComposer = bskyAuthed() ? `
         <div id="thread-reply-box" class="mt-4 border-t border-theme-border pt-4">
           <div id="thread-reply-label" style="font-size:.75rem;color:var(--ps-text-faint,#888);margin-bottom:.5rem">Replying to @${escapeHtml(mainPost.author.handle)}</div>
           <div class="flex gap-3">
@@ -1931,9 +1956,9 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
       if (input) input.placeholder = currentDiscoverSub === 'people' ? 'Search people...' : 'Search feeds...';
     }
     const composeBox = document.getElementById('compose-box');
-    if (composeBox) composeBox.style.display = (currentTab === 'timeline' && bskySession?.accessJwt) ? '' : 'none';
+    if (composeBox) composeBox.style.display = (currentTab === 'timeline' && bskyAuthed()) ? '' : 'none';
     const floatingComposeTrigger = document.getElementById('floating-compose-trigger');
-    if (floatingComposeTrigger) floatingComposeTrigger.classList.toggle('hidden', !bskySession?.accessJwt);
+    if (floatingComposeTrigger) floatingComposeTrigger.classList.toggle('hidden', !bskyAuthed());
     // Hide notification pills container if present from prev render
     const notifPills = document.getElementById('notif-pills');
     if (notifPills && currentTab !== 'notifications') notifPills.remove();
@@ -2151,7 +2176,7 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
       let hasBlueskyError = false;
 
       // Fetch Bluesky timeline (direct AT Protocol)
-      if (session?.accessJwt) {
+      if (session?.accessJwt || session?.oauth) {
         try {
           const bskyData = await fetchBskyTimeline(bskyCursor);
           bskyCursor = bskyData.cursor || null;
@@ -2164,7 +2189,7 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
       }
 
       // Fetch squad member posts and merge into timeline
-      if (session?.accessJwt && !append) {
+      if ((session?.accessJwt || session?.oauth) && !append) {
         try {
           if (!allSquads.length && token) {
             const sRes = await fetchTimeout(`${hubUrl}/api/bluesky-feed/squads`, { headers: { Authorization: `Bearer ${token}` } });
@@ -2250,7 +2275,7 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
       }
 
       // If no Bluesky session and no token, show discover
-      if (!session?.accessJwt && !token) {
+      if (!(session?.accessJwt || session?.oauth) && !token) {
         try {
           const pirateRes = await fetchTimeout(`${hubUrl}/api/timeline/discover?page=${piratePage}`);
           const pirateData = await pirateRes.json();
@@ -2284,7 +2309,7 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
           if (hasBlueskyError) {
             feedContainer.innerHTML = `<div class="text-center py-8"><div class="text-theme-faint mb-3">⚠️ Unable to load Bluesky feed</div><p class="text-sm text-theme-muted mb-4">Try connecting Bluesky in Settings or refreshing the page</p><button id="refresh-feed" class="rounded bg-theme-primary px-4 py-2 text-sm font-medium hover:bg-theme-primary-hover transition">↻ Retry</button></div>`;
             document.getElementById('refresh-feed')?.addEventListener('click', loadFeedTab);
-          } else if (session?.accessJwt) {
+          } else if (session?.accessJwt || session?.oauth) {
             feedContainer.innerHTML = `<div class="text-center py-8 text-theme-faint">${L.noPosts || 'No posts yet'}</div>`;
           } else {
             // Logged in but no Bluesky: guide them to Settings
@@ -2322,7 +2347,7 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
 
     try {
       const session = await ensureBskySession();
-      const allowBlueskyDiscover = !!token && !!session?.accessJwt;
+      const allowBlueskyDiscover = !!token && !!(session?.accessJwt || session?.oauth);
       let allPosts = [];
 
       // Trending topics banner
@@ -2595,7 +2620,7 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
       btn.dataset.bound = '1';
       btn.addEventListener('click', async (e) => {
         e.stopPropagation();
-        if (!bskySession?.accessJwt) return;
+        if (!bskyAuthed()) return;
         const uri = btn.dataset.uri;
         const cid = btn.dataset.cid;
         const countEl = btn.querySelector('.like-count');
@@ -2618,7 +2643,7 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
     document.querySelectorAll('.bsky-repost-btn:not([data-bound])').forEach(btn => {
       btn.dataset.bound = '1';
       btn.addEventListener('click', async (e) => {
-        if (!bskySession?.accessJwt) return;
+        if (!bskyAuthed()) return;
         e.stopPropagation();
         const uri = btn.dataset.uri;
         const cid = btn.dataset.cid;
@@ -4374,7 +4399,7 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
 
       if (delaySec === '0') {
         // Post immediately via Bluesky
-        if (!bskySession?.accessJwt) return;
+        if (!bskyAuthed()) return;
         composeSend.disabled = true;
         composeSend.textContent = 'Posting...';
         try {
