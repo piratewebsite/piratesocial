@@ -2082,6 +2082,12 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
     if (e.target?.id === 'social-login') {
       window.location.href = `${hubUrl}/api/auth/github?site=${encodeURIComponent(window.location.origin + window.location.pathname)}`;
     }
+    if (e.target?.id === 'social-login-bsky') {
+      const h = prompt('Your Bluesky handle (e.g. name.bsky.social):');
+      if (h && h.trim()) {
+        window.location.href = `${hubUrl}/api/auth/bluesky?handle=${encodeURIComponent(h.trim().replace(/^@/, ''))}&site=${encodeURIComponent(window.location.origin + window.location.pathname)}`;
+      }
+    }
   });
 
   // ============================================================
@@ -2263,14 +2269,14 @@ const tabBarTop = navStyle === 'float' ? 'top-0' : 'top-[41px] md:top-[57px]';
 
       const html = filtered.map(p => renderPostCard(p)).join('');
       // Build sign-in banner for guests (shown regardless of post count)
-      const guestBanner = !token ? `<div class="rounded-lg border border-theme-border bg-theme-surface p-4 text-center mb-4"><p class="text-sm text-theme-muted mb-3">${L.signInPrompt || 'Sign in to see your personalized feed'}</p><button id="social-login" class="rounded bg-theme-primary text-white px-4 py-2 text-sm font-medium hover:bg-theme-primary-hover transition">${L.signInButton || 'Sign in with GitHub'}</button></div>` : '';
+      const guestBanner = !token ? `<div class="rounded-lg border border-theme-border bg-theme-surface p-4 text-center mb-4"><p class="text-sm text-theme-muted mb-3">${L.signInPrompt || 'Sign in to see your personalized feed'}</p><button id="social-login" class="rounded bg-theme-primary text-white px-4 py-2 text-sm font-medium hover:bg-theme-primary-hover transition">${L.signInButton || 'Sign in with GitHub'}</button><button id="social-login-bsky" class="ml-2 rounded border border-theme-border px-4 py-2 text-sm font-medium text-theme-text hover:bg-theme-surface-hover transition">🦋 Sign in with Bluesky</button></div>` : '';
 
       if (append) {
         feedContainer.insertAdjacentHTML('beforeend', html);
       } else {
         if (!token && !filtered.length) {
           // Guest with no posts: show full-page sign-in prompt
-          feedContainer.innerHTML = `<div class="text-center text-theme-faint py-12"><p>${L.signInPrompt || 'Sign in to see your feed'}</p><button id="social-login" class="mt-4 rounded bg-theme-primary text-white px-4 py-2 text-sm font-medium hover:bg-theme-primary-hover transition">${L.signInButton || 'Sign in with GitHub'}</button></div>`;
+          feedContainer.innerHTML = `<div class="text-center text-theme-faint py-12"><p>${L.signInPrompt || 'Sign in to see your feed'}</p><button id="social-login" class="mt-4 rounded bg-theme-primary text-white px-4 py-2 text-sm font-medium hover:bg-theme-primary-hover transition">${L.signInButton || 'Sign in with GitHub'}</button><button id="social-login-bsky" class="mt-4 ml-2 rounded border border-theme-border px-4 py-2 text-sm font-medium text-theme-text hover:bg-theme-surface-hover transition">🦋 Sign in with Bluesky</button></div>`;
         } else if (!token && filtered.length) {
           // Guest with public posts: show banner then posts
           feedContainer.innerHTML = guestBanner + html;

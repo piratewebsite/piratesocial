@@ -395,6 +395,21 @@ const socialNavItems = allNavItems.filter((item: any) => socialPaths.some(p => i
         document.querySelectorAll('#auth-required a').forEach((a) => {
           a.href = `${hubUrl}/api/auth/github?site=${encodeURIComponent(window.location.origin + window.location.pathname)}`;
         });
+        // …and offer Bluesky sign-in alongside GitHub
+        document.querySelectorAll('#auth-required').forEach((box) => {
+          if (box.querySelector('[data-bsky-signin]')) return;
+          const b = document.createElement('button');
+          b.setAttribute('data-bsky-signin', '');
+          b.className = 'mt-3 block mx-auto text-sm text-theme-primary hover:underline';
+          b.textContent = '🦋 or sign in with Bluesky';
+          b.addEventListener('click', () => {
+            const h = prompt('Your Bluesky handle (e.g. name.bsky.social):');
+            if (h && h.trim()) {
+              window.location.href = `${hubUrl}/api/auth/bluesky?handle=${encodeURIComponent(h.trim().replace(/^@/, ''))}&site=${encodeURIComponent(window.location.origin + window.location.pathname)}`;
+            }
+          });
+          box.appendChild(b);
+        });
 
         // Show auth-only nav links when logged in
         const savedToken = localStorage.getItem(window.__psStorageKey('ps_token'));
