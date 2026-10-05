@@ -316,6 +316,24 @@ collections:
                   - { label: "Question", name: question, widget: string }
                   - { label: "Answer", name: answer, widget: markdown }
 
+          - label: "Contact Form"
+            name: contact
+            widget: object
+            fields:
+              - { label: "Heading", name: heading, widget: string, required: false, default: "Get in Touch" }
+              - { label: "Description", name: description, widget: text, required: false, hint: "Optional intro text above the form" }
+              - label: "Layout"
+                name: layout
+                widget: select
+                options:
+                  - { label: "Narrow (centered)", value: "narrow" }
+                  - { label: "Full Width", value: "full" }
+                default: "narrow"
+              - { label: "Ask for a name", name: showName, widget: boolean, default: true }
+              - { label: "Ask for a phone number", name: showPhone, widget: boolean, default: false }
+              - { label: "Button text", name: submitLabel, widget: string, required: false, default: "Send Message" }
+              - { label: "Message shown after sending", name: successMessage, widget: string, required: false, default: "Thanks! Your message was sent." }
+
           - label: "Call to Action"
             name: cta
             widget: object
@@ -458,6 +476,11 @@ collections:
             widget: string
             required: false
             hint: "Optional: enables the GIF picker in the compose window. Get a free key at developers.giphy.com — create an app, copy the API Key, and optionally restrict it to your domain."
+          - label: "Contact Form ID"
+            name: pirateFormsId
+            widget: string
+            required: false
+            hint: "Optional: turns on the Contact Form block. Enter the ID you were given when your site was registered for Pirate Forms. Messages are emailed to the address on file for that ID; your address never appears on the site."
 
       - label: PWA & Open Graph
         name: pwa

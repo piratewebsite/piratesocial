@@ -1,0 +1,53 @@
+---
+// A contact form, delivered through Pirate Forms (github.com/piratewebsite/pirate-forms).
+// Messages go to the address registered for this site's Contact Form ID; no email address
+// appears in the page. Without an ID in Site Settings the block renders nothing, so adding
+// it to a page before the site is registered is harmless.
+import { Form } from 'pirate-forms';
+import settings from '../../content/settings.json';
+
+const {
+  heading,
+  description,
+  layout = 'narrow',
+  showName = true,
+  showPhone = false,
+  submitLabel = 'Send Message',
+  successMessage = 'Thanks! Your message was sent.',
+} = Astro.props;
+
+const formId = String((settings as any).pirateFormsId || '').trim();
+const wrapperClass = layout === 'full' ? '' : 'max-w-3xl mx-auto';
+const fields = [
+  showName && { name: 'name', label: 'Your Name' },
+  { name: 'email', type: 'email', label: 'Your Email', required: true },
+  showPhone && { name: 'phone', type: 'tel', label: 'Your Phone' },
+  { name: 'message', type: 'textarea', label: 'Message', required: true, rows: 6 },
+].filter(Boolean) as any[];
+
+if (!formId) console.warn('[ContactBlock] No Contact Form ID in Site Settings; the contact form block is hidden.');
+---
+
+{formId && (
+  <section class={`mb-12 ${wrapperClass}`}>
+    {heading && <h2 class="mb-2 text-xl font-semibold">{heading}</h2>}
+    {description && <p class="mb-6 text-theme-muted">{description}</p>}
+    <Form
+      id={formId}
+      fields={fields}
+      submitLabel={submitLabel}
+      successMessage={successMessage}
+      submitClass="inline-flex cursor-pointer items-center rounded-md bg-theme-primary px-5 py-2.5 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-60"
+      class="ps-contact"
+    />
+  </section>
+)}
+
+<style>
+  /* The form takes its colours from the site theme. */
+  .ps-contact {
+    --pf-accent: var(--ps-primary);
+    --pf-border: var(--ps-input-border);
+    --pf-bg: var(--ps-input-bg);
+  }
+</style>
