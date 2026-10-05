@@ -476,11 +476,16 @@ collections:
             widget: string
             required: false
             hint: "Optional: enables the GIF picker in the compose window. Get a free key at developers.giphy.com — create an app, copy the API Key, and optionally restrict it to your domain."
+          - label: "Contact Form Email"
+            name: contactEmail
+            widget: string
+            required: false
+            hint: "Optional: turns on the Contact Form block and is where its messages are sent. The first time, you get an email asking you to confirm; messages are delivered once you do. The address is not shown on your website, but it is saved in your site's settings file, which anyone can read if your repository is public."
           - label: "Contact Form ID"
             name: pirateFormsId
             widget: string
             required: false
-            hint: "Optional: turns on the Contact Form block. Enter the ID you were given when your site was registered for Pirate Forms. Messages are emailed to the address on file for that ID; your address never appears on the site."
+            hint: "Leave empty unless the network operator registered your site and gave you an ID. The Contact Form Email above is used when both are filled in."
 
       - label: PWA & Open Graph
         name: pwa
